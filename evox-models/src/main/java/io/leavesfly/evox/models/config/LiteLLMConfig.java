@@ -27,7 +27,8 @@ public class LiteLLMConfig extends LLMConfig {
     /**
      * 是否为本地模型 (例如Ollama)
      */
-    private Boolean isLocal;
+    @lombok.Builder.Default
+    private Boolean isLocal = false;
 
     /**
      * OpenAI API Key
@@ -142,7 +143,9 @@ public class LiteLLMConfig extends LLMConfig {
     public LiteLLMConfig() {
         setProvider("litellm");
         setModel("gpt-4o-mini");
-        this.isLocal = false;
+        if (this.isLocal == null) {
+            this.isLocal = false;
+        }
     }
 
     /**

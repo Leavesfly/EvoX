@@ -312,4 +312,13 @@ public class WorkflowNode extends BaseModule {
         /** 参数描述 */
         private String description;
     }
+
+    /**
+     * 设置分支映射
+     *
+     * @param branchMapping 分支映射
+     */
+    public void setBranchMapping(Map<String, String> branchMapping) {
+        this.branches = branchMapping;
+    }
 }

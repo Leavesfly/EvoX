@@ -28,14 +28,14 @@ class RAGEngineTest {
     void setUp() {
         // 创建配置
         RAGConfig config = RAGConfig.builder()
-                .chunkConfig(RAGConfig.ChunkConfig.builder()
-                        .strategy(RAGConfig.ChunkConfig.ChunkStrategy.FIXED_SIZE)
+                .chunker(RAGConfig.ChunkerConfig.builder()
+                        .strategy("FIXED_SIZE")
                         .chunkSize(100)
                         .chunkOverlap(20)
                         .build())
-                .retrievalConfig(RAGConfig.RetrievalConfig.builder()
+                .retriever(RAGConfig.RetrieverConfig.builder()
                         .topK(3)
-                        .similarityThreshold(0.5f)
+                        .similarityThreshold(0.5)
                         .build())
                 .build();
 

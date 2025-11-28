@@ -37,11 +37,11 @@ public class OpenAILLM implements BaseLLM {
         // 创建聊天选项
         OpenAiChatOptions options = OpenAiChatOptions.builder()
                 .withModel(config.getModel())
-                .withTemperature(config.getTemperature().floatValue())
+                .withTemperature(config.getTemperature() != null ? config.getTemperature().floatValue() : 0.7f)
                 .withMaxTokens(config.getMaxTokens())
-                .withTopP(config.getTopP().floatValue())
-                .withFrequencyPenalty(config.getFrequencyPenalty().floatValue())
-                .withPresencePenalty(config.getPresencePenalty().floatValue())
+                .withTopP(config.getTopP() != null ? config.getTopP().floatValue() : 1.0f)
+                .withFrequencyPenalty(config.getFrequencyPenalty() != null ? config.getFrequencyPenalty().floatValue() : 0.0f)
+                .withPresencePenalty(config.getPresencePenalty() != null ? config.getPresencePenalty().floatValue() : 0.0f)
                 .build();
         
         // 创建聊天模型

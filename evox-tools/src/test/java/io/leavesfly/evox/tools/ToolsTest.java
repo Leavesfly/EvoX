@@ -105,7 +105,7 @@ class ToolsTest {
         
         Map<String, Object> params = new HashMap<>();
         params.put("operation", "write");
-        params.put("path", testFile.toString());
+        params.put("filePath", testFile.toString());
         params.put("content", "Hello World");
         
         BaseTool.ToolResult result = tool.execute(params);
@@ -123,12 +123,14 @@ class ToolsTest {
         
         Map<String, Object> params = new HashMap<>();
         params.put("operation", "read");
-        params.put("path", testFile.toString());
+        params.put("filePath", testFile.toString());
         
         BaseTool.ToolResult result = tool.execute(params);
         
         assertTrue(result.isSuccess());
-        assertEquals("Test Content", result.getData());
+        @SuppressWarnings("unchecked")
+        Map<String, Object> data = (Map<String, Object>) result.getData();
+        assertEquals("Test Content", data.get("content"));
     }
 
     @Test
@@ -140,7 +142,7 @@ class ToolsTest {
         
         Map<String, Object> params = new HashMap<>();
         params.put("operation", "append");
-        params.put("path", testFile.toString());
+        params.put("filePath", testFile.toString());
         params.put("content", "Line 2\n");
         
         BaseTool.ToolResult result = tool.execute(params);
@@ -160,7 +162,7 @@ class ToolsTest {
         
         Map<String, Object> params = new HashMap<>();
         params.put("operation", "delete");
-        params.put("path", testFile.toString());
+        params.put("filePath", testFile.toString());
         
         BaseTool.ToolResult result = tool.execute(params);
         
@@ -178,13 +180,15 @@ class ToolsTest {
         
         Map<String, Object> params = new HashMap<>();
         params.put("operation", "list");
-        params.put("path", testDir.toString());
+        params.put("directory", testDir.toString());
         
         BaseTool.ToolResult result = tool.execute(params);
         
         assertTrue(result.isSuccess());
         @SuppressWarnings("unchecked")
-        List<Map<String, Object>> files = (List<Map<String, Object>>) result.getData();
+        Map<String, Object> data = (Map<String, Object>) result.getData();
+        @SuppressWarnings("unchecked")
+        List<Map<String, Object>> files = (List<Map<String, Object>>) data.get("files");
         assertTrue(files.size() >= 2);
     }
 
@@ -194,12 +198,14 @@ class ToolsTest {
         
         Map<String, Object> params = new HashMap<>();
         params.put("operation", "exists");
-        params.put("path", testFile.toString());
+        params.put("filePath", testFile.toString());
         
         BaseTool.ToolResult result = tool.execute(params);
         
         assertTrue(result.isSuccess());
-        assertFalse((Boolean) result.getData());
+        @SuppressWarnings("unchecked")
+        Map<String, Object> data = (Map<String, Object>) result.getData();
+        assertFalse((Boolean) data.get("exists"));
     }
 
     @Test
@@ -208,7 +214,7 @@ class ToolsTest {
         
         Map<String, Object> params = new HashMap<>();
         params.put("operation", "read");
-        params.put("path", "/non/existent/file.txt");
+        params.put("filePath", "/non/existent/file.txt");
         
         BaseTool.ToolResult result = tool.execute(params);
         
@@ -339,7 +345,7 @@ class ToolsTest {
         FileSystemTool fileTool = new FileSystemTool();
         Map<String, Object> writeParams = new HashMap<>();
         writeParams.put("operation", "write");
-        writeParams.put("path", testFile.toString());
+        writeParams.put("filePath", testFile.toString());
         writeParams.put("content", "Integration Test Content");
         
         BaseTool.ToolResult writeResult = fileTool.execute(writeParams);
@@ -348,20 +354,24 @@ class ToolsTest {
         // 2. 读取文件验证
         Map<String, Object> readParams = new HashMap<>();
         readParams.put("operation", "read");
-        readParams.put("path", testFile.toString());
+        readParams.put("filePath", testFile.toString());
         
         BaseTool.ToolResult readResult = fileTool.execute(readParams);
         assertTrue(readResult.isSuccess());
-        assertEquals("Integration Test Content", readResult.getData());
+        @SuppressWarnings("unchecked")
+        Map<String, Object> readData = (Map<String, Object>) readResult.getData();
+        assertEquals("Integration Test Content", readData.get("content"));
         
         // 3. 检查文件存在
         Map<String, Object> existsParams = new HashMap<>();
         existsParams.put("operation", "exists");
-        existsParams.put("path", testFile.toString());
+        existsParams.put("filePath", testFile.toString());
         
         BaseTool.ToolResult existsResult = fileTool.execute(existsParams);
         assertTrue(existsResult.isSuccess());
-        assertTrue((Boolean) existsResult.getData());
+        @SuppressWarnings("unchecked")
+        Map<String, Object> existsData = (Map<String, Object>) existsResult.getData();
+        assertTrue((Boolean) existsData.get("exists"));
         
         log.info("Multiple tools integration test passed");
     }

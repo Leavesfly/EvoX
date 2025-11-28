@@ -359,8 +359,7 @@ public class WorkflowDemo {
                     }
                 }
                 
-                DataActionInput input = new DataActionInput();
-                input.setInputs(inputs);
+                DataActionInput input = new DataActionInput(inputs);
                 
                 // 执行动作
                 ActionOutput output = action.execute(input);
@@ -398,8 +397,7 @@ public class WorkflowDemo {
         
         @Override
         public ActionOutput execute(ActionInput input) {
-            DataActionInput dataInput = (DataActionInput) input;
-            Object data = dataInput.getInputs().get("data");
+            Object data = input.toMap().get("data");
             
             if (data == null) {
                 return SimpleActionOutput.failure("数据为空");
@@ -444,8 +442,7 @@ public class WorkflowDemo {
         
         @Override
         public ActionOutput execute(ActionInput input) {
-            DataActionInput dataInput = (DataActionInput) input;
-            Object data = dataInput.getInputs().get("data");
+            Object data = input.toMap().get("data");
             
             if (data instanceof List) {
                 @SuppressWarnings("unchecked")
@@ -490,8 +487,7 @@ public class WorkflowDemo {
         
         @Override
         public ActionOutput execute(ActionInput input) {
-            DataActionInput dataInput = (DataActionInput) input;
-            Object data = dataInput.getInputs().get("data");
+            Object data = input.toMap().get("data");
             
             if (data instanceof List) {
                 @SuppressWarnings("unchecked")
@@ -528,16 +524,24 @@ public class WorkflowDemo {
      * 数据动作输入
      */
     @Data
-    static class DataActionInput implements ActionInput {
+    static class DataActionInput extends ActionInput {
         private Map<String, Object> inputs = new HashMap<>();
         
-        @Override
-        public boolean validate() {
-            return inputs != null;
+        public DataActionInput() {
+            super();
         }
         
-        @Override
-        public Map<String, Object> toMap() {
+        public DataActionInput(Map<String, Object> inputs) {
+            super(inputs);
+            this.inputs = inputs;
+        }
+        
+        public void setInputs(Map<String, Object> inputs) {
+            this.inputs = inputs;
+            super.setData(inputs);
+        }
+        
+        public Map<String, Object> getInputs() {
             return inputs;
         }
     }

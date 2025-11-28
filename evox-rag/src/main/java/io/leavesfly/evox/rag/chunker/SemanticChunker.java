@@ -73,7 +73,7 @@ public class SemanticChunker implements Chunker {
             // 如果添加这个句子会超过最大大小
             if (currentLength + sentenceLength > maxChunkSize) {
                 // 保存当前块
-                int endPos = startPos + currentChunk.length();
+                int endPos = Math.min(startPos + currentChunk.length(), text.length());
                 Chunk chunk = Chunk.fromDocument(document, chunkIndex, startPos, endPos);
                 chunks.add(chunk);
                 
@@ -87,7 +87,7 @@ public class SemanticChunker implements Chunker {
             // 如果添加这个句子超过目标大小，检查是否应该分块
             if (currentLength + sentenceLength >= targetChunkSize) {
                 // 保存当前块
-                int endPos = startPos + currentChunk.length();
+                int endPos = Math.min(startPos + currentChunk.length(), text.length());
                 Chunk chunk = Chunk.fromDocument(document, chunkIndex, startPos, endPos);
                 chunks.add(chunk);
                 
@@ -104,7 +104,7 @@ public class SemanticChunker implements Chunker {
         // 处理最后一个块
         if (currentChunk.length() > 0) {
             if (maxChunks == null || chunkIndex < maxChunks) {
-                int endPos = startPos + currentChunk.length();
+                int endPos = Math.min(startPos + currentChunk.length(), text.length());
                 Chunk chunk = Chunk.fromDocument(document, chunkIndex, startPos, endPos);
                 chunks.add(chunk);
             }
@@ -121,7 +121,9 @@ public class SemanticChunker implements Chunker {
      */
     private List<String> splitIntoSentences(String text) {
         List<String> sentences = new ArrayList<>();
-        BreakIterator iterator = BreakIterator.getSentenceInstance(Locale.ENGLISH);
+        
+        // 支持中英文的句子分割
+        BreakIterator iterator = BreakIterator.getSentenceInstance(Locale.CHINESE);
         iterator.setText(text);
 
         int start = iterator.first();

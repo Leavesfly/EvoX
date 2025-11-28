@@ -32,6 +32,11 @@ public class SearchTool {
         this.searchEngine = searchEngine;
     }
 
+    public SearchTool(String searchEngine, int maxResults) {
+        this(searchEngine);
+        this.maxResults = maxResults;
+    }
+
     /**
      * 执行搜索操作
      */

@@ -66,7 +66,8 @@ public class AliyunLLMConfig extends LLMConfig {
      * 是否启用网络搜索增强
      * 部分模型支持实时网络搜索
      */
-    private Boolean enableSearch;
+    @lombok.Builder.Default
+    private Boolean enableSearch = false;
 
     /**
      * 响应格式
@@ -99,6 +100,9 @@ public class AliyunLLMConfig extends LLMConfig {
         setProvider("aliyun");
         setModel("qwen-turbo");
         setBaseUrl("https://dashscope.aliyuncs.com/api/v1");
+        if (this.enableSearch == null) {
+            this.enableSearch = false;
+        }
     }
 
     /**

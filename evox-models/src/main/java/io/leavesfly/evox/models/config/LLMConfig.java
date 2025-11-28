@@ -1,6 +1,7 @@
 package io.leavesfly.evox.models.config;
 
 import io.leavesfly.evox.core.module.BaseModule;
+import lombok.Builder;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.experimental.SuperBuilder;
@@ -41,27 +42,32 @@ public abstract class LLMConfig extends BaseModule {
     /**
      * 温度参数(0.0-2.0)
      */
-    private Float temperature;
+    @Builder.Default
+    private Float temperature = 0.7f;
 
     /**
      * 最大token数
      */
-    private Integer maxTokens;
+    @Builder.Default
+    private Integer maxTokens = 1000;
 
     /**
      * Top-p采样参数
      */
-    private Float topP;
+    @Builder.Default
+    private Float topP = 1.0f;
 
     /**
      * 频率惩罚
      */
-    private Float frequencyPenalty;
+    @Builder.Default
+    private Float frequencyPenalty = 0.0f;
 
     /**
      * 存在惩罚
      */
-    private Float presencePenalty;
+    @Builder.Default
+    private Float presencePenalty = 0.0f;
 
     /**
      * 是否启用流式输出

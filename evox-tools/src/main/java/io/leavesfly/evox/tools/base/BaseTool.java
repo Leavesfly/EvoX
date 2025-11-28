@@ -166,5 +166,13 @@ public abstract class BaseTool extends BaseModule {
             result.setMetadata(metadata);
             return result;
         }
+
+        @SuppressWarnings("unchecked")
+        public <T> T get(String key) {
+            if (data instanceof Map) {
+                return (T) ((Map<String, Object>) data).get(key);
+            }
+            return null;
+        }
     }
 }

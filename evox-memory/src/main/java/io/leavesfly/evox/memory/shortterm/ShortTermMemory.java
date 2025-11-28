@@ -9,6 +9,7 @@ import lombok.extern.slf4j.Slf4j;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 /**
@@ -23,9 +24,22 @@ import java.util.stream.Collectors;
 public class ShortTermMemory extends Memory {
 
     /**
+     * 记忆唯一标识
+     */
+    private String memoryId;
+
+    /**
      * 消息列表
      */
     private List<Message> messages = new ArrayList<>();
+
+    @Override
+    public void initModule() {
+        super.initModule();
+        if (memoryId == null) {
+            memoryId = UUID.randomUUID().toString();
+        }
+    }
 
     /**
      * 最大消息数量（0表示无限制）
@@ -34,11 +48,13 @@ public class ShortTermMemory extends Memory {
 
     public ShortTermMemory() {
         super();
+        initModule();
     }
 
     public ShortTermMemory(int maxMessages) {
         super();
         this.maxMessages = maxMessages;
+        initModule();
     }
 
     /**
@@ -88,6 +104,87 @@ public class ShortTermMemory extends Memory {
 
         int fromIndex = Math.max(0, messages.size() - n);
         return new ArrayList<>(messages.subList(fromIndex, messages.size()));
+    }
+
+    /**
+     * 获取内存ID
+     */
+    public String getMemoryId() {
+        return memoryId;
+    }
+
+    /**
+     * 获取最大大小
+     */
+    public int getMaxSize() {
+        return maxMessages;
+    }
+
+    /**
+     * 检查是否已满
+     */
+    public boolean isFull() {
+        return maxMessages > 0 && messages.size() >= maxMessages;
+    }
+
+    /**
+     * 获取所有消息
+     */
+    public List<Message> getAll() {
+        return getMessages();
+    }
+
+    /**
+     * 获取最近N条消息
+     */
+    public List<Message> get(int n) {
+        return getLatestMessages(n);
+    }
+
+    /**
+     * 获取最后一条消息
+     */
+    public Message getLastMessage() {
+        if (messages.isEmpty()) {
+            return null;
+        }
+        return messages.get(messages.size() - 1);
+    }
+
+    /**
+     * 获取第一条消息
+     */
+    public Message getFirstMessage() {
+        if (messages.isEmpty()) {
+            return null;
+        }
+        return messages.get(0);
+    }
+
+    /**
+     * 调整大小
+     */
+    public void resize(int newMaxSize) {
+        if (newMaxSize < 0) {
+            throw new IllegalArgumentException("Max size cannot be negative");
+        }
+        
+        this.maxMessages = newMaxSize;
+        
+        // 如果新大小小于当前消息数量，移除多余的消息
+        while (maxMessages > 0 && messages.size() > maxMessages) {
+            messages.remove(0);
+        }
+    }
+
+    /**
+     * 获取剩余容量
+     */
+    public int getRemainingCapacity() {
+        if (maxMessages <= 0) {
+            return Integer.MAX_VALUE; // 无限制
+        }
+        return Math.max(0, maxMessages - messages.size());
     }
 
     /**

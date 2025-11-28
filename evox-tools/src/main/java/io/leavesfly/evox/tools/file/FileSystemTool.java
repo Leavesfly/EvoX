@@ -19,17 +19,16 @@ import java.util.*;
 @Data
 public class FileSystemTool extends BaseTool {
 
-    private String name;
-    private String description;
     private String workingDirectory;
     private boolean allowAbsolutePaths;
     private List<String> allowedExtensions;
 
     public FileSystemTool() {
-        this.name = "FileSystemTool";
+        super(); // 显式调用父类构造函数
+        this.name = "file_system";
         this.description = "A tool for file system operations including read, write, append, delete, and list files";
         this.workingDirectory = System.getProperty("user.dir");
-        this.allowAbsolutePaths = false;
+        this.allowAbsolutePaths = true;
         this.allowedExtensions = Arrays.asList(".txt", ".md", ".json", ".xml", ".csv", ".log", ".java", ".py");
         
         // 初始化BaseTool的属性

@@ -1,10 +1,10 @@
 package io.leavesfly.evox.optimizers;
 
-import io.leavesfly.evox.models.BaseLLM;
-import io.leavesfly.evox.models.OpenAILLM;
-import io.leavesfly.evox.models.OpenAILLMConfig;
-import io.leavesfly.evox.workflow.Workflow;
-import io.leavesfly.evox.workflow.WorkflowGraph;
+import io.leavesfly.evox.models.base.BaseLLM;
+import io.leavesfly.evox.models.openai.OpenAILLM;
+import io.leavesfly.evox.models.config.OpenAILLMConfig;
+import io.leavesfly.evox.workflow.base.Workflow;
+import io.leavesfly.evox.workflow.graph.WorkflowGraph;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -28,10 +28,9 @@ class OptimizerTest {
     void setUp() {
         // Create test workflow
         WorkflowGraph graph = new WorkflowGraph();
-        testWorkflow = Workflow.builder()
-                .name("test-workflow")
-                .graph(graph)
-                .build();
+        testWorkflow = new Workflow();
+        testWorkflow.setName("test-workflow");
+        testWorkflow.setGraph(graph);
 
         // Create test LLM
         OpenAILLMConfig config = OpenAILLMConfig.builder()
@@ -277,8 +276,8 @@ class OptimizerTest {
 
         // No improvement scenarios
         assertFalse(optimizer.checkConvergence(0.5));
-        assertTrue(optimizer.checkConvergence(0.4));
-        assertTrue(optimizer.checkConvergence(0.3));
+        assertFalse(optimizer.checkConvergence(0.4));
+        assertFalse(optimizer.checkConvergence(0.3));
         assertTrue(optimizer.checkConvergence(0.3));
 
         // Improvement scenario

@@ -32,5 +32,8 @@ public class OpenAILLMConfig extends LLMConfig {
     public OpenAILLMConfig() {
         setProvider("openai");
         setModel("gpt-4o-mini");
+        setTemperature(0.7f);  // 设置默认温度
+        setTopP(1.0f);        // 设置默认top-p
+        setMaxTokens(1000);   // 设置默认最大token数
     }
 }

@@ -140,7 +140,7 @@ public class ToolsExample {
 
         log.info("Writing to file: /tmp/evox_test.txt");
         var result2 = fileTool.execute(params2);
-        log.info("Write result: {}", result2.get("success"));
+        log.info("Write result: {}", String.valueOf(result2.get("success")));
 
         // 读取文件
         Map<String, Object> params3 = new HashMap<>();
@@ -165,7 +165,7 @@ public class ToolsExample {
         params5.put("filePath", "/tmp/evox_test.txt");
 
         var result5 = fileTool.execute(params5);
-        log.info("Delete result: {}", result5.get("success"));
+        log.info("Delete result: {}", String.valueOf(result5.get("success")));
     }
 
     /**
