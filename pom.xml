@@ -6,12 +6,12 @@
     <modelVersion>4.0.0</modelVersion>
 
     <groupId>io.leavesfly.evox</groupId>
-    <artifactId>evox-parent</artifactId>
+    <artifactId>evox</artifactId>
     <version>1.0.0-SNAPSHOT</version>
     <packaging>pom</packaging>
 
-    <name>EvoX Parent</name>
-    <description>EvoAgentX Java Spring Ecosystem - Parent POM</description>
+    <name>EvoX</name>
+    <description>EvoX</description>
 
     <properties>
         <!-- Java Version -->

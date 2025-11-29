@@ -7,8 +7,9 @@
 
     <parent>
         <groupId>io.leavesfly.evox</groupId>
-        <artifactId>evox-parent</artifactId>
+        <artifactId>evox</artifactId>
         <version>1.0.0-SNAPSHOT</version>
+        <relativePath>../../pom.xml</relativePath>
     </parent>
 
     <artifactId>evox-workflow</artifactId>

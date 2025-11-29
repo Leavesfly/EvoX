@@ -22,16 +22,16 @@ class RetryTest {
     @DisplayName("测试 RetryPolicy 默认配置")
     void testRetryPolicyDefaultConfiguration() {
         // When
-        RetryPolicy policy = new RetryPolicy();
+        RetryPolicy policy = RetryPolicy.defaultPolicy();
         
         // Then
         assertEquals(3, policy.getMaxAttempts(), "默认最大重试次数应为 3");
-        assertEquals(Duration.ofSeconds(1), policy.getInitialDelay(), 
-                "默认初始延迟应为 1 秒");
+        assertEquals(Duration.ofMillis(100), policy.getInitialDelay(), 
+                "默认初始延迟应为 100 毫秒");
         assertEquals(2.0, policy.getBackoffMultiplier(), 
                 "默认退避倍数应为 2.0");
-        assertEquals(Duration.ofSeconds(30), policy.getMaxDelay(), 
-                "默认最大延迟应为 30 秒");
+        assertEquals(Duration.ofSeconds(10), policy.getMaxDelay(), 
+                "默认最大延迟应为 10 秒");
     }
 
     @Test
@@ -60,6 +60,7 @@ class RetryTest {
                 .initialDelay(Duration.ofMillis(100))
                 .backoffMultiplier(2.0)
                 .maxDelay(Duration.ofSeconds(10))
+                .useJitter(false)
                 .build();
         
         // When & Then
@@ -95,7 +96,7 @@ class RetryTest {
     @DisplayName("测试是否可重试判断 - 默认所有异常可重试")
     void testIsRetryableDefault() {
         // Given
-        RetryPolicy policy = new RetryPolicy();
+        RetryPolicy policy = RetryPolicy.defaultPolicy();
         
         // Then
         assertTrue(policy.isRetryable(new RuntimeException()), 
@@ -110,7 +111,7 @@ class RetryTest {
     @DisplayName("测试 RetryExecutor 成功执行（无需重试）")
     void testRetryExecutorSuccessNoRetry() throws Exception {
         // Given
-        RetryPolicy policy = new RetryPolicy();
+        RetryPolicy policy = RetryPolicy.defaultPolicy();
         RetryExecutor executor = new RetryExecutor(policy);
         Callable<String> callable = () -> "success";
         
@@ -176,7 +177,7 @@ class RetryTest {
         // Given
         RetryPolicy policy = RetryPolicy.builder()
                 .maxAttempts(3)
-                .retryableExceptions(ExecutionException.class)
+                .retryableException(e -> e instanceof ExecutionException)
                 .build();
         RetryExecutor executor = new RetryExecutor(policy);
         
@@ -233,7 +234,7 @@ class RetryTest {
                 .initialDelay(Duration.ofMillis(200))
                 .backoffMultiplier(1.5)
                 .maxDelay(Duration.ofSeconds(10))
-                .retryableExceptions(RuntimeException.class, ExecutionException.class)
+                .retryableException(e -> e instanceof RuntimeException || e instanceof ExecutionException)
                 .build();
         
         // Then
@@ -246,7 +247,7 @@ class RetryTest {
     @DisplayName("测试获取 RetryPolicy")
     void testGetRetryPolicy() {
         // Given
-        RetryPolicy policy = new RetryPolicy();
+        RetryPolicy policy = RetryPolicy.defaultPolicy();
         RetryExecutor executor = new RetryExecutor(policy);
         
         // When

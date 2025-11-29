@@ -3,7 +3,7 @@ package io.leavesfly.evox.core.message;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.DisplayName;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -22,7 +22,7 @@ class MessageTest {
     void testMessageCreationWithBuilder() {
         // Given
         String content = "Hello, World!";
-        MessageType type = MessageType.USER;
+        MessageType type = MessageType.INPUT;
         
         // When
         Message message = Message.builder()
@@ -41,14 +41,12 @@ class MessageTest {
     @DisplayName("测试所有 MessageType 枚举值")
     void testAllMessageTypes() {
         MessageType[] types = {
-            MessageType.SYSTEM,
-            MessageType.USER,
-            MessageType.ASSISTANT,
-            MessageType.FUNCTION,
-            MessageType.TOOL,
             MessageType.INPUT,
             MessageType.OUTPUT,
-            MessageType.ERROR
+            MessageType.RESPONSE,
+            MessageType.ERROR,
+            MessageType.SYSTEM,
+            MessageType.UNKNOWN
         };
         
         for (MessageType type : types) {
@@ -63,27 +61,21 @@ class MessageTest {
     }
 
     @Test
-    @DisplayName("测试 Message 带元数据")
-    void testMessageWithMetadata() {
+    @DisplayName("测试 Message 带工作流目标")
+    void testMessageWithWorkflowGoal() {
         // Given
-        Map<String, Object> metadata = new HashMap<>();
-        metadata.put("key1", "value1");
-        metadata.put("key2", 123);
-        metadata.put("key3", true);
+        String workflowGoal = "Complete task";
         
         // When
         Message message = Message.builder()
                 .content("test")
-                .messageType(MessageType.USER)
-                .metadata(metadata)
+                .messageType(MessageType.INPUT)
+                .workflowGoal(workflowGoal)
                 .build();
         
         // Then
-        assertNotNull(message.getMetadata(), "元数据不应为 null");
-        assertEquals(3, message.getMetadata().size(), "元数据应有3个条目");
-        assertEquals("value1", message.getMetadata().get("key1"));
-        assertEquals(123, message.getMetadata().get("key2"));
-        assertEquals(true, message.getMetadata().get("key3"));
+        assertNotNull(message.getWorkflowGoal(), "工作流目标不应为 null");
+        assertEquals(workflowGoal, message.getWorkflowGoal());
     }
 
     @Test
@@ -95,7 +87,7 @@ class MessageTest {
         // When
         Message message = Message.builder()
                 .content("test")
-                .messageType(MessageType.ASSISTANT)
+                .messageType(MessageType.RESPONSE)
                 .agent(agentName)
                 .build();
         
@@ -125,12 +117,11 @@ class MessageTest {
     void testMessageFullConstruction() {
         // Given
         String content = "Complete message";
-        MessageType type = MessageType.ASSISTANT;
+        MessageType type = MessageType.RESPONSE;
         String agent = "ChatAgent";
         String action = "GenerateResponse";
-        Map<String, Object> metadata = new HashMap<>();
-        metadata.put("model", "gpt-4");
-        metadata.put("temperature", 0.7);
+        String workflowGoal = "Complete task";
+        String workflowTask = "Process input";
         
         // When
         Message message = Message.builder()
@@ -138,7 +129,8 @@ class MessageTest {
                 .messageType(type)
                 .agent(agent)
                 .action(action)
-                .metadata(metadata)
+                .workflowGoal(workflowGoal)
+                .workflowTask(workflowTask)
                 .build();
         
         // Then
@@ -147,8 +139,8 @@ class MessageTest {
                 () -> assertEquals(type, message.getMessageType()),
                 () -> assertEquals(agent, message.getAgent()),
                 () -> assertEquals(action, message.getAction()),
-                () -> assertNotNull(message.getMetadata()),
-                () -> assertEquals(2, message.getMetadata().size()),
+                () -> assertEquals(workflowGoal, message.getWorkflowGoal()),
+                () -> assertEquals(workflowTask, message.getWorkflowTask()),
                 () -> assertNotNull(message.getTimestamp())
         );
     }
@@ -158,7 +150,7 @@ class MessageTest {
     void testEmptyContentMessage() {
         Message message = Message.builder()
                 .content("")
-                .messageType(MessageType.USER)
+                .messageType(MessageType.INPUT)
                 .build();
         
         assertNotNull(message);
@@ -170,7 +162,7 @@ class MessageTest {
     void testNullContentMessage() {
         Message message = Message.builder()
                 .content(null)
-                .messageType(MessageType.USER)
+                .messageType(MessageType.INPUT)
                 .build();
         
         assertNotNull(message);
@@ -180,14 +172,14 @@ class MessageTest {
     @Test
     @DisplayName("测试时间戳自动生成")
     void testTimestampAutoGeneration() {
-        LocalDateTime before = LocalDateTime.now();
+        Instant before = Instant.now();
         
         Message message = Message.builder()
                 .content("test")
-                .messageType(MessageType.USER)
+                .messageType(MessageType.INPUT)
                 .build();
         
-        LocalDateTime after = LocalDateTime.now();
+        Instant after = Instant.now();
         
         assertNotNull(message.getTimestamp());
         assertTrue(!message.getTimestamp().isBefore(before), 
@@ -201,13 +193,13 @@ class MessageTest {
     void testMessageEquality() {
         Message msg1 = Message.builder()
                 .content("test")
-                .messageType(MessageType.USER)
+                .messageType(MessageType.INPUT)
                 .agent("Agent1")
                 .build();
         
         Message msg2 = Message.builder()
                 .content("test")
-                .messageType(MessageType.USER)
+                .messageType(MessageType.INPUT)
                 .agent("Agent1")
                 .build();
         
@@ -222,7 +214,7 @@ class MessageTest {
     void testMessageToString() {
         Message message = Message.builder()
                 .content("test content")
-                .messageType(MessageType.USER)
+                .messageType(MessageType.INPUT)
                 .build();
         
         String str = message.toString();
