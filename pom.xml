@@ -53,23 +53,34 @@
     </properties>
 
     <modules>
-        <module>evox-core</module>
-        <module>evox-models</module>
-        <module>evox-actions</module>
-        <module>evox-agents</module>
-        <module>evox-workflow</module>
-        <module>evox-memory</module>
-        <module>evox-storage</module>
-        <module>evox-tools</module>
-        <module>evox-rag</module>
-        <module>evox-optimizers</module>
-        <module>evox-hitl</module>
-        <module>evox-evaluators</module>
-        <module>evox-prompts</module>
-        <module>evox-utils</module>
-        <module>evox-frameworks</module>
-        <module>evox-examples</module>
-        <module>evox-benchmark</module>
+        <!-- 核心层 (Core Layer) -->
+        <module>evox-core/evox-core</module>
+        <module>evox-core/evox-models</module>
+        <module>evox-core/evox-actions</module>
+
+        <!-- 能力层 (Capability Layer) -->
+        <module>evox-capability/evox-storage</module>
+        <module>evox-capability/evox-memory</module>
+        <module>evox-capability/evox-tools</module>
+        <module>evox-capability/evox-utils</module>
+
+        <!-- 业务层 (Business Layer) -->
+        <module>evox-business/evox-agents</module>
+        <module>evox-business/evox-workflow</module>
+        <module>evox-business/evox-rag</module>
+        <module>evox-business/evox-prompts</module>
+
+        <!-- 高级业务层 (Advanced Layer) -->
+        <module>evox-advanced/evox-optimizers</module>
+        <module>evox-advanced/evox-hitl</module>
+        <module>evox-advanced/evox-evaluators</module>
+
+        <!-- 框架层 (Framework Layer) -->
+        <module>evox-framework/evox-frameworks</module>
+
+        <!-- 应用层 (Application Layer) -->
+        <module>evox-application/evox-examples</module>
+        <module>evox-application/evox-benchmark</module>
     </modules>
 
     <dependencyManagement>
