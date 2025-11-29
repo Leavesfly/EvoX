@@ -12,15 +12,21 @@
         <relativePath>../../pom.xml</relativePath>
     </parent>
 
-    <artifactId>evox-utils</artifactId>
-    <name>EvoX Utils</name>
-    <description>EvoX Utils Module - Common utility functions</description>
+    <artifactId>evox-frameworks</artifactId>
+    <name>EvoX Frameworks</name>
+    <description>多智能体协同框架,包含辩论、共识、分层决策、拍卖、团队协作等框架</description>
 
     <dependencies>
         <!-- EvoX Core -->
         <dependency>
             <groupId>io.leavesfly.evox</groupId>
             <artifactId>evox-core</artifactId>
+        </dependency>
+
+        <!-- EvoX Agents - 框架基于 Agent 构建 -->
+        <dependency>
+            <groupId>io.leavesfly.evox</groupId>
+            <artifactId>evox-agents</artifactId>
         </dependency>
 
         <!-- Lombok -->
@@ -30,11 +36,26 @@
             <scope>provided</scope>
         </dependency>
 
-        <!-- SLF4J -->
+        <!-- Logging -->
         <dependency>
             <groupId>org.slf4j</groupId>
             <artifactId>slf4j-api</artifactId>
         </dependency>
+
+        <!-- Test -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-test</artifactId>
+            <scope>test</scope>
+        </dependency>
     </dependencies>
 
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+            </plugin>
+        </plugins>
+    </build>
 </project>

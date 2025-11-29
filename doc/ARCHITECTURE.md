@@ -2,15 +2,14 @@
 
 ## 📐 架构概览
 
-EvoX 采用分层架构设计，将系统划分为 6 个层次，从底层到顶层依次为：
+EvoX 采用分层架构设计，将系统划分为 5 个层次，从底层到顶层依次为：
 
 1. **基础设施层** (Infrastructure)
 2. **核心层** (Core Layer)
 3. **能力层** (Capability Layer)
 4. **业务层** (Business Layer)
 5. **高级业务层** (Advanced Layer)
-6. **框架层** (Framework Layer)
-7. **应用层** (Application Layer)
+6. **应用层** (Application Layer)
 
 ## 🏗️ 分层架构图
 
@@ -19,29 +18,25 @@ EvoX 采用分层架构设计，将系统划分为 6 个层次，从底层到顶
 │                      应用层 (Applications)                       │
 │                evox-examples / evox-benchmark                   │
 ├─────────────────────────────────────────────────────────────────┤
-│                     框架层 (Frameworks)                          │
-│                      evox-frameworks                            │
-│                   (多智能体框架、辩论系统)                          │
-├─────────────────────────────────────────────────────────────────┤
 │                    高级业务层 (Advanced Services)                │
-│  ┌──────────────┬──────────────┬──────────────────────────┐   │
-│  │  Optimizers  │     HITL     │       Evaluators         │   │
-│  │   优化器      │   人机协同    │        评估器            │   │
-│  │ (依赖Workflow)│ (依赖Workflow)│      (独立服务)          │   │
-│  └──────────────┴──────────────┴──────────────────────────┘   │
+│  ┌────────────────────────┬──────────────────────┐   │
+│  │  Optimizers (含评估器)   │        HITL         │   │
+│  │      优化器+评估       │      人机协同      │   │
+│  │      (依赖Workflow)      │   (依赖Workflow)   │   │
+│  └────────────────────────┴──────────────────────┘   │
 ├─────────────────────────────────────────────────────────────────┤
 │                     业务层 (Business Logic)                     │
-│  ┌─────────────┬─────────────┬─────────────┬─────────────┐    │
-│  │   Agents    │  Workflow   │     RAG     │   Prompts   │    │
-│  │   代理系统   │   工作流     │   检索增强   │  提示词管理  │    │
-│  │ (依赖Tools) │ (依赖Memory) │ (依赖Storage)│  (工具类)   │    │
-│  └─────────────┴─────────────┴─────────────┴─────────────┘    │
+│  ┌────────────────────┬─────────────┬─────────────┐    │
+│  │  Agents+Frameworks  │  Workflow  │     RAG     │    │
+│  │   代理+协同框架    │   工作流   │   检索增强 │    │
+│  │    (依赖Tools)     │(依赖Memory)│(依赖Storage)│    │
+│  └────────────────────┴─────────────┴─────────────┘    │
 ├─────────────────────────────────────────────────────────────────┤
 │                    能力层 (Capabilities)                        │
 │  ┌─────────────┬─────────────┬─────────────┬─────────────┐    │
-│  │   Memory    │    Tools    │   Storage   │    Utils    │    │
-│  │   记忆管理   │   工具集     │   存储适配   │   工具类     │    │
-│  │(依赖Storage)│ (独立模块)   │  (独立模块)  │  (独立模块)  │    │
+│  │   Memory    │    Tools    │   Storage   │Utils+Prompts│    │
+│  │   记忆管理   │   工具集     │   存储适配   │ 工具+提示词 │    │
+│  │(依赖Storage)│ (独立模块)   │  (独立模块)  │ (独立模块)  │    │
 │  └─────────────┴─────────────┴─────────────┴─────────────┘    │
 ├─────────────────────────────────────────────────────────────────┤
 │                     核心层 (Core Services)                      │
@@ -63,10 +58,9 @@ EvoX 采用分层架构设计，将系统划分为 6 个层次，从底层到顶
 ```
 evox/
 ├── evox-core/              # 核心层：最底层，提供基础抽象
-├── evox-capability/        # 能力层：提供通用能力
-├── evox-business/          # 业务层：实现核心业务逻辑
-├── evox-advanced/          # 高级业务层：提供高级业务能力
-├── evox-framework/         # 框架层：多智能体协同框架
+├── evox-capability/        # 能力层：提供通用能力(包含提示词)
+├── evox-business/          # 业务层：实现核心业务逻辑(包含多智能体框架)
+├── evox-advanced/          # 高级业务层：提供高级业务能力(包含评估器)
 └── evox-application/       # 应用层：示例和测试
 ```
 
@@ -84,7 +78,6 @@ evox/
 | 层级 | 可依赖的层级 |
 |------|-------------|
 | 应用层 | 所有下层 |
-| 框架层 | 核心层、能力层、业务层 |
 | 高级业务层 | 核心层、能力层、业务层 |
 | 业务层 | 核心层、能力层 |
 | 能力层 | 核心层（部分模块间可互相依赖） |
@@ -118,7 +111,7 @@ evox/
 | evox-storage | 存储适配（内存、数据库、向量、图） | evox-core |
 | evox-memory | 记忆管理（短期、长期） | evox-core, evox-storage |
 | evox-tools | 工具集（文件、HTTP、数据库、搜索） | evox-core |
-| evox-utils | 工具类库 | 无 |
+| evox-utils | 工具类库，包含提示词管理 | evox-core |
 
 **设计原则**:
 - 可插拔设计
@@ -133,10 +126,9 @@ evox/
 
 | 模块 | 说明 | 依赖 |
 |------|------|------|
-| evox-agents | 智能代理系统 | evox-core, evox-models, evox-actions, evox-tools |
+| evox-agents | 智能代理系统，包含多智能体协同框架 | evox-core, evox-models, evox-actions, evox-tools |
 | evox-workflow | 工作流编排引擎 | evox-core, evox-models, evox-memory, evox-storage |
 | evox-rag | 检索增强生成 | evox-core, evox-models, evox-storage |
-| evox-prompts | 提示词管理 | evox-core |
 
 **设计原则**:
 - 业务聚焦
@@ -151,30 +143,14 @@ evox/
 
 | 模块 | 说明 | 依赖 |
 |------|------|------|
-| evox-optimizers | 性能优化器（TextGrad、MIPRO、AFlow） | evox-core, evox-models, evox-agents, evox-workflow |
+| evox-optimizers | 性能优化器（TextGrad、MIPRO、AFlow），包含评估器 | evox-core, evox-models, evox-agents, evox-workflow |
 | evox-hitl | 人机协同 | evox-core, evox-agents, evox-workflow |
-| evox-evaluators | 效果评估器 | evox-core |
 
 **设计原则**:
 - 智能优化
 - 人机结合
 - 效果量化
 - 持续改进
-
-### 框架层 (Framework Layer)
-
-**位置**: `evox-framework/`  
-**职责**: 提供多智能体协同框架
-
-| 模块 | 说明 | 依赖 |
-|------|------|------|
-| evox-frameworks | 多智能体框架（辩论系统等） | evox-core, evox-agents |
-
-**设计原则**:
-- 协同优先
-- 模式封装
-- 易于使用
-- 可扩展
 
 ### 应用层 (Application Layer)
 
@@ -212,9 +188,9 @@ evox/
 
 每一层都有明确的扩展点：
 - 核心层：新增模型适配器
-- 能力层：新增存储类型、工具
-- 业务层：新增业务模块
-- 框架层：新增协同模式
+- 能力层：新增存储类型、工具、提示词模板
+- 业务层：新增业务模块、多智能体协同模式
+- 高级层：新增优化算法、评估指标
 
 ### 4. 维护性强
 

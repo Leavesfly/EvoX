@@ -1,15 +1,15 @@
 # 业务层 (Business Layer)
 
-业务层实现核心业务逻辑，包括智能代理、工作流、RAG 和提示词管理。
+业务层实现核心业务逻辑，包括智能代理、多智能体协同框架、工作流和RAG。
 
 ## 模块列表
 
 | 模块 | 说明 | 依赖 |
 |------|------|------|
-| **evox-agents** | 智能代理系统，提供多种专业代理和代理管理 | evox-core, evox-models, evox-actions, evox-tools |
+| **evox-agents** | 智能代理系统，提供多种专业代理、代理管理 | evox-core, evox-models, evox-actions, evox-tools |
+| **evox-frameworks** | 多智能体协同框架，支持5种核心框架(辩论、共识、分层、拍卖、团队) | evox-core, evox-agents |
 | **evox-workflow** | 工作流编排引擎，支持 DAG、条件分支、循环控制 | evox-core, evox-models, evox-memory, evox-storage |
 | **evox-rag** | 检索增强生成，提供文档处理、向量化、语义检索 | evox-core, evox-models, evox-storage |
-| **evox-prompts** | 提示词管理，提供提示词模板和常量 | evox-core |
 
 ## 设计原则
 
@@ -26,6 +26,9 @@ evox-agents ──┬──> evox-core
               ├──> evox-actions
               └──> evox-tools
 
+evox-frameworks ──┬──> evox-core
+                 └──> evox-agents
+
 evox-workflow ──┬──> evox-core
                 ├──> evox-models
                 ├──> evox-memory
@@ -34,6 +37,4 @@ evox-workflow ──┬──> evox-core
 evox-rag ──┬──> evox-core
            ├──> evox-models
            └──> evox-storage
-
-evox-prompts ──> evox-core
 ```

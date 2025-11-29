@@ -1,14 +1,13 @@
 # 高级业务层 (Advanced Layer)
 
-高级业务层提供更高级的业务能力，包括优化器、人机协同和评估器。
+高级业务层提供更高级的业务能力，包括优化器(含评估器)和人机协同。
 
 ## 模块列表
 
 | 模块 | 说明 | 依赖 |
 |------|------|------|
-| **evox-optimizers** | 性能优化器，支持 TextGrad、MIPRO、AFlow 等优化算法 | evox-core, evox-models, evox-agents, evox-workflow |
+| **evox-optimizers** | 性能优化器，支持 TextGrad、MIPRO、AFlow 等优化算法，包含评估器 | evox-core, evox-models, evox-agents, evox-workflow |
 | **evox-hitl** | 人机协同（Human-in-the-Loop），支持人工介入和决策 | evox-core, evox-agents, evox-workflow |
-| **evox-evaluators** | 效果评估器，提供多维度评估指标 | evox-core |
 
 ## 设计原则
 
@@ -28,8 +27,6 @@ evox-optimizers ──┬──> evox-core
 evox-hitl ──┬──> evox-core
             ├──> evox-agents
             └──> evox-workflow
-
-evox-evaluators ──> evox-core
 ```
 
 ## 特点

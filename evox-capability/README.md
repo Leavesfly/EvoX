@@ -9,7 +9,7 @@
 | **evox-storage** | 存储适配层，支持内存、数据库、向量、图等多种存储 | evox-core |
 | **evox-memory** | 记忆管理系统，提供短期和长期记忆能力 | evox-core, evox-storage |
 | **evox-tools** | 工具集成框架，提供文件、HTTP、数据库、搜索等工具 | evox-core |
-| **evox-utils** | 工具类库，提供通用工具函数 | 无 |
+| **evox-utils** | 工具类库，提供通用工具函数和提示词管理 | evox-core |
 
 ## 设计原则
 
@@ -27,5 +27,5 @@ evox-memory ──┘
 
 evox-tools ──> evox-core
 
-evox-utils (独立)
+evox-utils ──> evox-core
 ```

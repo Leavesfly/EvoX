@@ -53,32 +53,28 @@
     </properties>
 
     <modules>
-        <!-- 核心层 (Core Layer) -->
+        <!-- 核心层 (Core Layer) - 提供基础抽象和模型适配 -->
         <module>evox-core/evox-core</module>
         <module>evox-core/evox-models</module>
         <module>evox-core/evox-actions</module>
 
-        <!-- 能力层 (Capability Layer) -->
+        <!-- 能力层 (Capability Layer) - 提供通用能力(存储、记忆、工具、提示词) -->
         <module>evox-capability/evox-storage</module>
         <module>evox-capability/evox-memory</module>
         <module>evox-capability/evox-tools</module>
         <module>evox-capability/evox-utils</module>
 
-        <!-- 业务层 (Business Layer) -->
+        <!-- 业务层 (Business Layer) - 核心业务逻辑(智能体、工作流、RAG、协同框架) -->
         <module>evox-business/evox-agents</module>
+        <module>evox-business/evox-frameworks</module>
         <module>evox-business/evox-workflow</module>
         <module>evox-business/evox-rag</module>
-        <module>evox-business/evox-prompts</module>
 
-        <!-- 高级业务层 (Advanced Layer) -->
+        <!-- 高级业务层 (Advanced Layer) - 高级能力(优化器、人机协同) -->
         <module>evox-advanced/evox-optimizers</module>
         <module>evox-advanced/evox-hitl</module>
-        <module>evox-advanced/evox-evaluators</module>
 
-        <!-- 框架层 (Framework Layer) -->
-        <module>evox-framework/evox-frameworks</module>
-
-        <!-- 应用层 (Application Layer) -->
+        <!-- 应用层 (Application Layer) - 示例和基准测试 -->
         <module>evox-application/evox-examples</module>
         <module>evox-application/evox-benchmark</module>
     </modules>
@@ -144,6 +140,11 @@
             </dependency>
             <dependency>
                 <groupId>io.leavesfly.evox</groupId>
+                <artifactId>evox-frameworks</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>io.leavesfly.evox</groupId>
                 <artifactId>evox-workflow</artifactId>
                 <version>${project.version}</version>
             </dependency>
@@ -179,22 +180,7 @@
             </dependency>
             <dependency>
                 <groupId>io.leavesfly.evox</groupId>
-                <artifactId>evox-evaluators</artifactId>
-                <version>${project.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>io.leavesfly.evox</groupId>
-                <artifactId>evox-prompts</artifactId>
-                <version>${project.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>io.leavesfly.evox</groupId>
                 <artifactId>evox-utils</artifactId>
-                <version>${project.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>io.leavesfly.evox</groupId>
-                <artifactId>evox-frameworks</artifactId>
                 <version>${project.version}</version>
             </dependency>
             <dependency>
