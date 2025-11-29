@@ -63,6 +63,7 @@
         <module>evox-capability/evox-memory</module>
         <module>evox-capability/evox-tools</module>
         <module>evox-capability/evox-utils</module>
+        <module>evox-capability/evox-spring-boot-starter</module>
 
         <!-- 业务层 (Business Layer) - 核心业务逻辑(智能体、工作流、RAG、协同框架) -->
         <module>evox-business/evox-agents</module>
@@ -181,6 +182,11 @@
             <dependency>
                 <groupId>io.leavesfly.evox</groupId>
                 <artifactId>evox-utils</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>io.leavesfly.evox</groupId>
+                <artifactId>evox-spring-boot-starter</artifactId>
                 <version>${project.version}</version>
             </dependency>
             <dependency>

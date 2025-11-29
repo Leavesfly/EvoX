@@ -1,0 +1,52 @@
+# EvoX Spring Boot Starter 默认配置
+# 复制此文件到你的项目中并根据需要修改
+
+evox:
+  # 是否启用 EvoX 自动配置
+  enabled: true
+  
+  # LLM 配置
+  llm:
+    # LLM 提供商: openai, dashscope, litellm
+    provider: openai
+    # API Key（优先使用环境变量 OPENAI_API_KEY）
+    api-key: ${OPENAI_API_KEY:}
+    # 模型名称
+    model: gpt-4o-mini
+    # 温度参数 (0.0-1.0)
+    temperature: 0.7
+    # 最大 Token 数
+    max-tokens: 2000
+    # 超时时间（毫秒）
+    timeout: 30000
+  
+  # Agent 配置
+  agents:
+    # 默认超时时间（毫秒）
+    default-timeout: 60000
+    # 最大并发数
+    max-concurrent: 10
+  
+  # Memory 配置
+  memory:
+    # 短期记忆配置
+    short-term:
+      # 容量
+      capacity: 100
+      # 滑动窗口大小
+      window-size: 10
+    # 长期记忆配置
+    long-term:
+      # 是否启用
+      enabled: false
+      # 存储类型: in-memory, redis, database
+      storage-type: in-memory
+  
+  # Tools 配置
+  tools:
+    # 是否启用工具
+    enabled: true
+    # 超时时间（毫秒）
+    timeout: 30000
+    # 最大重试次数
+    max-retries: 3

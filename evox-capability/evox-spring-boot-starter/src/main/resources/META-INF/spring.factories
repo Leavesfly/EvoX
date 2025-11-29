@@ -1,0 +1,2 @@
+org.springframework.boot.autoconfigure.EnableAutoConfiguration=\
+io.leavesfly.evox.starter.EvoXAutoConfiguration

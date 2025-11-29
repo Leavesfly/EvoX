@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project xmlns="http://maven.apache.org/POM/4.0.0"
          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0
          http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
@@ -12,60 +12,64 @@
         <relativePath>../../pom.xml</relativePath>
     </parent>
 
-    <artifactId>evox-workflow</artifactId>
-    <name>EvoX Workflow</name>
-    <description>EvoX Workflow Module - Workflow engine</description>
+    <artifactId>evox-spring-boot-starter</artifactId>
+    <name>EvoX Spring Boot Starter</name>
+    <description>Spring Boot Starter for EvoX framework with auto-configuration</description>
 
     <dependencies>
+        <!-- EvoX Core Dependencies -->
         <dependency>
             <groupId>io.leavesfly.evox</groupId>
             <artifactId>evox-core</artifactId>
         </dependency>
+        
         <dependency>
             <groupId>io.leavesfly.evox</groupId>
             <artifactId>evox-models</artifactId>
         </dependency>
+        
         <dependency>
             <groupId>io.leavesfly.evox</groupId>
             <artifactId>evox-agents</artifactId>
         </dependency>
+        
         <dependency>
             <groupId>io.leavesfly.evox</groupId>
             <artifactId>evox-memory</artifactId>
         </dependency>
-        <dependency>
-            <groupId>io.leavesfly.evox</groupId>
-            <artifactId>evox-storage</artifactId>
-        </dependency>
-
-        <!-- Test dependencies -->
+        
         <dependency>
             <groupId>io.leavesfly.evox</groupId>
             <artifactId>evox-tools</artifactId>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>io.leavesfly.evox</groupId>
-            <artifactId>evox-actions</artifactId>
-            <scope>test</scope>
         </dependency>
 
+        <!-- Spring Boot Starter -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter</artifactId>
         </dependency>
 
+        <!-- Spring Boot Configuration Processor -->
         <dependency>
-            <groupId>io.projectreactor</groupId>
-            <artifactId>reactor-core</artifactId>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-configuration-processor</artifactId>
+            <optional>true</optional>
         </dependency>
 
+        <!-- Spring Boot Autoconfigure -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-autoconfigure</artifactId>
+        </dependency>
+
+        <!-- Lombok -->
         <dependency>
             <groupId>org.projectlombok</groupId>
             <artifactId>lombok</artifactId>
             <scope>provided</scope>
         </dependency>
 
+        <!-- Test Dependencies -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-test</artifactId>
@@ -73,4 +77,12 @@
         </dependency>
     </dependencies>
 
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+            </plugin>
+        </plugins>
+    </build>
 </project>
