@@ -1,0 +1,39 @@
+# 生产环境配置
+spring:
+  ai:
+    openai:
+      chat:
+        options:
+          model: gpt-4o  # 生产环境使用更强的模型
+
+evox:
+  llm:
+    temperature: 0.7
+    max-tokens: 2000
+    retry:
+      max-attempts: 5
+      max-delay: 30000
+  
+  agents:
+    max-concurrent: 20
+  
+  memory:
+    short-term:
+      capacity: 200
+      window-size: 20
+    long-term:
+      enabled: true
+      storage-type: redis  # 生产环境使用 Redis
+  
+  workflow:
+    timeout: 600000  # 10分钟超时
+
+logging:
+  level:
+    root: INFO
+    io.leavesfly.evox: INFO
+    org.springframework.ai: WARN
+  file:
+    name: /var/log/evox/evox-examples.log
+    max-size: 50MB
+    max-history: 90

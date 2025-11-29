@@ -1,0 +1,97 @@
+spring:
+  application:
+    name: evox-examples
+  
+  # AI 模型配置
+  ai:
+    openai:
+      api-key: ${OPENAI_API_KEY:}
+      base-url: ${OPENAI_BASE_URL:https://api.openai.com}
+      chat:
+        options:
+          model: ${OPENAI_MODEL:gpt-4o-mini}
+          temperature: 0.7
+          max-tokens: 2000
+    
+    # 阿里云通义千问配置（可选）
+    dashscope:
+      api-key: ${DASHSCOPE_API_KEY:}
+      chat:
+        options:
+          model: ${DASHSCOPE_MODEL:qwen-plus}
+
+# EvoX 框架配置
+evox:
+  # LLM 通用配置
+  llm:
+    provider: ${LLM_PROVIDER:openai}  # openai, dashscope, litellm
+    temperature: ${LLM_TEMPERATURE:0.7}
+    max-tokens: ${LLM_MAX_TOKENS:2000}
+    timeout: ${LLM_TIMEOUT:30000}  # 毫秒
+    retry:
+      max-attempts: ${LLM_RETRY_MAX_ATTEMPTS:3}
+      initial-delay: ${LLM_RETRY_INITIAL_DELAY:1000}
+      max-delay: ${LLM_RETRY_MAX_DELAY:10000}
+  
+  # Agent 配置
+  agents:
+    default-timeout: ${AGENT_TIMEOUT:60000}  # 毫秒
+    max-concurrent: ${AGENT_MAX_CONCURRENT:10}
+  
+  # Memory 配置
+  memory:
+    short-term:
+      capacity: ${MEMORY_SHORT_CAPACITY:100}
+      window-size: ${MEMORY_SHORT_WINDOW:10}
+    long-term:
+      enabled: ${MEMORY_LONG_ENABLED:true}
+      storage-type: ${MEMORY_LONG_STORAGE:in-memory}  # in-memory, redis, database
+  
+  # Storage 配置
+  storage:
+    type: ${STORAGE_TYPE:in-memory}  # in-memory, h2, postgresql
+    vector:
+      enabled: ${VECTOR_ENABLED:false}
+      provider: ${VECTOR_PROVIDER:in-memory}  # in-memory, qdrant, milvus
+      dimension: ${VECTOR_DIMENSION:1536}
+  
+  # Workflow 配置
+  workflow:
+    max-depth: ${WORKFLOW_MAX_DEPTH:10}
+    timeout: ${WORKFLOW_TIMEOUT:300000}  # 毫秒
+    enable-parallel: ${WORKFLOW_PARALLEL:true}
+  
+  # Tools 配置
+  tools:
+    enabled: ${TOOLS_ENABLED:true}
+    timeout: ${TOOLS_TIMEOUT:30000}
+    max-retries: ${TOOLS_MAX_RETRIES:3}
+
+# 日志配置
+logging:
+  level:
+    root: ${LOGGING_LEVEL:INFO}
+    io.leavesfly.evox: ${LOGGING_LEVEL_EVOX:DEBUG}
+    org.springframework.ai: ${LOGGING_LEVEL_SPRING_AI:INFO}
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n"
+    file: "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n"
+  file:
+    name: ${LOGGING_FILE:logs/evox-examples.log}
+    max-size: ${LOGGING_MAX_SIZE:10MB}
+    max-history: ${LOGGING_MAX_HISTORY:30}
+
+# 管理端点配置（用于监控）
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
+  endpoint:
+    health:
+      show-details: when-authorized
+  metrics:
+    enable:
+      jvm: true
+      process: true
+      system: true

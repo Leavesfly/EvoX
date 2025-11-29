@@ -1,0 +1,26 @@
+# 开发环境配置
+spring:
+  ai:
+    openai:
+      chat:
+        options:
+          model: gpt-4o-mini  # 开发环境使用更快的模型
+
+evox:
+  llm:
+    temperature: 0.3  # 开发环境降低随机性
+    max-tokens: 1000
+  
+  memory:
+    short-term:
+      capacity: 50
+      window-size: 5
+  
+  workflow:
+    timeout: 60000  # 1分钟超时
+
+logging:
+  level:
+    root: DEBUG
+    io.leavesfly.evox: DEBUG
+    org.springframework.ai: DEBUG

@@ -7,11 +7,19 @@ import java.util.*;
 
 /**
  * Qdrant向量存储实现
- *
+ * 
+ * <p><b>⚠️ 注意：此类尚未实现，仅为占位符</b></p>
+ * <p>计划支持 Qdrant 向量数据库集成，目前建议使用 {@link InMemoryVectorStore}</p>
+ * <p>欢迎贡献此功能的实现！</p>
+ * 
  * @author EvoX Team
+ * @since 1.0.0
+ * @deprecated 未实现，请使用 {@link InMemoryVectorStore}
+ * @see InMemoryVectorStore
  */
 @Slf4j
 @Data
+@Deprecated(since = "1.0.0", forRemoval = false)
 public class QdrantVectorStore implements VectorStore {
 
     private String host;
@@ -30,9 +38,13 @@ public class QdrantVectorStore implements VectorStore {
     @Override
     public void initialize() {
         if (!initialized) {
+            log.warn("⚠️ QdrantVectorStore is not implemented yet. Use InMemoryVectorStore instead.");
             log.info("Initializing Qdrant vector store: {}", collectionName);
-            // TODO: 实现Qdrant初始化
-            initialized = true;
+            // NOTE: Qdrant integration not implemented
+            // To implement: Connect to Qdrant server and create collection
+            // See: https://qdrant.tech/documentation/quick-start/
+            throw new UnsupportedOperationException(
+                "Qdrant integration is not implemented. Please use InMemoryVectorStore or contribute to implement this feature.");
         }
     }
 

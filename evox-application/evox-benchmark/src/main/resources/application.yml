@@ -1,0 +1,33 @@
+spring:
+  application:
+    name: evox-benchmark
+  
+  ai:
+    openai:
+      api-key: ${OPENAI_API_KEY:}
+      chat:
+        options:
+          model: ${OPENAI_MODEL:gpt-4o-mini}
+          temperature: 0.0  # 基准测试使用确定性输出
+          max-tokens: 2000
+
+evox:
+  llm:
+    provider: openai
+    temperature: 0.0
+    max-tokens: 2000
+  
+  # Benchmark 专用配置
+  benchmark:
+    warmup-iterations: ${BENCHMARK_WARMUP:3}
+    measurement-iterations: ${BENCHMARK_ITERATIONS:10}
+    timeout: ${BENCHMARK_TIMEOUT:300000}
+    parallel-threads: ${BENCHMARK_THREADS:1}
+    output-directory: ${BENCHMARK_OUTPUT:./benchmark-results}
+
+logging:
+  level:
+    root: INFO
+    io.leavesfly.evox: INFO
+  pattern:
+    console: "%d{HH:mm:ss.SSS} %-5level %logger{36} - %msg%n"
