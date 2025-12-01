@@ -603,175 +603,355 @@ curl https://api.openai.com/v1/models \
 
 ## 💡 使用示例
 
-### 示例 1: 带记忆的对话
+### 示例 1：带记忆的对话
+
+实现一个能够记住上下文的对话系统：
 
 ```java
 import io.leavesfly.evox.memory.shortterm.ShortTermMemory;
+import io.leavesfly.evox.agents.base.Agent;
+import io.leavesfly.evox.models.openai.OpenAILLM;
 
-// 创建短期记忆
-ShortTermMemory memory = ShortTermMemory.builder()
-    .capacity(20)        // 最大容量
-    .windowSize(10)      // 滑动窗口大小
-    .build();
-
-// 创建带记忆的 Agent
-Agent agent = Agent.builder()
-    .name("MemoryBot")
-    .llm(llm)
-    .memory(memory)
-    .build();
-
-// 多轮对话
-String[] questions = {
-    "我叫张三",
-    "我最喜欢的颜色是蓝色",
-    "你还记得我叫什么名字吗？",
-    "我喜欢什么颜色？"
-};
-
-for (String question : questions) {
-    Message msg = Message.builder()
-        .content(question)
-        .messageType(MessageType.USER)
-        .build();
-    
-    memory.addMessage(msg);
-    
-    List<Message> context = memory.getLatestMessages(5);
-    Message response = agent.execute("chat", context);
-    
-    memory.addMessage(response);
-    System.out.println("Q: " + question);
-    System.out.println("A: " + response.getContent());
+public class MemoryChatBot {
+    public static void main(String[] args) {
+        // 1. 创建短期记忆
+        ShortTermMemory memory = ShortTermMemory.builder()
+            .capacity(100)        // 最大容量
+            .windowSize(10)       // 滑动窗口大小
+            .build();
+        
+        // 2. 创建带记忆的 Agent
+        Agent agent = Agent.builder()
+            .name("MemoryBot")
+            .llm(new OpenAILLM(config))
+            .memory(memory)
+            .build();
+        
+        // 3. 多轮对话
+        String[] questions = {
+            "我叫张三",
+            "我最喜欢的颜色是蓝色",
+            "你还记得我叫什么名字吗？",
+            "我喜欢什么颜色？"
+        };
+        
+        for (String question : questions) {
+            Message msg = Message.builder()
+                .content(question)
+                .messageType(MessageType.USER)
+                .build();
+            
+            // 保存用户消息
+            memory.addMessage(msg);
+            
+            // 获取历史上下文
+            List<Message> context = memory.getLatestMessages(5);
+            Message response = agent.execute("chat", context);
+            
+            // 保存 AI 回复
+            memory.addMessage(response);
+            
+            System.out.println("Q: " + question);
+            System.out.println("A: " + response.getContent());
+            System.out.println();
+        }
+    }
 }
 ```
 
-### 示例 2: 使用工具
+**运行结果**：
+```
+Q: 我叫张三
+A: 你好，张三！很高兴认识你。
+
+Q: 我最喜欢的颜色是蓝色
+A: 好的，我记住了，你喜欢蓝色。
+
+Q: 你还记得我叫什么名字吗？
+A: 当然记得，你叫张三。
+
+Q: 我喜欢什么颜色？
+A: 你最喜欢的颜色是蓝色。
+```
+
+### 示例 2：集成外部工具
+
+让 Agent 具备调用外部工具的能力：
 
 ```java
 import io.leavesfly.evox.tools.base.Toolkit;
 import io.leavesfly.evox.tools.file.FileSystemTool;
 import io.leavesfly.evox.tools.http.HttpTool;
 import io.leavesfly.evox.tools.search.WebSearchTool;
+import io.leavesfly.evox.agents.specialized.ToolAgent;
 
-// 创建工具集
-Toolkit toolkit = new Toolkit();
-toolkit.addTool(new FileSystemTool());
-toolkit.addTool(new HttpTool());
-toolkit.addTool(new WebSearchTool());
-
-// 创建带工具的 Agent
-Agent toolAgent = Agent.builder()
-    .name("ToolBot")
-    .llm(llm)
-    .toolkit(toolkit)
-    .build();
-
-// 使用工具
-Message request = Message.builder()
-    .content("请搜索最新的 AI 新闻")
-    .messageType(MessageType.USER)
-    .build();
-
-Message response = toolAgent.execute("use-tool", 
-    Collections.singletonList(request));
+public class ToolIntegrationExample {
+    public static void main(String[] args) {
+        // 1. 创建工具集
+        Toolkit toolkit = new Toolkit();
+        toolkit.addTool(new FileSystemTool());     // 文件操作
+        toolkit.addTool(new HttpTool());          // HTTP 请求
+        toolkit.addTool(new WebSearchTool());     // 网络搜索
+        
+        // 2. 创建 ToolAgent
+        ToolAgent toolAgent = ToolAgent.builder()
+            .name("ToolBot")
+            .llm(new OpenAILLM(config))
+            .toolkit(toolkit)
+            .build();
+        
+        // 3. 使用工具
+        Message request = Message.builder()
+            .content("请搜索最新的 AI 新闻，并保存到 news.txt 文件")
+            .messageType(MessageType.USER)
+            .build();
+        
+        Message response = toolAgent.execute("use-tool", 
+            Collections.singletonList(request));
+        
+        System.out.println(response.getContent());
+    }
+}
 ```
 
-### 示例 3: 工作流编排
+### 示例 3：DAG 工作流编排
+
+构建一个复杂的多步骤工作流：
 
 ```java
 import io.leavesfly.evox.workflow.base.Workflow;
 import io.leavesfly.evox.workflow.graph.WorkflowGraph;
 import io.leavesfly.evox.workflow.graph.WorkflowNode;
+import io.leavesfly.evox.workflow.graph.WorkflowNode.NodeType;
 
-// 创建工作流节点
-WorkflowNode analyzeNode = WorkflowNode.builder()
-    .nodeId("analyze")
-    .name("分析问题")
-    .nodeType(WorkflowNode.NodeType.ACTION)
-    .build();
-
-WorkflowNode answerNode = WorkflowNode.builder()
-    .nodeId("answer")
-    .name("生成答案")
-    .nodeType(WorkflowNode.NodeType.ACTION)
-    .build();
-
-// 创建工作流图
-WorkflowGraph graph = new WorkflowGraph();
-graph.addNode(analyzeNode);
-graph.addNode(answerNode);
-graph.addEdge("analyze", "answer");
-
-// 创建工作流
-Workflow workflow = Workflow.builder()
-    .name("QA-Workflow")
-    .graph(graph)
-    .llm(llm)
-    .build();
-
-// 执行工作流
-Map<String, Object> inputs = Map.of(
-    "question", "什么是人工智能？"
-);
-
-String result = workflow.execute(inputs);
-System.out.println("结果: " + result);
+public class WorkflowExample {
+    public static void main(String[] args) {
+        // 1. 创建工作流节点
+        WorkflowNode step1 = WorkflowNode.builder()
+            .nodeId("analyze")
+            .name("分析问题")
+            .nodeType(NodeType.ACTION)
+            .action(new AnalyzeAction())
+            .build();
+        
+        WorkflowNode step2 = WorkflowNode.builder()
+            .nodeId("search")
+            .name("搜索信息")
+            .nodeType(NodeType.ACTION)
+            .action(new SearchAction())
+            .build();
+        
+        WorkflowNode step3 = WorkflowNode.builder()
+            .nodeId("summarize")
+            .name("总结答案")
+            .nodeType(NodeType.ACTION)
+            .action(new SummarizeAction())
+            .build();
+        
+        // 2. 构建工作流图
+        WorkflowGraph graph = new WorkflowGraph();
+        graph.addNode(step1);
+        graph.addNode(step2);
+        graph.addNode(step3);
+        
+        // 定义节点依赖关系
+        graph.addEdge("analyze", "search");     // step1 -> step2
+        graph.addEdge("search", "summarize");   // step2 -> step3
+        
+        // 3. 创建工作流
+        Workflow workflow = Workflow.builder()
+            .name("QA-Workflow")
+            .description("问答系统工作流")
+            .graph(graph)
+            .llm(new OpenAILLM(config))
+            .build();
+        
+        // 4. 执行工作流
+        Map<String, Object> inputs = Map.of(
+            "question", "什么是人工智能？"
+        );
+        
+        Map<String, Object> result = workflow.execute(inputs);
+        System.out.println("结果: " + result.get("answer"));
+    }
+}
 ```
 
-### 示例 4: RAG 应用
+**工作流执行过程**：
+```
+[分析问题] -> [搜索信息] -> [总结答案]
+     ✅              ✅              ✅
+```
+
+### 示例 4：RAG 知识库问答
+
+构建一个基于文档的问答系统：
 
 ```java
-import io.leavesfly.evox.rag.base.RAGPipeline;
+import io.leavesfly.evox.rag.base.RAGEngine;
+import io.leavesfly.evox.rag.loader.DocumentLoader;
 import io.leavesfly.evox.rag.retriever.VectorRetriever;
-import io.leavesfly.evox.rag.indexer.DocumentIndexer;
+import io.leavesfly.evox.rag.config.RAGConfig;
 
-// 创建文档索引器
-DocumentIndexer indexer = new DocumentIndexer();
-indexer.indexDocument("doc1.txt", "人工智能是...");
-indexer.indexDocument("doc2.txt", "机器学习是...");
+public class RAGExample {
+    public static void main(String[] args) {
+        // 1. 创建文档加载器
+        DocumentLoader loader = new DocumentLoader();
+        List<Document> documents = loader.loadDirectory("./docs");
+        
+        System.out.println("已加载 " + documents.size() + " 个文档");
+        
+        // 2. 配置 RAG 引擎
+        RAGConfig config = RAGConfig.builder()
+            .chunkSize(500)          // 分块大小
+            .chunkOverlap(50)        // 重叠大小
+            .topK(3)                 // 检索 Top-K
+            .similarityThreshold(0.7) // 相似度阈值
+            .build();
+        
+        // 3. 创建 RAG 引擎
+        RAGEngine ragEngine = RAGEngine.builder()
+            .config(config)
+            .llm(new OpenAILLM(llmConfig))
+            .vectorStore(new InMemoryVectorStore())
+            .build();
+        
+        // 4. 索引文档
+        ragEngine.indexDocuments(documents);
+        System.out.println("文档索引完成");
+        
+        // 5. 执行问答
+        String question = "EvoX 框架的主要特性是什么？";
+        RAGResult result = ragEngine.query(question);
+        
+        System.out.println("问题: " + question);
+        System.out.println("答案: " + result.getAnswer());
+        System.out.println("参考文档: " + result.getReferences());
+    }
+}
+```
 
-// 创建检索器
-VectorRetriever retriever = VectorRetriever.builder()
-    .indexer(indexer)
-    .topK(3)
-    .build();
+### 示例 5：多智能体辩论
 
-// 创建 RAG 管道
-RAGPipeline rag = RAGPipeline.builder()
-    .retriever(retriever)
-    .llm(llm)
-    .build();
+让多个 Agent 通过辩论达成共识：
 
-// 执行 RAG 查询
-String question = "什么是人工智能？";
-String answer = rag.query(question);
-System.out.println(answer);
+```java
+import io.leavesfly.evox.frameworks.debate.MultiAgentDebate;
+import io.leavesfly.evox.agents.base.Agent;
+
+public class DebateExample {
+    public static void main(String[] args) {
+        // 1. 创建多个 Agent
+        Agent agent1 = Agent.builder()
+            .name("Optimist")
+            .systemPrompt("你是一个乐观主义者")
+            .llm(new OpenAILLM(config))
+            .build();
+        
+        Agent agent2 = Agent.builder()
+            .name("Pessimist")
+            .systemPrompt("你是一个悲观主义者")
+            .llm(new OpenAILLM(config))
+            .build();
+        
+        Agent agent3 = Agent.builder()
+            .name("Realist")
+            .systemPrompt("你是一个现实主义者")
+            .llm(new OpenAILLM(config))
+            .build();
+        
+        // 2. 创建辩论框架
+        MultiAgentDebate debate = MultiAgentDebate.builder()
+            .agents(Arrays.asList(agent1, agent2, agent3))
+            .maxRounds(3)              // 最多 3 轮辩论
+            .moderator(new OpenAILLM(config))  // 主持人
+            .build();
+        
+        // 3. 开始辩论
+        String topic = "AI 是否会取代人类的大部分工作？";
+        DebateResult result = debate.startDebate(topic);
+        
+        // 4. 查看结果
+        System.out.println("辩题: " + topic);
+        System.out.println("辩论轮次: " + result.getRounds());
+        System.out.println("最终结论: " + result.getConclusion());
+    }
+}
+```
+
+### 示例 6：提示词优化
+
+自动优化提示词获得更好效果：
+
+```java
+import io.leavesfly.evox.optimizers.TextGrad;
+import io.leavesfly.evox.optimizers.config.OptimizerConfig;
+
+public class OptimizerExample {
+    public static void main(String[] args) {
+        // 1. 准备训练数据
+        List<TrainingSample> samples = Arrays.asList(
+            new TrainingSample("What is AI?", "AI is..."),
+            new TrainingSample("How does ML work?", "ML works by...")
+        );
+        
+        // 2. 创建优化器
+        OptimizerConfig config = OptimizerConfig.builder()
+            .learningRate(0.1)
+            .batchSize(4)
+            .maxIterations(10)
+            .build();
+        
+        TextGrad optimizer = new TextGrad(config);
+        
+        // 3. 定义评估函数
+        EvaluationFunction evalFunc = (prompt, samples) -> {
+            // 根据提示词和样本计算得分
+            return calculateScore(prompt, samples);
+        };
+        
+        // 4. 优化提示词
+        String initialPrompt = "You are a helpful assistant.";
+        OptimizationResult result = optimizer.optimize(
+            initialPrompt, 
+            samples, 
+            evalFunc
+        );
+        
+        System.out.println("原始提示词: " + initialPrompt);
+        System.out.println("优化后: " + result.getBestPrompt());
+        System.out.println("性能提升: " + result.getImprovement() + "%");
+    }
+}
 ```
 
 ### 更多示例
 
-查看 `evox-examples` 模块获取更多完整示例：
+查看 [`evox-examples`](evox-application/evox-examples) 模块获取更多完整示例：
 
-- **SimpleChatBot**: 基础聊天机器人
-- **ComprehensiveChatBot**: 多代理协同聊天
-- **WorkflowDemo**: 复杂工作流示例
-- **ActionAgentExample**: 动作执行示例
-- **MemoryAgentExample**: 记忆管理示例
-- **ToolsExample**: 工具集成示例
-- **BenchmarkExample**: 性能测试示例
+| 示例名称 | 功能说明 | 代码位置 |
+|---------|---------|----------|
+| **SimpleChatBot** | 基础聊天机器人 | `examples/SimpleChatBot.java` |
+| **ComprehensiveChatBot** | 多代理协同聊天 | `examples/ComprehensiveChatBot.java` |
+| **WorkflowDemo** | 复杂工作流示例 | `examples/WorkflowDemo.java` |
+| **ActionAgentExample** | 动作执行示例 | `examples/ActionAgentExample.java` |
+| **MemoryAgentExample** | 记忆管理示例 | `examples/MemoryAgentExample.java` |
+| **ToolsExample** | 工具集成示例 | `examples/ToolsExample.java` |
+| **BenchmarkExample** | 性能测试示例 | `examples/BenchmarkExample.java` |
+| **OptimizerExample** | 优化器示例 | `examples/optimizer/OptimizerExample.java` |
+| **HITLExample** | 人机协同示例 | `examples/hitl/HITLExample.java` |
 
-运行示例：
+**运行示例的方法**：
 
 ```bash
-# 运行简单聊天机器人
-mvn exec:java -pl evox-examples \
-  -Dexec.mainClass="io.leavesfly.evox.examples.SimpleChatBot" \
-  -Dexec.args="YOUR_OPENAI_API_KEY"
+# 进入示例目录
+cd evox-application/evox-examples
 
-# 运行工作流示例
-mvn exec:java -pl evox-examples \
-  -Dexec.mainClass="io.leavesfly.evox.examples.WorkflowDemo"
+# 使用脚本运行（交互式菜单）
+./run-examples.sh
+
+# 或直接运行指定示例
+mvn exec:java -Dexec.mainClass="io.leavesfly.evox.examples.SimpleChatBot"
 ```
 
 ## 🔧 开发指南
@@ -1108,11 +1288,7 @@ mvn test -pl evox-benchmark -Dtest=AgentBenchmark
 - **功能建议**: [GitHub Discussions](https://github.com/your-org/evox/discussions)
 - **邮件**: evox-dev@example.com
 
-## 📄 许可证
 
-本项目采用 [MIT License](LICENSE) 开源协议。
-
----
 
 ## 🙏 致谢
 
@@ -1122,12 +1298,6 @@ mvn test -pl evox-benchmark -Dtest=AgentBenchmark
 - [Spring AI](https://spring.io/projects/spring-ai)
 - [Project Reactor](https://projectreactor.io/)
 - [OpenAI](https://openai.com/)
-
-## ⭐ Star History
-
-[![Star History Chart](https://api.star-history.com/svg?repos=your-org/evox&type=Date)](https://star-history.com/#your-org/evox&Date)
-
----
 
 <div align="center">
 
