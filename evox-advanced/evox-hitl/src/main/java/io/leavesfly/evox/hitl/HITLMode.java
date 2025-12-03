@@ -1,16 +1,16 @@
 package io.leavesfly.evox.hitl;
 
 /**
- * HITL execution modes defining when human intervention occurs.
+ * HITL执行模式,定义人类干预何时发生
  */
 public enum HITLMode {
     /**
-     * Intercept before action execution
+     * 在动作执行前拦截
      */
     PRE_EXECUTION,
     
     /**
-     * Intercept after action execution
+     * 在动作执行后拦截
      */
     POST_EXECUTION
 }

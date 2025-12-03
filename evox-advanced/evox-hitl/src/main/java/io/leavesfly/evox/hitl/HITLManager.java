@@ -12,35 +12,35 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * HITL Manager for handling human-in-the-loop interactions.
- * Manages approval requests, user input collection, and human feedback.
+ * HITL管理器,用于处理人在回路中(Human-in-the-Loop)交互。
+ * 管理批准请求、用户输入收集和人类反馈。
  */
 @Slf4j
 @Data
 public class HITLManager {
 
     /**
-     * Whether HITL is currently active
+     * HITL是否当前激活
      */
     private boolean active = false;
 
     /**
-     * Pending approval requests
+     * 待处理的批准请求
      */
     private final Map<String, CompletableFuture<HITLResponse>> pendingRequests = new ConcurrentHashMap<>();
 
     /**
-     * Input/output field mapping for workflow integration
+     * 用于工作流集成的输入/输出字段映射
      */
     private Map<String, String> hitlInputOutputMapping = new HashMap<>();
 
     /**
-     * Default timeout for human responses (in seconds)
+     * 人类响应的默认超时时间(秒)
      */
-    private long defaultTimeout = 1800; // 30 minutes
+    private long defaultTimeout = 1800; // 30分钟
 
     /**
-     * Scanner for CLI input
+     * 用于CLI输入的扫描器
      */
     private transient Scanner scanner;
 
@@ -49,7 +49,7 @@ public class HITLManager {
     }
 
     /**
-     * Activate HITL feature.
+     * 激活HITL功能
      */
     public void activate() {
         this.active = true;
@@ -57,7 +57,7 @@ public class HITLManager {
     }
 
     /**
-     * Deactivate HITL feature.
+     * 停用HITL功能
      */
     public void deactivate() {
         this.active = false;
@@ -65,14 +65,14 @@ public class HITLManager {
     }
 
     /**
-     * Check if HITL is active.
+     * 检查HITL是否激活
      */
     public boolean isActive() {
         return active;
     }
 
     /**
-     * Request human approval for an action.
+     * 请求人类批准某个动作
      */
     public Mono<HITLResponse> requestApproval(
             String taskName,
@@ -86,7 +86,7 @@ public class HITLManager {
             Map<String, Object> displayContext
     ) {
         if (!active) {
-            // HITL not active, auto-approve
+            // HITL未激活,自动批准
             return Mono.just(HITLResponse.builder()
                     .requestId("auto_approved")
                     .decision(HITLDecision.APPROVE)
@@ -94,7 +94,7 @@ public class HITLManager {
                     .build());
         }
 
-        // Build context
+        // 构建上下文
         HITLContext context = HITLContext.builder()
                 .taskName(taskName)
                 .agentName(agentName)
@@ -105,10 +105,10 @@ public class HITLManager {
                 .displayContext(displayContext != null ? displayContext : new HashMap<>())
                 .build();
 
-        // Generate prompt message
+        // 生成提示信息
         String promptMessage = generatePromptMessage(interactionType, mode, context);
 
-        // Create request
+        // 创建请求
         HITLRequest request = HITLRequest.builder()
                 .interactionType(interactionType)
                 .mode(mode)
@@ -116,7 +116,7 @@ public class HITLManager {
                 .promptMessage(promptMessage)
                 .build();
 
-        // Handle interaction
+        // 处理交互
         return handleCLIInteraction(request)
                 .timeout(Duration.ofSeconds(defaultTimeout))
                 .onErrorResume(error -> {
@@ -130,18 +130,18 @@ public class HITLManager {
     }
 
     /**
-     * Handle CLI interaction with user.
+     * 处理与用户的CLI交互
      */
     private Mono<HITLResponse> handleCLIInteraction(HITLRequest request) {
         return Mono.fromCallable(() -> {
-            // Display request
+            // 显示请求
             System.out.println("\n" + "=".repeat(80));
             System.out.println("🔔 Human-in-the-Loop Approval Request");
             System.out.println("=".repeat(80));
             System.out.println(request.getPromptMessage());
             System.out.println("=".repeat(80));
 
-            // Get user decision based on interaction type
+            // 根据交互类型获取用户决策
             if (request.getInteractionType() == HITLInteractionType.APPROVE_REJECT) {
                 return handleApproveReject(request);
             } else if (request.getInteractionType() == HITLInteractionType.COLLECT_USER_INPUT) {
@@ -158,7 +158,7 @@ public class HITLManager {
     }
 
     /**
-     * Handle approve/reject interaction.
+     * 处理批准/拒绝交互
      */
     private HITLResponse handleApproveReject(HITLRequest request) {
         System.out.print("\nPlease select [a]pprove / [r]eject: ");
@@ -189,14 +189,14 @@ public class HITLManager {
     }
 
     /**
-     * Handle user input collection.
+     * 处理用户输入收集
      */
     private HITLResponse handleUserInputCollection(HITLRequest request) {
         System.out.println("\nPlease provide the requested information:");
         
         Map<String, Object> collectedData = new HashMap<>();
         
-        // Simple implementation: collect one input
+        // 简单实现:收集一个输入
         System.out.print("Input data: ");
         String inputData = scanner.nextLine().trim();
         
@@ -219,7 +219,7 @@ public class HITLManager {
     }
 
     /**
-     * Generate prompt message for display.
+     * 生成用于显示的提示信息
      */
     private String generatePromptMessage(
             HITLInteractionType interactionType,
@@ -248,7 +248,7 @@ public class HITLManager {
     }
 
     /**
-     * Close resources.
+     * 关闭资源
      */
     public void close() {
         if (scanner != null) {

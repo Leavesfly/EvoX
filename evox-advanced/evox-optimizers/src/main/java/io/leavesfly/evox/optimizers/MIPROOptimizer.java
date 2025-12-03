@@ -10,11 +10,11 @@ import lombok.extern.slf4j.Slf4j;
 import java.util.*;
 
 /**
- * MIPRO (Model-agnostic Iterative Prompt Optimization) optimizer.
- * Based on the MIPRO paper: https://arxiv.org/abs/2406.11695
+ * MIPRO(模型无关迭代提示词优化)优化器。
+ * 基于MIPRO论文: https://arxiv.org/abs/2406.11695
  * 
- * This optimizer combines instruction generation, demonstration bootstrapping,
- * and Bayesian optimization to find optimal prompt configurations.
+ * 此优化器结合了指令生成、示例引导和
+ * 贝叶斯优化来找到最优的提示词配置。
  */
 @Slf4j
 @Data
@@ -23,47 +23,47 @@ import java.util.*;
 public class MIPROOptimizer extends Optimizer {
 
     /**
-     * LLM for optimization
+     * 用于优化的LLM
      */
     private BaseLLM optimizerLLM;
 
     /**
-     * Maximum number of bootstrapped demonstrations
+     * 引导示例的最大数量
      */
     private int maxBootstrappedDemos;
 
     /**
-     * Maximum number of labeled demonstrations
+     * 标注示例的最大数量
      */
     private int maxLabeledDemos;
 
     /**
-     * Number of instruction candidates to generate
+     * 要生成的指令候选数量
      */
     private int numCandidates;
 
     /**
-     * Auto configuration mode: "light", "medium", "heavy"
+     * 自动配置模式: "light", "medium", "heavy"
      */
     private String autoMode;
 
     /**
-     * Metric threshold for filtering demonstrations
+     * 过滤示例的指标阈值
      */
     private double metricThreshold;
 
     /**
-     * Candidate instructions pool
+     * 候选指令池
      */
     private List<String> instructionCandidates;
 
     /**
-     * Demonstration examples pool
+     * 示例示例池
      */
     private List<Map<String, Object>> demonstrationPool;
 
     /**
-     * Best configuration found
+     * 找到的最佳配置
      */
     private Map<String, Object> bestConfiguration;
 
@@ -78,41 +78,41 @@ public class MIPROOptimizer extends Optimizer {
         demonstrationPool = new ArrayList<>();
         bestConfiguration = new HashMap<>();
 
-        // Initialize based on auto mode
+        // 根据自动模式初始化
         initializeFromAutoMode();
 
         for (int step = 0; step < maxSteps; step++) {
             currentStep = step;
             log.info("MIPRO step {}/{}", step + 1, maxSteps);
 
-            // Generate instruction candidates
+            // 生成指令候选
             if (step == 0) {
                 generateInstructionCandidates(dataset);
             }
 
-            // Bootstrap demonstrations
+            // 引导示例
             bootstrapDemonstrations(dataset);
 
-            // Perform optimization step
+            // 执行优化步骤
             Map<String, Object> stepKwargs = new HashMap<>(kwargs);
             stepKwargs.put("dataset", dataset);
             stepKwargs.put("step", step);
 
             StepResult stepResult = step(stepKwargs);
 
-            // Evaluate if needed
+            // 如果需要则进行评估
             if ((step + 1) % evalEveryNSteps == 0) {
                 EvaluationMetrics metrics = evaluate(dataset, "validation", kwargs);
                 double currentScore = metrics.getScore();
                 log.info("Step {} evaluation score: {}", step + 1, currentScore);
 
-                // Check convergence
+                // 检查收敛
                 if (checkConvergence(currentScore)) {
                     log.info("MIPRO optimization converged at step {}", step + 1);
                     break;
                 }
 
-                // Update best configuration
+                // 更新最佳配置
                 if (currentScore > bestScore - 0.001) {
                     updateBestConfiguration(stepResult);
                 }
@@ -138,15 +138,15 @@ public class MIPROOptimizer extends Optimizer {
     public StepResult step(Map<String, Object> kwargs) {
         log.debug("Executing MIPRO step {}", currentStep);
 
-        // Simplified step implementation
-        // In real implementation, this would:
-        // 1. Sample instruction and demonstration combinations
-        // 2. Evaluate each combination
-        // 3. Use Bayesian optimization to select next candidate
-        // 4. Update program with best combination
+        // 简化的步骤实现
+        // 在真实实现中,这将会:
+        // 1. 采样指令和示例组合
+        // 2. 评估每个组合
+        // 3. 使用贝叶斯优化选择下一个候选
+        // 4. 使用最佳组合更新程序
 
         String modification = String.format(
-                "MIPRO step %d: Tested %d instruction candidates with %d demonstrations",
+                "MIPRO步骤 %d: 测试了 %d 个指令候选和 %d 个示例",
                 currentStep, Math.min(numCandidates, instructionCandidates.size()),
                 Math.min(maxBootstrappedDemos + maxLabeledDemos, demonstrationPool.size())
         );
@@ -167,9 +167,9 @@ public class MIPROOptimizer extends Optimizer {
     public EvaluationMetrics evaluate(Object dataset, String evalMode, Map<String, Object> kwargs) {
         log.info("Evaluating MIPRO configuration on {} set", evalMode);
 
-        // Simplified evaluation
+        // 简化的评估
         int totalSamples = 100;
-        int correctSamples = 75; // Placeholder
+        int correctSamples = 75; // 占位符
         double accuracy = (double) correctSamples / totalSamples;
 
         return EvaluationMetrics.builder()
@@ -185,7 +185,7 @@ public class MIPROOptimizer extends Optimizer {
     }
 
     /**
-     * Initialize parameters based on auto mode.
+     * 根据自动模式初始化参数。
      */
     private void initializeFromAutoMode() {
         if ("light".equals(autoMode)) {
@@ -203,40 +203,40 @@ public class MIPROOptimizer extends Optimizer {
     }
 
     /**
-     * Generate instruction candidates.
+     * 生成指令候选。
      */
     private void generateInstructionCandidates(Object dataset) {
-        log.info("Generating {} instruction candidates", numCandidates);
+        log.info("生成 {} 个指令候选", numCandidates);
         
-        // Simplified implementation
+        // 简化实现
         for (int i = 0; i < numCandidates; i++) {
-            String instruction = String.format("Generated instruction candidate %d", i + 1);
+            String instruction = String.format("生成的指令候选 %d", i + 1);
             instructionCandidates.add(instruction);
         }
         
-        log.info("Generated {} instruction candidates", instructionCandidates.size());
+        log.info("已生成 {} 个指令候选", instructionCandidates.size());
     }
 
     /**
-     * Bootstrap demonstration examples from dataset.
+     * 从数据集中引导示例。
      */
     private void bootstrapDemonstrations(Object dataset) {
-        log.debug("Bootstrapping demonstrations");
+        log.debug("引导示例");
         
-        // Simplified implementation
+        // 简化实现
         int targetSize = maxBootstrappedDemos + maxLabeledDemos;
         while (demonstrationPool.size() < targetSize) {
             Map<String, Object> demo = new HashMap<>();
             demo.put("id", demonstrationPool.size());
-            demo.put("example", "Demonstration example " + demonstrationPool.size());
+            demo.put("example", "示例 " + demonstrationPool.size());
             demonstrationPool.add(demo);
         }
         
-        log.debug("Demonstration pool size: {}", demonstrationPool.size());
+        log.debug("示例池大小: {}", demonstrationPool.size());
     }
 
     /**
-     * Update best configuration with current step result.
+     * 使用当前步骤结果更新最佳配置。
      */
     private void updateBestConfiguration(StepResult stepResult) {
         bestConfiguration.put("step", stepResult.getStep());
@@ -247,7 +247,7 @@ public class MIPROOptimizer extends Optimizer {
     }
 
     /**
-     * Restore the best program/configuration found.
+     * 恢复找到的最佳程序/配置。
      */
     public void restoreBestProgram() {
         if (bestConfiguration != null && !bestConfiguration.isEmpty()) {
@@ -258,7 +258,7 @@ public class MIPROOptimizer extends Optimizer {
     }
 
     /**
-     * Get the best configuration.
+     * 获取最佳配置。
      */
     public Map<String, Object> getBestConfiguration() {
         return new HashMap<>(bestConfiguration);

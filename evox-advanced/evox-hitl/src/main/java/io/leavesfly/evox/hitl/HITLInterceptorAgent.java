@@ -16,8 +16,8 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * HITL Interceptor Agent that intercepts target agent/action execution
- * for human approval before or after execution.
+ * HITL拦截器智能体,在执行前或执行后拦截目标智能体/动作的执行
+ * 以获取人类批准
  */
 @Slf4j
 @Data
@@ -26,32 +26,32 @@ import java.util.Map;
 public class HITLInterceptorAgent extends Agent {
 
     /**
-     * Target agent name to intercept
+     * 要拦截的目标智能体名称
      */
     private String targetAgentName;
 
     /**
-     * Target action name to intercept
+     * 要拦截的目标动作名称
      */
     private String targetActionName;
 
     /**
-     * HITL interaction type
+     * HITL交互类型
      */
     private HITLInteractionType interactionType;
 
     /**
-     * HITL mode (pre/post execution)
+     * HITL模式(执行前/执行后)
      */
     private HITLMode mode;
 
     /**
-     * HITL manager reference
+     * HITL管理器引用
      */
     private transient HITLManager hitlManager;
 
     /**
-     * Intercept and request approval.
+     * 拦截并请求批准
      */
     public Mono<HITLResponse> intercept(
             String taskName,
@@ -84,19 +84,19 @@ public class HITLInterceptorAgent extends Agent {
     }
 
     /**
-     * Execute interceptor agent.
-     * This will trigger the HITL approval flow.
+     * 执行拦截器智能体。
+     * 这将触发HITL批准流程。
      */
     public Mono<String> executeAsync(List<Message> messages, Map<String, Object> inputs) {
         return Mono.fromCallable(() -> {
-            // Extract task information from inputs
+            // 从输入中提取任务信息
             String taskName = (String) inputs.getOrDefault("task_name", "unknown_task");
             String workflowGoal = (String) inputs.getOrDefault("workflow_goal", null);
             Object executionResult = inputs.get("execution_result");
 
             log.info("HITL Interceptor executing for task: {}", taskName);
 
-            // Request approval
+            // 请求批准
             HITLResponse response = intercept(taskName, inputs, executionResult, workflowGoal)
                     .block();
 
@@ -120,7 +120,7 @@ public class HITLInterceptorAgent extends Agent {
     }
 
     /**
-     * Get agent description.
+     * 获取智能体描述
      */
     public String getDescription() {
         return String.format(
@@ -147,7 +147,7 @@ public class HITLInterceptorAgent extends Agent {
     }
 
     /**
-     * Create a HITL interceptor action wrapper.
+     * 创建HITL拦截器动作包装器
      */
     public static class HITLInterceptorAction extends Action {
 

@@ -1,26 +1,26 @@
 package io.leavesfly.evox.hitl;
 
 /**
- * HITL decision types for human feedback.
+ * HITL决策类型,用于人类反馈
  */
 public enum HITLDecision {
     /**
-     * Approve the action/result
+     * 批准该动作/结果
      */
     APPROVE,
     
     /**
-     * Reject the action/result
+     * 拒绝该动作/结果
      */
     REJECT,
     
     /**
-     * Modify the action/result
+     * 修改该动作/结果
      */
     MODIFY,
     
     /**
-     * Continue with current state
+     * 继续当前状态
      */
     CONTINUE
 }

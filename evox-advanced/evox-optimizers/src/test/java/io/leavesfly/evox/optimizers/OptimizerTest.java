@@ -16,7 +16,7 @@ import java.util.Map;
 import static org.junit.jupiter.api.Assertions.*;
 
 /**
- * Unit tests for Optimizer implementations.
+ * 优化器实现的单元测试。
  */
 class OptimizerTest {
 
@@ -44,9 +44,9 @@ class OptimizerTest {
     }
 
     @Test
-    @DisplayName("TextGrad optimizer basic functionality")
+    @DisplayName("TextGrad优化器基本功能")
     void testTextGradOptimizer() {
-        // Create optimizer
+        // 创建优化器
         TextGradOptimizer optimizer = TextGradOptimizer.builder()
                 .workflow(testWorkflow)
                 .optimizerLLM(testLLM)
@@ -64,7 +64,7 @@ class OptimizerTest {
         assertEquals(3, optimizer.getBatchSize());
         assertEquals(5, optimizer.getMaxSteps());
 
-        // Test reset
+        // 测试重置
         optimizer.reset();
         assertEquals(0, optimizer.getCurrentStep());
         assertEquals(Double.NEGATIVE_INFINITY, optimizer.getBestScore());
@@ -72,7 +72,7 @@ class OptimizerTest {
     }
 
     @Test
-    @DisplayName("TextGrad optimizer optimization flow")
+    @DisplayName("TextGrad优化器优化流程")
     void testTextGradOptimization() {
         TextGradOptimizer optimizer = TextGradOptimizer.builder()
                 .workflow(testWorkflow)
@@ -85,7 +85,7 @@ class OptimizerTest {
                 .convergenceThreshold(2)
                 .build();
 
-        // Run optimization
+        // 运行优化
         Map<String, Object> kwargs = new HashMap<>();
         Optimizer.OptimizationResult result = optimizer.optimize(testDataset, kwargs);
 
@@ -97,7 +97,7 @@ class OptimizerTest {
     }
 
     @Test
-    @DisplayName("TextGrad optimizer history tracking")
+    @DisplayName("TextGrad优化器历史跟踪")
     void testTextGradHistory() {
         TextGradOptimizer optimizer = TextGradOptimizer.builder()
                 .workflow(testWorkflow)
@@ -123,7 +123,7 @@ class OptimizerTest {
     }
 
     @Test
-    @DisplayName("MIPRO optimizer basic functionality")
+    @DisplayName("MIPRO优化器基本功能")
     void testMIPROOptimizer() {
         MIPROOptimizer optimizer = MIPROOptimizer.builder()
                 .workflow(testWorkflow)
@@ -143,7 +143,7 @@ class OptimizerTest {
     }
 
     @Test
-    @DisplayName("MIPRO optimizer optimization flow")
+    @DisplayName("MIPRO优化器优化流程")
     void testMIPROOptimization() {
         MIPROOptimizer optimizer = MIPROOptimizer.builder()
                 .workflow(testWorkflow)
@@ -167,7 +167,7 @@ class OptimizerTest {
     }
 
     @Test
-    @DisplayName("MIPRO optimizer configuration management")
+    @DisplayName("MIPRO优化器配置管理")
     void testMIPROConfiguration() {
         MIPROOptimizer optimizer = MIPROOptimizer.builder()
                 .workflow(testWorkflow)
@@ -185,12 +185,12 @@ class OptimizerTest {
         Map<String, Object> config = optimizer.getBestConfiguration();
         assertNotNull(config);
         
-        // Restore best program
+        // 恢复最佳程序
         assertDoesNotThrow(() -> optimizer.restoreBestProgram());
     }
 
     @Test
-    @DisplayName("AFlow optimizer basic functionality")
+    @DisplayName("AFlow优化器基本功能")
     void testAFlowOptimizer() {
         AFlowOptimizer optimizer = AFlowOptimizer.builder()
                 .workflow(testWorkflow)
@@ -210,7 +210,7 @@ class OptimizerTest {
     }
 
     @Test
-    @DisplayName("AFlow optimizer optimization flow")
+    @DisplayName("AFlow优化器优化流程")
     void testAFlowOptimization() {
         AFlowOptimizer optimizer = AFlowOptimizer.builder()
                 .workflow(testWorkflow)
@@ -234,7 +234,7 @@ class OptimizerTest {
     }
 
     @Test
-    @DisplayName("AFlow optimizer experience tracking")
+    @DisplayName("AFlow优化器经验跟踪")
     void testAFlowExperience() {
         AFlowOptimizer optimizer = AFlowOptimizer.builder()
                 .workflow(testWorkflow)
@@ -260,7 +260,7 @@ class OptimizerTest {
     }
 
     @Test
-    @DisplayName("Optimizer convergence check")
+    @DisplayName("优化器收敛检查")
     void testConvergenceCheck() {
         TextGradOptimizer optimizer = TextGradOptimizer.builder()
                 .workflow(testWorkflow)
@@ -274,13 +274,13 @@ class OptimizerTest {
 
         optimizer.reset();
 
-        // No improvement scenarios
+        // 无改善场景
         assertFalse(optimizer.checkConvergence(0.5));
         assertFalse(optimizer.checkConvergence(0.4));
         assertFalse(optimizer.checkConvergence(0.3));
         assertTrue(optimizer.checkConvergence(0.3));
 
-        // Improvement scenario
+        // 改善场景
         optimizer.reset();
         assertFalse(optimizer.checkConvergence(0.6));
         assertFalse(optimizer.checkConvergence(0.7));
@@ -288,7 +288,7 @@ class OptimizerTest {
     }
 
     @Test
-    @DisplayName("Optimizer JSON serialization")
+    @DisplayName("优化器JSON序列化")
     void testOptimizerJson() {
         TextGradOptimizer optimizer = TextGradOptimizer.builder()
                 .workflow(testWorkflow)
@@ -311,7 +311,7 @@ class OptimizerTest {
     }
 
     @Test
-    @DisplayName("Evaluation metrics calculation")
+    @DisplayName("评估指标计算")
     void testEvaluationMetrics() {
         Optimizer.EvaluationMetrics metrics = Optimizer.EvaluationMetrics.builder()
                 .accuracy(0.85)

@@ -6,7 +6,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 /**
- * HITL response from human containing decision and feedback.
+ * 来自人类的HITL响应,包含决策和反馈
  */
 @Data
 @Builder
@@ -15,22 +15,22 @@ import lombok.NoArgsConstructor;
 public class HITLResponse {
     
     /**
-     * Request ID this response is for
+     * 此响应对应的请求ID
      */
     private String requestId;
     
     /**
-     * Human decision
+     * 人类决策
      */
     private HITLDecision decision;
     
     /**
-     * Modified content (if decision is MODIFY)
+     * 修改后的内容(如果决策是MODIFY)
      */
     private Object modifiedContent;
     
     /**
-     * Human feedback/comment
+     * 人类反馈/评论
      */
     private String feedback;
 }

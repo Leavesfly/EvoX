@@ -12,7 +12,7 @@ import java.util.Map;
 import static org.junit.jupiter.api.Assertions.*;
 
 /**
- * Unit tests for HITL module.
+ * HITL模块的单元测试。
  */
 class HITLTest {
 
@@ -24,7 +24,7 @@ class HITLTest {
     }
 
     @Test
-    @DisplayName("HITL Manager activation and deactivation")
+    @DisplayName("HITL管理器的激活和停用")
     void testHITLManagerActivation() {
         assertFalse(hitlManager.isActive());
 
@@ -36,7 +36,7 @@ class HITLTest {
     }
 
     @Test
-    @DisplayName("HITL auto-approve when not active")
+    @DisplayName("HITL未激活时自动批准")
     void testAutoApproveWhenNotActive() {
         Mono<HITLResponse> responseMono = hitlManager.requestApproval(
                 "test_task",
@@ -60,7 +60,7 @@ class HITLTest {
     }
 
     @Test
-    @DisplayName("HITL Decision enum values")
+    @DisplayName("HITL决策枚举值")
     void testHITLDecisionEnum() {
         assertEquals(4, HITLDecision.values().length);
         assertNotNull(HITLDecision.valueOf("APPROVE"));
@@ -70,7 +70,7 @@ class HITLTest {
     }
 
     @Test
-    @DisplayName("HITL InteractionType enum values")
+    @DisplayName("HITL交互类型枚举值")
     void testHITLInteractionTypeEnum() {
         assertEquals(5, HITLInteractionType.values().length);
         assertNotNull(HITLInteractionType.valueOf("APPROVE_REJECT"));
@@ -81,7 +81,7 @@ class HITLTest {
     }
 
     @Test
-    @DisplayName("HITL Mode enum values")
+    @DisplayName("HITL模式枚举值")
     void testHITLModeEnum() {
         assertEquals(2, HITLMode.values().length);
         assertNotNull(HITLMode.valueOf("PRE_EXECUTION"));
@@ -89,7 +89,7 @@ class HITLTest {
     }
 
     @Test
-    @DisplayName("HITL Context creation")
+    @DisplayName("HITL上下文创建")
     void testHITLContextCreation() {
         Map<String, Object> inputs = Map.of("key1", "value1", "key2", 123);
         
@@ -113,7 +113,7 @@ class HITLTest {
     }
 
     @Test
-    @DisplayName("HITL Request creation")
+    @DisplayName("HITL请求创建")
     void testHITLRequestCreation() {
         HITLContext context = HITLContext.builder()
                 .taskName("test")
@@ -137,7 +137,7 @@ class HITLTest {
     }
 
     @Test
-    @DisplayName("HITL Response creation")
+    @DisplayName("HITL响应创建")
     void testHITLResponseCreation() {
         HITLResponse response = HITLResponse.builder()
                 .requestId("test-request-id")
@@ -153,7 +153,7 @@ class HITLTest {
     }
 
     @Test
-    @DisplayName("HITL Response with modified content")
+    @DisplayName("HITL响应带修改内容")
     void testHITLResponseWithModifiedContent() {
         Map<String, Object> modifiedContent = Map.of("modified", "data");
         
@@ -170,7 +170,7 @@ class HITLTest {
     }
 
     @Test
-    @DisplayName("HITL Interceptor Agent creation")
+    @DisplayName("HITL拦截器智能体创建")
     void testHITLInterceptorAgentCreation() {
         HITLInterceptorAgent agent = HITLInterceptorAgent.builder()
                 .name("test_interceptor")
@@ -191,7 +191,7 @@ class HITLTest {
     }
 
     @Test
-    @DisplayName("HITL Interceptor without manager auto-approves")
+    @DisplayName("HITL拦截器无管理器时自动批准")
     void testInterceptorWithoutManager() {
         HITLInterceptorAgent agent = HITLInterceptorAgent.builder()
                 .name("test_interceptor")
@@ -217,7 +217,7 @@ class HITLTest {
     }
 
     @Test
-    @DisplayName("HITL User Input Collector Agent creation")
+    @DisplayName("HITL用户输入收集器智能体创建")
     void testUserInputCollectorCreation() {
         Map<String, HITLUserInputCollectorAgent.FieldDefinition> fields = new HashMap<>();
         HITLUserInputCollectorAgent.FieldDefinition field = new HITLUserInputCollectorAgent.FieldDefinition();
@@ -240,7 +240,7 @@ class HITLTest {
     }
 
     @Test
-    @DisplayName("HITL Manager input/output mapping")
+    @DisplayName("HITL管理器输入/输出映射")
     void testHITLManagerMapping() {
         Map<String, String> mapping = new HashMap<>();
         mapping.put("human_verified_data", "extracted_data");
@@ -253,7 +253,7 @@ class HITLTest {
     }
 
     @Test
-    @DisplayName("HITL Manager default timeout")
+    @DisplayName("HITL管理器默认超时")
     void testHITLManagerDefaultTimeout() {
         assertEquals(1800, hitlManager.getDefaultTimeout());
 
@@ -262,7 +262,7 @@ class HITLTest {
     }
 
     @Test
-    @DisplayName("Field Definition creation")
+    @DisplayName("字段定义创建")
     void testFieldDefinitionCreation() {
         HITLUserInputCollectorAgent.FieldDefinition field = new HITLUserInputCollectorAgent.FieldDefinition();
         field.setName("email");
@@ -279,7 +279,7 @@ class HITLTest {
     }
 
     @Test
-    @DisplayName("HITL Interceptor Action wrapper")
+    @DisplayName("HITL拦截器动作包装器")
     void testInterceptorActionWrapper() {
         HITLInterceptorAgent agent = HITLInterceptorAgent.builder()
                 .name("test_interceptor")

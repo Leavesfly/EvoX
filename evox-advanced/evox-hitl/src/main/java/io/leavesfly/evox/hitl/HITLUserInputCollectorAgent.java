@@ -13,7 +13,7 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * HITL User Input Collector Agent for collecting user input during workflow execution.
+ * HITL用户输入收集器智能体,用于在工作流执行期间收集用户输入
  */
 @Slf4j
 @Data
@@ -22,17 +22,17 @@ import java.util.Map;
 public class HITLUserInputCollectorAgent extends Agent {
 
     /**
-     * Field definitions for input collection
+     * 输入收集的字段定义
      */
     private Map<String, FieldDefinition> fieldDefinitions;
 
     /**
-     * HITL manager reference
+     * HITL管理器引用
      */
     private transient HITLManager hitlManager;
 
     /**
-     * Collect user input based on field definitions.
+     * 根据字段定义收集用户输入
      */
     public Mono<Map<String, Object>> collectInput(String taskName, String workflowGoal) {
         if (hitlManager == null) {
@@ -64,12 +64,12 @@ public class HITLUserInputCollectorAgent extends Agent {
     }
 
     /**
-     * Field definition for user input.
+     * 用户输入的字段定义
      */
     @Data
     public static class FieldDefinition {
         private String name;
-        private String type; // string, int, boolean, etc.
+        private String type; // string, int, boolean, 等
         private String description;
         private boolean required;
         private Object defaultValue;

@@ -1,31 +1,31 @@
 package io.leavesfly.evox.hitl;
 
 /**
- * HITL interaction types defining how humans interact with the system.
+ * HITL交互类型,定义人类如何与系统交互
  */
 public enum HITLInteractionType {
     /**
-     * Simple approve/reject decision
+     * 简单的批准/拒绝决策
      */
     APPROVE_REJECT,
     
     /**
-     * Collect user input
+     * 收集用户输入
      */
     COLLECT_USER_INPUT,
     
     /**
-     * Review and edit state
+     * 审查并编辑状态
      */
     REVIEW_EDIT_STATE,
     
     /**
-     * Review tool calls
+     * 审查工具调用
      */
     REVIEW_TOOL_CALLS,
     
     /**
-     * Multi-turn conversation
+     * 多轮对话
      */
     MULTI_TURN_CONVERSATION
 }

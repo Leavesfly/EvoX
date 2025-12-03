@@ -9,7 +9,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 /**
- * HITL context information containing execution details.
+ * HITL上下文信息,包含执行详情
  */
 @Data
 @Builder
@@ -18,38 +18,38 @@ import java.util.Map;
 public class HITLContext {
     
     /**
-     * Task name
+     * 任务名称
      */
     private String taskName;
     
     /**
-     * Agent name
+     * 智能体名称
      */
     private String agentName;
     
     /**
-     * Action name
+     * 动作名称
      */
     private String actionName;
     
     /**
-     * Workflow goal
+     * 工作流目标
      */
     private String workflowGoal;
     
     /**
-     * Action inputs
+     * 动作输入参数
      */
     @Builder.Default
     private Map<String, Object> actionInputs = new HashMap<>();
     
     /**
-     * Execution result (for post-execution review)
+     * 执行结果(用于执行后审查)
      */
     private Object executionResult;
     
     /**
-     * Additional display context
+     * 额外的显示上下文
      */
     @Builder.Default
     private Map<String, Object> displayContext = new HashMap<>();

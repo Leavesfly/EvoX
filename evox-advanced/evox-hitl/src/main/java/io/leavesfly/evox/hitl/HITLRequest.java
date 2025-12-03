@@ -8,7 +8,7 @@ import lombok.NoArgsConstructor;
 import java.util.UUID;
 
 /**
- * HITL request sent to human for review/approval.
+ * 发送给人类进行审查/批准的HITL请求
  */
 @Data
 @Builder
@@ -17,28 +17,28 @@ import java.util.UUID;
 public class HITLRequest {
     
     /**
-     * Unique request ID
+     * 唯一请求ID
      */
     @Builder.Default
     private String requestId = UUID.randomUUID().toString();
     
     /**
-     * Interaction type
+     * 交互类型
      */
     private HITLInteractionType interactionType;
     
     /**
-     * Execution mode
+     * 执行模式
      */
     private HITLMode mode;
     
     /**
-     * Context information
+     * 上下文信息
      */
     private HITLContext context;
     
     /**
-     * Prompt message to display to user
+     * 显示给用户的提示信息
      */
     private String promptMessage;
 }

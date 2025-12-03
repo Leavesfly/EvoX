@@ -10,8 +10,8 @@ import lombok.extern.slf4j.Slf4j;
 import java.util.Map;
 
 /**
- * Base Optimizer class for workflow optimization.
- * Provides common functionality for different optimization strategies like TextGrad, MIPRO, AFlow.
+ * 优化器基类,用于工作流优化。
+ * 为不同的优化策略提供通用功能,如TextGrad、MIPRO、AFlow等。
  */
 @Slf4j
 @Data
@@ -20,77 +20,77 @@ import java.util.Map;
 public abstract class Optimizer extends BaseModule {
 
     /**
-     * The workflow to optimize
+     * 要优化的工作流
      */
     protected Workflow workflow;
 
     /**
-     * Maximum number of optimization steps
+     * 最大优化步骤数
      */
     protected int maxSteps;
 
     /**
-     * Evaluate every N steps
+     * 每 N 步进行一次评估
      */
     protected int evalEveryNSteps;
 
     /**
-     * Number of evaluation rounds
+     * 评估轮数
      */
     protected int evalRounds;
 
     /**
-     * Convergence threshold (stop if no improvement for N steps)
+     * 收敛阈值(如果N步没有改善则停止)
      */
     protected int convergenceThreshold;
 
     /**
-     * Best score achieved during optimization
+     * 优化过程中获得的最佳分数
      */
     protected double bestScore;
 
     /**
-     * Current optimization step
+     * 当前优化步骤
      */
     protected int currentStep;
 
     /**
-     * Steps without improvement
+     * 没有改善的步骤数
      */
     protected int stepsWithoutImprovement;
 
     /**
-     * Optimize the workflow using the given dataset.
+     * 使用给定的数据集优化工作流。
      *
-     * @param dataset Evaluation dataset
-     * @param kwargs Additional parameters
-     * @return Optimization results
+     * @param dataset 评估数据集
+     * @param kwargs 额外参数
+     * @return 优化结果
      */
     public abstract OptimizationResult optimize(Object dataset, Map<String, Object> kwargs);
 
     /**
-     * Perform a single optimization step.
+     * 执行单次优化步骤。
      *
-     * @param kwargs Additional parameters
-     * @return Step result
+     * @param kwargs 额外参数
+     * @return 步骤结果
      */
     public abstract StepResult step(Map<String, Object> kwargs);
 
     /**
-     * Evaluate the workflow on the given dataset.
+     * 在给定的数据集上评估工作流。
      *
-     * @param dataset Evaluation dataset
-     * @param evalMode Evaluation mode (e.g., "train", "validation", "test")
-     * @param kwargs Additional parameters
-     * @return Evaluation metrics
+     * @param dataset 评估数据集
+     * @param evalMode 评估模式(例如:"train", "validation", "test")
+     * @param kwargs 额外参数
+     * @return 评估指标
      */
     public abstract EvaluationMetrics evaluate(Object dataset, String evalMode, Map<String, Object> kwargs);
 
     /**
-     * Check if optimization has converged.
+     * 检查优化是否已收敛。
      *
-     * @param currentScore Current score
-     * @return True if converged, false otherwise
+     * @param currentScore 当前分数
+     * @return 如果已收敛返回true,否则返回false
      */
     public boolean checkConvergence(double currentScore) {
         if (currentScore > bestScore) {
@@ -107,7 +107,7 @@ public abstract class Optimizer extends BaseModule {
     }
 
     /**
-     * Reset optimizer state.
+     * 重置优化器状态
      */
     public void reset() {
         currentStep = 0;
@@ -125,7 +125,7 @@ public abstract class Optimizer extends BaseModule {
     }
 
     /**
-     * 从JSON字符串恢复Optimizer状态
+     * 从 JSON 字符串恢复 Optimizer 状态
      * 仅恢复可序列化的基本字段
      * 
      * @param json JSON字符串
@@ -178,7 +178,7 @@ public abstract class Optimizer extends BaseModule {
     }
 
     /**
-     * Optimization result container.
+     * 优化结果容器
      */
     @Data
     @SuperBuilder
@@ -191,7 +191,7 @@ public abstract class Optimizer extends BaseModule {
     }
 
     /**
-     * Single step result container.
+     * 单步结果容器
      */
     @Data
     @SuperBuilder
@@ -204,7 +204,7 @@ public abstract class Optimizer extends BaseModule {
     }
 
     /**
-     * Evaluation metrics container.
+     * 评估指标容器
      */
     @Data
     @SuperBuilder

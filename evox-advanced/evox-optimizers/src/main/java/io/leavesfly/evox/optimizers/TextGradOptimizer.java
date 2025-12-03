@@ -13,11 +13,11 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * TextGrad optimizer for prompt optimization using gradient-based methods.
- * Based on the TextGrad paper: https://arxiv.org/abs/2406.07496
+ * TextGrad优化器,使用基于梯度的方法进行提示词优化。
+ * 基于TextGrad论文: https://arxiv.org/abs/2406.07496
  * 
- * This optimizer treats prompts as differentiable variables and uses
- * gradient descent to optimize them based on task performance.
+ * 此优化器将提示词视为可微分变量,并使用
+ * 梯度下降来基于任务性能优化它们。
  */
 @Slf4j
 @Data
@@ -26,37 +26,37 @@ import java.util.Map;
 public class TextGradOptimizer extends Optimizer {
 
     /**
-     * LLM for optimization (generating gradients)
+     * 用于优化的LLM(生成梯度)
      */
     private BaseLLM optimizerLLM;
 
     /**
-     * LLM for execution (running the workflow)
+     * 用于执行的LLM(运行工作流)
      */
     private BaseLLM executorLLM;
 
     /**
-     * Optimization mode: "all", "system_prompt", "instruction"
+     * 优化模式: "all", "system_prompt", "instruction"
      */
     private String optimizeMode;
 
     /**
-     * Batch size for optimization
+     * 优化的批次大小
      */
     private int batchSize;
 
     /**
-     * Learning rate (not used directly but for reference)
+     * 学习率(不直接使用,仅供参考)
      */
     private double learningRate;
 
     /**
-     * History of optimization steps
+     * 优化步骤的历史记录
      */
     private List<StepResult> history;
 
     /**
-     * Best workflow configuration
+     * 最佳工作流配置
      */
     private Workflow bestWorkflow;
 
@@ -68,13 +68,13 @@ public class TextGradOptimizer extends Optimizer {
 
         reset();
         history = new ArrayList<>();
-        bestWorkflow = workflow; // Clone or deep copy in real implementation
+        bestWorkflow = workflow; // 在真实实现中克隆或深拷贝
 
         for (int step = 0; step < maxSteps; step++) {
             currentStep = step;
             log.info("Optimization step {}/{}", step + 1, maxSteps);
 
-            // Perform optimization step
+            // 执行优化步骤
             Map<String, Object> stepKwargs = new HashMap<>(kwargs);
             stepKwargs.put("dataset", dataset);
             stepKwargs.put("step", step);
@@ -82,21 +82,21 @@ public class TextGradOptimizer extends Optimizer {
             StepResult stepResult = step(stepKwargs);
             history.add(stepResult);
 
-            // Evaluate if needed
+            // 如果需要则进行评估
             if ((step + 1) % evalEveryNSteps == 0) {
                 EvaluationMetrics metrics = evaluate(dataset, "validation", kwargs);
                 double currentScore = metrics.getScore();
                 log.info("Step {} evaluation score: {}", step + 1, currentScore);
 
-                // Check convergence
+                // 检查收敛
                 if (checkConvergence(currentScore)) {
                     log.info("Optimization converged at step {}", step + 1);
                     break;
                 }
 
-                // Update best workflow if improved
-                if (currentScore > bestScore - 0.001) { // Small epsilon for floating point comparison
-                    bestWorkflow = workflow; // Clone or deep copy
+                // 如果有改善则更新最佳工作流
+                if (currentScore > bestScore - 0.001) { // 小的epsilon用于浮点数比较
+                    bestWorkflow = workflow; // 克隆或深拷贝
                     log.info("Updated best workflow at step {}", step + 1);
                 }
             }
@@ -119,23 +119,23 @@ public class TextGradOptimizer extends Optimizer {
 
     @Override
     public StepResult step(Map<String, Object> kwargs) {
-        // Simplified step implementation
-        // In real implementation, this would:
-        // 1. Sample batch from dataset
-        // 2. Execute workflow on batch
-        // 3. Compute loss/gradient
-        // 4. Update prompts using gradient descent
+        // 简化的步骤实现
+        // 在真实实现中,这将会:
+        // 1. 从数据集中采样批次
+        // 2. 在批次上执行工作流
+        // 3. 计算损失/梯度
+        // 4. 使用梯度下降更新提示词
 
-        log.debug("Executing optimization step {}", currentStep);
+        log.debug("执行优化步骤 {}", currentStep);
 
-        // Simulate prompt update
-        String modification = String.format("Updated prompts at step %d using gradient descent", currentStep);
+        // 模拟提示词更新
+        String modification = String.format("在步骤 %d 使用梯度下降更新了提示词", currentStep);
 
         return StepResult.builder()
                 .step(currentStep)
-                .score(0.0) // Placeholder
+                .score(0.0) // 占位符
                 .modification(modification)
-                .improved(false) // Placeholder
+                .improved(false) // 占位符
                 .details(Map.of(
                         "optimizeMode", optimizeMode,
                         "batchSize", batchSize
@@ -145,21 +145,21 @@ public class TextGradOptimizer extends Optimizer {
 
     @Override
     public EvaluationMetrics evaluate(Object dataset, String evalMode, Map<String, Object> kwargs) {
-        log.info("Evaluating workflow on {} set", evalMode);
+        log.info("在 {} 集上评估工作流", evalMode);
 
-        // Simplified evaluation
-        // In real implementation, this would:
-        // 1. Run workflow on evaluation dataset
-        // 2. Compute metrics (accuracy, F1, etc.)
-        // 3. Return evaluation results
+        // 简化的评估
+        // 在真实实现中,这将会:
+        // 1. 在评估数据集上运行工作流
+        // 2. 计算指标(准确率、F1等)
+        // 3. 返回评估结果
 
-        int totalSamples = 100; // Placeholder
-        int correctSamples = 70; // Placeholder
+        int totalSamples = 100; // 占位符
+        int correctSamples = 70; // 占位符
         double accuracy = (double) correctSamples / totalSamples;
 
         return EvaluationMetrics.builder()
                 .accuracy(accuracy)
-                .f1Score(accuracy) // Simplified
+                .f1Score(accuracy) // 简化
                 .totalSamples(totalSamples)
                 .correctSamples(correctSamples)
                 .additionalMetrics(Map.of(
@@ -170,7 +170,7 @@ public class TextGradOptimizer extends Optimizer {
     }
 
     /**
-     * Restore the best workflow found during optimization.
+     * 恢复优化过程中找到的最佳工作流。
      */
     public void restoreBestWorkflow() {
         if (bestWorkflow != null) {
@@ -182,7 +182,7 @@ public class TextGradOptimizer extends Optimizer {
     }
 
     /**
-     * Get optimization history.
+     * 获取优化历史。
      */
     public List<StepResult> getHistory() {
         return new ArrayList<>(history);

@@ -10,11 +10,11 @@ import lombok.extern.slf4j.Slf4j;
 import java.util.*;
 
 /**
- * AFlow optimizer for workflow structure optimization using Monte Carlo Tree Search.
- * Based on the AFlow paper: https://arxiv.org/abs/2410.10762
+ * AFlow优化器,使用蒙特卡洛树搜索进行工作流结构优化。
+ * 基于AFlow论文: https://arxiv.org/abs/2410.10762
  * 
- * This optimizer uses MCTS-like iteration to optimize workflow structure,
- * combining experience replay and convergence detection.
+ * 此优化器使用类似MCTS的迭代来优化工作流结构,
+ * 结合经验回放和收敛检测。
  */
 @Slf4j
 @Data
@@ -23,42 +23,42 @@ import java.util.*;
 public class AFlowOptimizer extends Optimizer {
 
     /**
-     * LLM for optimization
+     * 用于优化的LLM
      */
     private BaseLLM optimizerLLM;
 
     /**
-     * Maximum number of iterations per step
+     * 每步的最大迭代次数
      */
     private int maxIterations;
 
     /**
-     * Population size for workflow candidates
+     * 工作流候选项的种群大小
      */
     private int populationSize;
 
     /**
-     * Experience buffer for replay
+     * 用于回放的经验缓冲区
      */
     private List<ExperienceEntry> experienceBuffer;
 
     /**
-     * Current workflow candidates
+     * 当前的工作流候选项
      */
     private List<Workflow> workflowCandidates;
 
     /**
-     * Convergence window size
+     * 收敛窗口大小
      */
     private int convergenceWindow;
 
     /**
-     * Best workflow found
+     * 找到的最佳工作流
      */
     private Workflow bestWorkflow;
 
     /**
-     * Score history for convergence detection
+     * 用于收敛检测的分数历史
      */
     private Deque<Double> scoreHistory;
 
@@ -78,39 +78,39 @@ public class AFlowOptimizer extends Optimizer {
             currentStep = step;
             log.info("AFlow step {}/{}", step + 1, maxSteps);
 
-            // Generate workflow candidates
+            // 生成工作流候选项
             if (step == 0) {
                 initializePopulation();
             } else {
                 generateNewCandidates();
             }
 
-            // Perform optimization step
+            // 执行优化步骤
             Map<String, Object> stepKwargs = new HashMap<>(kwargs);
             stepKwargs.put("dataset", dataset);
             stepKwargs.put("step", step);
 
             StepResult stepResult = step(stepKwargs);
 
-            // Evaluate if needed
+            // 如果需要则进行评估
             if ((step + 1) % evalEveryNSteps == 0) {
                 EvaluationMetrics metrics = evaluate(dataset, "validation", kwargs);
                 double currentScore = metrics.getScore();
                 log.info("Step {} evaluation score: {}", step + 1, currentScore);
 
-                // Update score history
+                // 更新分数历史
                 scoreHistory.add(currentScore);
                 if (scoreHistory.size() > convergenceWindow) {
                     scoreHistory.removeFirst();
                 }
 
-                // Check convergence
+                // 检查收敛
                 if (checkAFlowConvergence()) {
                     log.info("AFlow optimization converged at step {}", step + 1);
                     break;
                 }
 
-                // Update best workflow
+                // 更新最佳工作流
                 if (currentScore > bestScore - 0.001) {
                     bestScore = currentScore;
                     bestWorkflow = workflow; // Clone or deep copy
@@ -118,7 +118,7 @@ public class AFlowOptimizer extends Optimizer {
                 }
             }
 
-            // Store experience
+            // 存储经验
             storeExperience(stepResult);
         }
 
@@ -141,15 +141,15 @@ public class AFlowOptimizer extends Optimizer {
     public StepResult step(Map<String, Object> kwargs) {
         log.debug("Executing AFlow step {}", currentStep);
 
-        // Simplified step implementation
-        // In real implementation, this would:
-        // 1. Sample experience from buffer
-        // 2. Use MCTS to explore workflow modifications
-        // 3. Evaluate modifications
-        // 4. Select best modification
+        // 简化的步骤实现
+        // 在真实实现中,这将会:
+        // 1. 从缓冲区中采样经验
+        // 2. 使用MCTS探索工作流修改
+        // 3. 评估修改
+        // 4. 选择最佳修改
 
         String modification = String.format(
-                "AFlow step %d: Explored %d workflow candidates using MCTS",
+                "AFlow步骤 %d: 使用MCTS探索了 %d 个工作流候选项",
                 currentStep, workflowCandidates.size()
         );
 
@@ -169,9 +169,9 @@ public class AFlowOptimizer extends Optimizer {
     public EvaluationMetrics evaluate(Object dataset, String evalMode, Map<String, Object> kwargs) {
         log.info("Evaluating AFlow workflow on {} set", evalMode);
 
-        // Simplified evaluation
+        // 简化的评估
         int totalSamples = 100;
-        int correctSamples = 78; // Placeholder
+        int correctSamples = 78; // 占位符
         double accuracy = (double) correctSamples / totalSamples;
 
         return EvaluationMetrics.builder()
@@ -187,40 +187,40 @@ public class AFlowOptimizer extends Optimizer {
     }
 
     /**
-     * Initialize workflow population.
+     * 初始化工作流种群
      */
     private void initializePopulation() {
         log.info("Initializing workflow population of size {}", populationSize);
         
         workflowCandidates.clear();
-        workflowCandidates.add(workflow); // Start with initial workflow
+        workflowCandidates.add(workflow); // 从初始工作流开始
         
-        // Generate variants (simplified)
+        // 生成变体(简化)
         for (int i = 1; i < populationSize; i++) {
-            // In real implementation, generate workflow variants
-            workflowCandidates.add(workflow); // Placeholder
+            // 在真实实现中,生成工作流变体
+            workflowCandidates.add(workflow); // 占位符
         }
         
         log.info("Initialized {} workflow candidates", workflowCandidates.size());
     }
 
     /**
-     * Generate new workflow candidates based on experience.
+     * 基于经验生成新的工作流候选项
      */
     private void generateNewCandidates() {
         log.debug("Generating new workflow candidates");
         
-        // Simplified implementation
-        // In real implementation:
-        // 1. Use MCTS to explore modifications
-        // 2. Apply operators (add/remove/modify nodes)
-        // 3. Sample from experience buffer
+        // 简化实现
+        // 在真实实现中:
+        // 1. 使用MCTS探索修改
+        // 2. 应用操作符(添加/删除/修改节点)
+        // 3. 从经验缓冲区采样
         
         log.debug("Generated {} new candidates", workflowCandidates.size());
     }
 
     /**
-     * Store optimization experience.
+     * 存储优化经验
      */
     private void storeExperience(StepResult stepResult) {
         ExperienceEntry entry = new ExperienceEntry(
@@ -232,7 +232,7 @@ public class AFlowOptimizer extends Optimizer {
         
         experienceBuffer.add(entry);
         
-        // Limit buffer size
+        // 限制缓冲区大小
         if (experienceBuffer.size() > 1000) {
             experienceBuffer.remove(0);
         }
@@ -241,14 +241,14 @@ public class AFlowOptimizer extends Optimizer {
     }
 
     /**
-     * Check AFlow-specific convergence using score variance.
+     * 使用分数方差检查AFlow特定的收敛。
      */
     private boolean checkAFlowConvergence() {
         if (scoreHistory.size() < convergenceWindow) {
             return false;
         }
 
-        // Calculate variance of recent scores
+        // 计算最近分数的方差
         double mean = scoreHistory.stream().mapToDouble(Double::doubleValue).average().orElse(0.0);
         double variance = scoreHistory.stream()
                 .mapToDouble(score -> Math.pow(score - mean, 2))
@@ -256,7 +256,7 @@ public class AFlowOptimizer extends Optimizer {
                 .orElse(0.0);
 
         double stdDev = Math.sqrt(variance);
-        boolean converged = stdDev < 0.01; // Threshold for convergence
+        boolean converged = stdDev < 0.01; // 收敛阈值
 
         if (converged) {
             log.info("AFlow converged: score std dev = {:.4f} < 0.01", stdDev);
@@ -266,7 +266,7 @@ public class AFlowOptimizer extends Optimizer {
     }
 
     /**
-     * Restore the best workflow found during optimization.
+     * 恢复优化过程中找到的最佳工作流。
      */
     public void restoreBestWorkflow() {
         if (bestWorkflow != null) {
@@ -278,14 +278,14 @@ public class AFlowOptimizer extends Optimizer {
     }
 
     /**
-     * Get experience buffer.
+     * 获取经验缓冲区。
      */
     public List<ExperienceEntry> getExperienceBuffer() {
         return new ArrayList<>(experienceBuffer);
     }
 
     /**
-     * Experience entry for replay.
+     * 用于回放的经验条目
      */
     @Data
     public static class ExperienceEntry {
