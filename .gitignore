@@ -1,49 +1,39 @@
-# 编译产物
 target/
-*.class
-*.jar
-*.war
-*.ear
-*.log
+!.mvn/wrapper/maven-wrapper.jar
+!**/src/main/**/target/
+!**/src/test/**/target/
+dependency-reduced-pom.xml
 
-# IDE 配置
-.idea/
-*.iml
+### IntelliJ IDEA ###
+.idea
 *.iws
+*.iml
 *.ipr
-.project
+*.class
+
+### Eclipse ###
+.apt_generated
 .classpath
-.settings/
+.factorypath
+.project
+.settings
+.springBeans
+.sts4-cache
+
+### NetBeans ###
+/nbproject/private/
+/nbbuild/
+/dist/
+/nbdist/
+/.nb-gradle/
+build/
+!**/src/main/**/build/
+!**/src/test/**/build/
+
+### VS Code ###
 .vscode/
-*.swp
-*.swo
-*~
+.qoder/
+**/.jimi/config.json
 
-# OS 文件
+### Mac OS ###
 .DS_Store
-Thumbs.db
-
-# 日志文件
-logs/
-*.log
-
-# 环境变量文件
-.env
-.env.local
-.env.*.local
-
-# 测试覆盖率报告
-coverage/
-*.exec
-jacoco.xml
-
-# Benchmark 结果
-benchmark-results/
-
-# 临时文件
-tmp/
-temp/
-*.tmp
-
-# Maven 相关
-.mvn/wrapper/maven-wrapper.jar
