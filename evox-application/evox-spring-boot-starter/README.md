@@ -1,6 +1,14 @@
 # EvoX Spring Boot Starter
 
-EvoX 框架的 Spring Boot Starter，提供自动配置功能，让你零配置快速开始使用 EvoX。
+## 📦 模块定位
+
+**层级**: 应用层 (Application Layer)  
+**职责**: 提供Spring Boot自动配置  
+**依赖**: evox-core, evox-agents
+
+## 🎯 核心功能
+
+evox-spring-boot-starter 为 EvoX 框架提供开箱即用的 Spring Boot 集成,自动配置LLM、Agent、Memory等组件。
 
 ## ✨ 特性
 

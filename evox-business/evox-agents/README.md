@@ -1,6 +1,14 @@
-# EvoX Agents 智能体模块
+# EvoX Agents 智能代理模块
 
-**智能代理(Agent)系统**是 EvoX 框架的核心业务模块,提供多种类型的智能体实现和多智能体协同框架。
+## 📦 模块定位
+
+**层级**: 业务层 (Business Layer)  
+**职责**: 提供多种智能体实现和Agent管理能力  
+**依赖**: evox-core, evox-models, evox-actions, evox-tools
+
+## 🎯 核心功能
+
+evox-agents 是 EvoX 框架的核心业务模块,提供多种类型的智能体实现,让AI应用能够自主推理、规划和执行任务。
 
 ## 📦 模块结构
 
