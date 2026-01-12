@@ -74,7 +74,7 @@
             <version>${project.version}</version>
         </dependency>
         
-        <!--
+        
         <dependency>
             <groupId>io.leavesfly.evox</groupId>
             <artifactId>evox-optimizers</artifactId>
@@ -86,7 +86,12 @@
             <artifactId>evox-hitl</artifactId>
             <version>${project.version}</version>
         </dependency>
-        -->
+        
+        <dependency>
+            <groupId>io.leavesfly.evox</groupId>
+            <artifactId>evox-frameworks</artifactId>
+            <version>${project.version}</version>
+        </dependency>
         
         <!-- Spring Boot Starter -->
         <dependency>
