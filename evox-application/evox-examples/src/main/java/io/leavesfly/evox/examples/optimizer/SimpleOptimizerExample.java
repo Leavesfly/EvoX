@@ -4,7 +4,7 @@ import io.leavesfly.evox.models.openai.OpenAILLM;
 import io.leavesfly.evox.models.config.OpenAILLMConfig;
 import io.leavesfly.evox.optimizers.*;
 import io.leavesfly.evox.workflow.base.Workflow;
-import io.leavesfly.evox.workflow.core.WorkflowGraph;
+import io.leavesfly.evox.workflow.graph.WorkflowGraph;
 import lombok.extern.slf4j.Slf4j;
 
 import java.util.HashMap;
@@ -248,7 +248,7 @@ public class SimpleOptimizerExample {
         OpenAILLMConfig config = OpenAILLMConfig.builder()
                 .model("gpt-4o-mini")
                 .apiKey(apiKey)
-                .temperature(0.7)
+                .temperature(0.7f)
                 .maxTokens(1000)
                 .build();
 

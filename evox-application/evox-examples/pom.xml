@@ -4,20 +4,20 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 
          http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
-    
+
     <parent>
         <groupId>io.leavesfly.evox</groupId>
         <artifactId>evox</artifactId>
         <version>1.0.0-SNAPSHOT</version>
         <relativePath>../../pom.xml</relativePath>
     </parent>
-    
+
     <artifactId>evox-examples</artifactId>
     <packaging>jar</packaging>
-    
+
     <name>EvoX Examples</name>
     <description>示例应用和使用案例</description>
-    
+
     <dependencies>
         <!-- 依赖所有核心模块 -->
         <dependency>
@@ -25,91 +25,75 @@
             <artifactId>evox-core</artifactId>
             <version>${project.version}</version>
         </dependency>
-        
+
         <dependency>
             <groupId>io.leavesfly.evox</groupId>
             <artifactId>evox-models</artifactId>
             <version>${project.version}</version>
         </dependency>
-        
+
         <dependency>
             <groupId>io.leavesfly.evox</groupId>
             <artifactId>evox-actions</artifactId>
             <version>${project.version}</version>
         </dependency>
-        
+
         <dependency>
             <groupId>io.leavesfly.evox</groupId>
             <artifactId>evox-agents</artifactId>
             <version>${project.version}</version>
         </dependency>
-        
+
         <dependency>
             <groupId>io.leavesfly.evox</groupId>
             <artifactId>evox-workflow</artifactId>
             <version>${project.version}</version>
         </dependency>
-        
+
         <dependency>
             <groupId>io.leavesfly.evox</groupId>
-            <artifactId>evox-memory</artifactId>
+            <artifactId>evox-capability</artifactId>
             <version>${project.version}</version>
         </dependency>
-        
-        <dependency>
-            <groupId>io.leavesfly.evox</groupId>
-            <artifactId>evox-storage</artifactId>
-            <version>${project.version}</version>
-        </dependency>
-        
-        <dependency>
-            <groupId>io.leavesfly.evox</groupId>
-            <artifactId>evox-tools</artifactId>
-            <version>${project.version}</version>
-        </dependency>
-        
+
+
         <dependency>
             <groupId>io.leavesfly.evox</groupId>
             <artifactId>evox-benchmark</artifactId>
             <version>${project.version}</version>
         </dependency>
-        
-        
+
+
         <dependency>
             <groupId>io.leavesfly.evox</groupId>
             <artifactId>evox-optimizers</artifactId>
             <version>${project.version}</version>
         </dependency>
-        
+
         <dependency>
             <groupId>io.leavesfly.evox</groupId>
             <artifactId>evox-hitl</artifactId>
             <version>${project.version}</version>
         </dependency>
-        
-        <dependency>
-            <groupId>io.leavesfly.evox</groupId>
-            <artifactId>evox-frameworks</artifactId>
-            <version>${project.version}</version>
-        </dependency>
-        
+
+
         <!-- Spring Boot Starter -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter</artifactId>
         </dependency>
-        
+
         <!-- Logging -->
         <dependency>
             <groupId>org.slf4j</groupId>
             <artifactId>slf4j-api</artifactId>
         </dependency>
-        
+
         <dependency>
             <groupId>ch.qos.logback</groupId>
             <artifactId>logback-classic</artifactId>
         </dependency>
-        
+
         <!-- Lombok -->
         <dependency>
             <groupId>org.projectlombok</groupId>
@@ -117,7 +101,7 @@
             <optional>true</optional>
         </dependency>
     </dependencies>
-    
+
     <build>
         <plugins>
             <!-- Maven Compiler Plugin -->

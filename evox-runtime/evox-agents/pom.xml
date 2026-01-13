@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project xmlns="http://maven.apache.org/POM/4.0.0"
          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 
          http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
@@ -12,49 +12,39 @@
         <relativePath>../../pom.xml</relativePath>
     </parent>
 
-    <artifactId>evox-spring-boot-starter</artifactId>
-    <name>EvoX Spring Boot Starter</name>
-    <description>Spring Boot Starter for EvoX framework with auto-configuration</description>
+    <artifactId>evox-agents</artifactId>
+    <name>EvoX Agents</name>
+    <description>EvoX Agents Module - Agent system</description>
 
     <dependencies>
-        <!-- EvoX Core Dependencies -->
+        <!-- EvoX Modules -->
         <dependency>
             <groupId>io.leavesfly.evox</groupId>
             <artifactId>evox-core</artifactId>
         </dependency>
-        
         <dependency>
             <groupId>io.leavesfly.evox</groupId>
             <artifactId>evox-models</artifactId>
         </dependency>
-        
         <dependency>
             <groupId>io.leavesfly.evox</groupId>
-            <artifactId>evox-agents</artifactId>
+            <artifactId>evox-actions</artifactId>
         </dependency>
-        
         <dependency>
             <groupId>io.leavesfly.evox</groupId>
             <artifactId>evox-capability</artifactId>
         </dependency>
 
-        <!-- Spring Boot Starter -->
+        <!-- Spring Boot -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter</artifactId>
         </dependency>
 
-        <!-- Spring Boot Configuration Processor -->
+        <!-- Project Reactor -->
         <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-configuration-processor</artifactId>
-            <optional>true</optional>
-        </dependency>
-
-        <!-- Spring Boot Autoconfigure -->
-        <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-autoconfigure</artifactId>
+            <groupId>io.projectreactor</groupId>
+            <artifactId>reactor-core</artifactId>
         </dependency>
 
         <!-- Lombok -->
@@ -64,7 +54,7 @@
             <scope>provided</scope>
         </dependency>
 
-        <!-- Test Dependencies -->
+        <!-- Test -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-test</artifactId>
@@ -72,12 +62,4 @@
         </dependency>
     </dependencies>
 
-    <build>
-        <plugins>
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-compiler-plugin</artifactId>
-            </plugin>
-        </plugins>
-    </build>
 </project>

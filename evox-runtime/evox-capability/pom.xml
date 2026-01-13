@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project xmlns="http://maven.apache.org/POM/4.0.0"
          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 
          http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
@@ -12,59 +12,56 @@
         <relativePath>../../pom.xml</relativePath>
     </parent>
 
-    <artifactId>evox-spring-boot-starter</artifactId>
-    <name>EvoX Spring Boot Starter</name>
-    <description>Spring Boot Starter for EvoX framework with auto-configuration</description>
+    <artifactId>evox-capability</artifactId>
+    <name>EvoX Memory</name>
+    <description>EvoX Memory Module - Memory system</description>
 
     <dependencies>
-        <!-- EvoX Core Dependencies -->
         <dependency>
             <groupId>io.leavesfly.evox</groupId>
             <artifactId>evox-core</artifactId>
         </dependency>
-        
-        <dependency>
-            <groupId>io.leavesfly.evox</groupId>
-            <artifactId>evox-models</artifactId>
-        </dependency>
-        
-        <dependency>
-            <groupId>io.leavesfly.evox</groupId>
-            <artifactId>evox-agents</artifactId>
-        </dependency>
-        
-        <dependency>
-            <groupId>io.leavesfly.evox</groupId>
-            <artifactId>evox-capability</artifactId>
-        </dependency>
 
-        <!-- Spring Boot Starter -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter</artifactId>
         </dependency>
 
-        <!-- Spring Boot Configuration Processor -->
+        <!-- Spring AI OpenAI for Image Generation -->
         <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-configuration-processor</artifactId>
+            <groupId>org.springframework.ai</groupId>
+            <artifactId>spring-ai-openai</artifactId>
             <optional>true</optional>
         </dependency>
 
-        <!-- Spring Boot Autoconfigure -->
+        <!-- Spring Web for HTTP operations -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-autoconfigure</artifactId>
+            <artifactId>spring-boot-starter-web</artifactId>
+            <optional>true</optional>
         </dependency>
 
-        <!-- Lombok -->
+        <!-- Spring JDBC for Database operations -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-jdbc</artifactId>
+            <optional>true</optional>
+        </dependency>
+
+        <!-- MongoDB Driver -->
+        <dependency>
+            <groupId>org.mongodb</groupId>
+            <artifactId>mongodb-driver-sync</artifactId>
+            <version>4.11.1</version>
+            <optional>true</optional>
+        </dependency>
+
         <dependency>
             <groupId>org.projectlombok</groupId>
             <artifactId>lombok</artifactId>
             <scope>provided</scope>
         </dependency>
 
-        <!-- Test Dependencies -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-test</artifactId>
@@ -72,12 +69,4 @@
         </dependency>
     </dependencies>
 
-    <build>
-        <plugins>
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-compiler-plugin</artifactId>
-            </plugin>
-        </plugins>
-    </build>
 </project>
