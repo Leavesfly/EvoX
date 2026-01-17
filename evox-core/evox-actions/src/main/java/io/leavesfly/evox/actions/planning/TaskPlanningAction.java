@@ -31,33 +31,33 @@ public class TaskPlanningAction extends Action {
      * 提示词模板
      */
     private static final String DEFAULT_PROMPT = 
-        "Your Task: Given a user's goal, break it down into clear, manageable sub-tasks.\n\n" +
-        "### Instructions:\n" +
-        "1. **Understand the Goal**: Identify the core objective.\n" +
-        "2. **Review the History**: Assess any previously generated task plan.\n" +
-        "3. **Consider Suggestions**: Use suggestions to improve the workflow.\n" +
-        "4. **Define Sub-Tasks**: Break the task into logical, actionable sub-tasks.\n\n" +
-        "### Principles:\n" +
-        "- **Simplicity**: Each sub-task has a specific, clear objective\n" +
-        "- **Modularity**: Sub-tasks are self-contained and reusable\n" +
-        "- **Consistency**: Sub-tasks logically support the goal\n" +
-        "- **Avoid Redundancy**: No overlapping or unnecessary sub-tasks\n\n" +
-        "### Sub-Task Format:\n" +
+        "你的任务：根据用户的目标，将其分解为清晰、可管理的子任务。\n\n" +
+        "### 操作指南：\n" +
+        "1. **理解目标**：识别核心目标\n" +
+        "2. **回顾历史**：评估之前生成的任务计划\n" +
+        "3. **采纳建议**：利用建议来优化工作流程\n" +
+        "4. **定义子任务**：将任务拆分为逻辑清晰、可执行的子任务\n\n" +
+        "### 原则：\n" +
+        "- **简洁性**：每个子任务都有明确、具体的目标\n" +
+        "- **模块化**：子任务是独立且可复用的\n" +
+        "- **一致性**：子任务在逻辑上支撑总目标\n" +
+        "- **避免冗余**：不产生重叠或不必要的子任务\n\n" +
+        "### 子任务格式：\n" +
         "```json\n" +
         "{\n" +
-        "  \"name\": \"subtask_name\",\n" +
-        "  \"description\": \"Clear explanation of the sub-task goal\",\n" +
-        "  \"reason\": \"Why this sub-task is necessary\",\n" +
-        "  \"inputs\": [{\"name\": \"input_name\", \"type\": \"string\", \"required\": true, \"description\": \"...\"}],\n" +
-        "  \"outputs\": [{\"name\": \"output_name\", \"type\": \"string\", \"required\": true, \"description\": \"...\"}]\n" +
+        "  \"name\": \"子任务名称\",\n" +
+        "  \"description\": \"子任务目标的清晰说明\",\n" +
+        "  \"reason\": \"为什么需要这个子任务\",\n" +
+        "  \"inputs\": [{\"name\": \"输入名称\", \"type\": \"string\", \"required\": true, \"description\": \"...\"}],\n" +
+        "  \"outputs\": [{\"name\": \"输出名称\", \"type\": \"string\", \"required\": true, \"description\": \"...\"}]\n" +
         "}\n" +
         "```\n\n" +
-        "### Output Format:\n" +
-        "## Thought\n" +
-        "Your reasoning for the task structure.\n\n" +
-        "## Goal\n" +
-        "Restate the user's goal.\n\n" +
-        "## Plan\n" +
+        "### 输出格式：\n" +
+        "## 思考\n" +
+        "你对任务结构的推理过程。\n\n" +
+        "## 目标\n" +
+        "重新陈述用户的目标。\n\n" +
+        "## 计划\n" +
         "```json\n" +
         "{\n" +
         "  \"sub_tasks\": [\n" +
@@ -67,10 +67,10 @@ public class TaskPlanningAction extends Action {
         "}\n" +
         "```\n\n" +
         "---\n\n" +
-        "### History: {history}\n" +
-        "### Suggestions: {suggestion}\n" +
-        "### User's Goal: {goal}\n\n" +
-        "Output:";
+        "### 历史计划：{history}\n" +
+        "### 优化建议：{suggestion}\n" +
+        "### 用户目标：{goal}\n\n" +
+        "输出：";
 
     private String prompt;
 

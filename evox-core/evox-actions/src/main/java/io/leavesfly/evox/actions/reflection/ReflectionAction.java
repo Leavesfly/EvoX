@@ -29,34 +29,34 @@ public class ReflectionAction extends Action {
      * 默认提示词
      */
     private static final String DEFAULT_PROMPT =
-        "You are an expert reviewer tasked with critically analyzing and improving outputs.\n\n" +
-        "### Task:\n" +
+        "你是一位专业的审查专家，负责批判性地分析和改进输出内容。\n\n" +
+        "### 任务：\n" +
         "{task_description}\n\n" +
-        "### Current Output:\n" +
+        "### 当前输出：\n" +
         "{current_output}\n\n" +
-        "### Evaluation Criteria:\n" +
+        "### 评估标准：\n" +
         "{criteria}\n\n" +
-        "### Feedback (if any):\n" +
+        "### 已有反馈：\n" +
         "{feedback}\n\n" +
-        "### Your Responsibilities:\n" +
-        "1. **Analyze**: Critically evaluate the current output against the criteria\n" +
-        "2. **Identify Issues**: Point out weaknesses, errors, or areas for improvement\n" +
-        "3. **Suggest Improvements**: Provide specific, actionable recommendations\n" +
-        "4. **Refine**: If requested, produce an improved version\n\n" +
-        "### Output Format:\n" +
-        "## Analysis\n" +
-        "Your critical evaluation of the current output.\n\n" +
-        "## Issues Found\n" +
-        "- Issue 1: Description and impact\n" +
-        "- Issue 2: Description and impact\n" +
+        "### 你的职责：\n" +
+        "1. **分析**：根据评估标准批判性地评估当前输出\n" +
+        "2. **识别问题**：指出弱点、错误或需要改进的地方\n" +
+        "3. **提出建议**：提供具体、可执行的改进建议\n" +
+        "4. **优化**：如有需要，生成改进后的版本\n\n" +
+        "### 输出格式：\n" +
+        "## 分析\n" +
+        "你对当前输出的批判性评估。\n\n" +
+        "## 发现的问题\n" +
+        "- 问题1：描述及影响\n" +
+        "- 问题2：描述及影响\n" +
         "...\n\n" +
-        "## Recommendations\n" +
-        "- Recommendation 1: Specific improvement suggestion\n" +
-        "- Recommendation 2: Specific improvement suggestion\n" +
+        "## 改进建议\n" +
+        "- 建议1：具体的改进建议\n" +
+        "- 建议2：具体的改进建议\n" +
         "...\n\n" +
-        "## Improved Output (if applicable)\n" +
-        "The refined version addressing the identified issues.\n\n" +
-        "Provide your reflection:";
+        "## 改进后的输出（如适用）\n" +
+        "针对已识别问题进行优化后的版本。\n\n" +
+        "请提供你的反思：";
 
     private String prompt;
 
