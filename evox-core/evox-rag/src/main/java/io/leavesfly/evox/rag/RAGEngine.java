@@ -7,6 +7,9 @@ import io.leavesfly.evox.rag.config.RAGConfig;
 import io.leavesfly.evox.rag.embedding.EmbeddingService;
 import io.leavesfly.evox.rag.reader.DocumentReader;
 import io.leavesfly.evox.rag.reader.UniversalDocumentReader;
+import io.leavesfly.evox.rag.reranker.Reranker;
+import io.leavesfly.evox.rag.reranker.CrossEncoderReranker;
+import io.leavesfly.evox.rag.reranker.LLMReranker;
 import io.leavesfly.evox.rag.retriever.Retriever;
 import io.leavesfly.evox.rag.retriever.VectorRetriever;
 import io.leavesfly.evox.rag.schema.Chunk;
@@ -14,6 +17,7 @@ import io.leavesfly.evox.rag.schema.Document;
 import io.leavesfly.evox.rag.schema.Query;
 import io.leavesfly.evox.rag.schema.RetrievalResult;
 import io.leavesfly.evox.rag.vectorstore.VectorStore;
+import io.leavesfly.evox.models.base.BaseLLM;
 import lombok.extern.slf4j.Slf4j;
 
 import java.io.IOException;
@@ -35,12 +39,13 @@ public class RAGEngine {
     private final EmbeddingService embeddingService;
     private final VectorStore vectorStore;
     private final Retriever retriever;
+    private final Reranker reranker;
 
     public RAGEngine(
             RAGConfig config,
             EmbeddingService embeddingService,
             VectorStore vectorStore) {
-        this(config, new UniversalDocumentReader(), embeddingService, vectorStore);
+        this(config, new UniversalDocumentReader(), embeddingService, vectorStore, null);
     }
 
     public RAGEngine(
@@ -48,6 +53,15 @@ public class RAGEngine {
             DocumentReader reader,
             EmbeddingService embeddingService,
             VectorStore vectorStore) {
+        this(config, reader, embeddingService, vectorStore, null);
+    }
+
+    public RAGEngine(
+            RAGConfig config,
+            DocumentReader reader,
+            EmbeddingService embeddingService,
+            VectorStore vectorStore,
+            BaseLLM llm) {
         this.config = config;
         this.reader = reader;
         this.embeddingService = embeddingService;
@@ -59,6 +73,9 @@ public class RAGEngine {
         // 初始化检索器
         this.retriever = new VectorRetriever(vectorStore, embeddingService, 
                 config.getRetriever().getTopK());
+        
+        // 初始化重排序器
+        this.reranker = createReranker(config, llm);
         
         log.info("RAG Engine initialized with config: {}", config);
     }
@@ -146,13 +163,24 @@ public class RAGEngine {
     }
 
     /**
-     * 使用Query对象检索
+     * 检索相关文档
      *
      * @param query 查询对象
      * @return 检索结果
      */
     public RetrievalResult retrieve(Query query) {
-        return retriever.retrieve(query);
+        RetrievalResult result = retriever.retrieve(query);
+        
+        // 如果启用了重排序且reranker不为null，进行重排序
+        if (config.getRetriever().getEnableReranking() && reranker != null) {
+            log.debug("Applying reranking with {}", reranker.getName());
+            List<Chunk> rerankedChunks = reranker.rerank(query, result.getChunks());
+            result.setChunks(rerankedChunks);
+            result.setTotalResults(rerankedChunks.size());
+            result.getMetadata().put("reranker", reranker.getName());
+        }
+        
+        return result;
     }
 
     /**
@@ -202,6 +230,38 @@ public class RAGEngine {
     public void load(String path) {
         log.info("Loading index from: {}", path);
         vectorStore.load(path);
+    }
+
+    /**
+     * 创建重排序器
+     */
+    private Reranker createReranker(RAGConfig config, BaseLLM llm) {
+        if (!config.getRetriever().getEnableReranking() || config.getReranker() == null) {
+            return null;
+        }
+        
+        RAGConfig.RerankerConfig rerankerConfig = config.getReranker();
+        String type = rerankerConfig.getType();
+        
+        if ("llm".equalsIgnoreCase(type)) {
+            if (llm == null) {
+                log.warn("LLM reranker requested but no LLM provided, skipping reranking");
+                return null;
+            }
+            return new LLMReranker(
+                    llm,
+                    rerankerConfig.getPromptTemplate(),
+                    rerankerConfig.getScoreThreshold()
+            );
+        } else if ("crossencoder".equalsIgnoreCase(type)) {
+            return new CrossEncoderReranker(
+                    rerankerConfig.getModelName(),
+                    rerankerConfig.getScoreThreshold()
+            );
+        }
+        
+        log.warn("Unknown reranker type: {}, skipping reranking", type);
+        return null;
     }
 
     /**

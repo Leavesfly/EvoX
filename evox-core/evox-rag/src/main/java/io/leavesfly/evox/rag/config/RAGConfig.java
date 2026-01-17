@@ -103,6 +103,33 @@ public class RAGConfig {
     }
 
     /**
+     * Reranker配置
+     */
+    @Data
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class RerankerConfig {
+        /** 重排序器类型 (crossencoder, llm) */
+        @Builder.Default
+        private String type = "crossencoder";
+        
+        /** 重排序模型名称 */
+        @Builder.Default
+        private String modelName = "cross-encoder/ms-marco-MiniLM-L-12-v2";
+        
+        /** 分数阈值 */
+        @Builder.Default
+        private Double scoreThreshold = 0.0;
+        
+        /** 重排序后返回的Top K */
+        private Integer topK;
+        
+        /** LLM Reranker的prompt模板 */
+        private String promptTemplate;
+    }
+
+    /**
      * Reader配置
      */
     @Data
@@ -157,6 +184,7 @@ public class RAGConfig {
     private RetrieverConfig retriever;
     private ReaderConfig reader;
     private GeneratorConfig generator;
+    private RerankerConfig reranker;
 
     /**
      * 创建默认配置
@@ -216,6 +244,12 @@ public class RAGConfig {
                         .similarityThreshold(0.75)
                         .enableReranking(true)
                         .rerankModel("cross-encoder/ms-marco-MiniLM-L-12-v2")
+                        .build())
+                .reranker(RerankerConfig.builder()
+                        .type("crossencoder")
+                        .modelName("cross-encoder/ms-marco-MiniLM-L-12-v2")
+                        .scoreThreshold(0.5)
+                        .topK(5)
                         .build())
                 .generator(GeneratorConfig.builder()
                         .modelName("gpt-4")

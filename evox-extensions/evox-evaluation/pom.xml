@@ -12,9 +12,9 @@
         <relativePath>../../pom.xml</relativePath>
     </parent>
 
-    <artifactId>evox-optimizers</artifactId>
-    <name>EvoX Optimizers</name>
-    <description>Optimizers module for workflow and prompt optimization (TextGrad, MIPRO, AFlow)</description>
+    <artifactId>evox-evaluation</artifactId>
+    <name>EvoX Evaluation</name>
+    <description>Evaluation module for task-specific and LLM-based evaluation</description>
 
     <dependencies>
         <!-- EvoX Dependencies -->
@@ -29,14 +29,6 @@
         <dependency>
             <groupId>io.leavesfly.evox</groupId>
             <artifactId>evox-agents</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>io.leavesfly.evox</groupId>
-            <artifactId>evox-workflow</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>io.leavesfly.evox</groupId>
-            <artifactId>evox-capability</artifactId>
         </dependency>
 
         <!-- Spring Boot -->

@@ -57,16 +57,18 @@
         <module>evox-core/evox-core</module>
         <module>evox-core/evox-models</module>
         <module>evox-core/evox-actions</module>
+        <module>evox-core/evox-mcp</module>
+        <module>evox-core/evox-rag</module>
 
         <!-- 运行时层 (Runtime Layer) - 智能体、能力、工作流 -->
         <module>evox-runtime/evox-agents</module>
         <module>evox-runtime/evox-capability</module>
         <module>evox-runtime/evox-workflow</module>
 
-        <!-- 扩展层 (Extensions Layer) - RAG、优化器、人机协同 -->
-        <module>evox-extensions/evox-rag</module>
+        <!-- 扩展层 (Extensions Layer) - 优化器、人机协同、评估 -->
         <module>evox-extensions/evox-optimizers</module>
         <module>evox-extensions/evox-hitl</module>
+        <module>evox-extensions/evox-evaluation</module>
 
         <!-- 应用层 (Application Layer) - 示例和基准测试 -->
         <module>evox-application/evox-examples</module>
@@ -130,6 +132,11 @@
             </dependency>
             <dependency>
                 <groupId>io.leavesfly.evox</groupId>
+                <artifactId>evox-mcp</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>io.leavesfly.evox</groupId>
                 <artifactId>evox-capability</artifactId>
                 <version>${project.version}</version>
             </dependency>
@@ -156,6 +163,11 @@
             <dependency>
                 <groupId>io.leavesfly.evox</groupId>
                 <artifactId>evox-hitl</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>io.leavesfly.evox</groupId>
+                <artifactId>evox-evaluation</artifactId>
                 <version>${project.version}</version>
             </dependency>
             <dependency>
