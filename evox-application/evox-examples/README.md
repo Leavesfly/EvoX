@@ -44,6 +44,23 @@ List<BaseTool> tools = List.of(
 Agent toolAgent = new ToolAgent(llm, tools);
 ```
 
+### 2.1 RAG 检索增强
+
+**RagQuickStartExample** - RAG 入门示例:
+```java
+RAGEngine rag = new RAGEngine(config, embeddingService, vectorStore);
+rag.indexDocuments(documents);
+RetrievalResult result = rag.retrieve("workflow");
+```
+
+### 2.2 记忆系统
+
+**MemoryBasicsExample** - 短期/长期记忆基础用法:
+```java
+ShortTermMemory shortTerm = new ShortTermMemory(3);
+InMemoryLongTermMemory longTerm = new InMemoryLongTermMemory();
+```
+
 ### 3. 工作流编排
 
 **WorkflowDemo** - 工作流示例:
@@ -84,6 +101,7 @@ BaseLLM llm2 = new AliyunLLM(config2);
 **CustomizeAgentExample** - 自定义Agent
 **SpecializedAgentsExample** - 专业Agent
 **BuilderExample** - 构建器模式
+**RetryAndCircuitBreakerExample** - 重试与熔断示例
 
 ## 🚀 运行示例
 
