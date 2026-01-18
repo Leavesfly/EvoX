@@ -9,13 +9,14 @@ import java.time.Duration;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
- * Core resilience demo showcasing retry and circuit breaker.
+ * 核心能力示例：重试与熔断。
  */
 @Slf4j
 public class RetryAndCircuitBreakerExample {
 
     public static void main(String[] args) throws InterruptedException {
         log.info("=== EvoX Core Resilience Demo ===");
+        // 先演示重试，再演示熔断
         demoRetry();
         demoCircuitBreaker();
     }
@@ -23,6 +24,7 @@ public class RetryAndCircuitBreakerExample {
     private static void demoRetry() {
         log.info("--- Retry demo ---");
 
+        // 配置重试策略：最多 4 次，固定退避
         RetryPolicy policy = RetryPolicy.builder()
                 .maxAttempts(4)
                 .initialDelay(Duration.ofMillis(50))
@@ -34,6 +36,7 @@ public class RetryAndCircuitBreakerExample {
         RetryExecutor executor = new RetryExecutor(policy);
         AtomicInteger attempts = new AtomicInteger(0);
 
+        // 前两次失败，第三次成功
         String result = executor.execute(() -> {
             int attempt = attempts.incrementAndGet();
             if (attempt < 3) {
@@ -48,6 +51,7 @@ public class RetryAndCircuitBreakerExample {
     private static void demoCircuitBreaker() throws InterruptedException {
         log.info("--- Circuit breaker demo ---");
 
+        // 构建熔断器：2 次失败即打开
         CircuitBreaker breaker = new CircuitBreaker(
                 "demo-breaker",
                 2,
@@ -57,6 +61,7 @@ public class RetryAndCircuitBreakerExample {
 
         AtomicInteger counter = new AtomicInteger(0);
 
+        // 连续失败触发熔断
         for (int i = 0; i < 3; i++) {
             try {
                 breaker.execute(() -> {
@@ -68,6 +73,7 @@ public class RetryAndCircuitBreakerExample {
             }
         }
 
+        // 等待进入半开状态
         log.info("Breaker open, waiting to reset...");
         Thread.sleep(1100);
 

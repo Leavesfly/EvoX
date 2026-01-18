@@ -10,7 +10,7 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * Memory demo showcasing short-term and long-term memory usage.
+ * 记忆系统示例：演示短期与长期记忆的基本用法。
  */
 @Slf4j
 public class MemoryBasicsExample {
@@ -18,9 +18,11 @@ public class MemoryBasicsExample {
     public static void main(String[] args) {
         log.info("=== EvoX Memory Basics Demo ===");
 
+        // 短期记忆：容量为 3
         ShortTermMemory shortTerm = new ShortTermMemory(3);
         shortTerm.initModule();
 
+        // 长期记忆：使用内存实现，带内容去重
         InMemoryLongTermMemory longTerm = new InMemoryLongTermMemory();
         longTerm.initModule();
 
@@ -32,6 +34,7 @@ public class MemoryBasicsExample {
                 message(MessageType.INPUT, "Remember that I prefer DAGs.")
         );
 
+        // 写入短期与长期记忆
         conversation.forEach(shortTerm::addMessage);
         longTerm.addAll(conversation);
 
@@ -43,10 +46,12 @@ public class MemoryBasicsExample {
 
         log.info("Long-term memory stats: {}", longTerm.getStatistics());
 
+        // 从长期记忆检索关键词
         Map<String, Message> matches = longTerm.search("workflow", 5);
         log.info("Long-term search results: {}", matches.size());
         matches.forEach((id, msg) -> log.info(" - {}: {}", id, msg.getContent()));
 
+        // 触发去重：同内容会返回已有记忆 ID
         String duplicateId = longTerm.add(message(MessageType.INPUT, "I like workflow automation."));
         log.info("Duplicate message resolved to ID: {}", duplicateId);
     }

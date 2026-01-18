@@ -15,8 +15,7 @@ import java.util.List;
 /**
  * RAG quick start demo.
  *
- * <p>This demo uses an in-memory vector store and a lightweight embedding
- * implementation so it can run without external services.</p>
+ * <p>本示例使用内存向量库和轻量嵌入实现，无需外部服务即可运行。</p>
  */
 @Slf4j
 public class RagQuickStartExample {
@@ -26,6 +25,7 @@ public class RagQuickStartExample {
     public static void main(String[] args) {
         log.info("=== EvoX RAG Quick Start Demo ===");
 
+        // 构建 RAG 配置：固定分块 + 向量检索
         RAGConfig config = RAGConfig.builder()
                 .embedding(RAGConfig.EmbeddingConfig.builder()
                         .dimension(EMBEDDING_DIMENSIONS)
@@ -41,9 +41,11 @@ public class RagQuickStartExample {
                         .build())
                 .build();
 
+        // 使用简易嵌入服务与内存向量库，方便本地演示
         EmbeddingService embeddingService = new SimpleHashEmbeddingService(EMBEDDING_DIMENSIONS);
         VectorStore vectorStore = new InMemoryVectorStore();
 
+        // 初始化 RAG 引擎
         RAGEngine ragEngine = new RAGEngine(config, embeddingService, vectorStore);
 
         List<Document> documents = List.of(
@@ -64,9 +66,11 @@ public class RagQuickStartExample {
                         .build()
         );
 
+        // 索引文档到向量库
         int chunks = ragEngine.indexDocuments(documents);
         log.info("Indexed documents into {} chunks", chunks);
 
+        // 执行检索
         String query = "How does EvoX handle workflows?";
         RetrievalResult result = ragEngine.retrieve(query);
 
@@ -80,7 +84,7 @@ public class RagQuickStartExample {
     }
 
     /**
-     * A tiny embedding service that hashes text into a fixed-size vector.
+     * 简易嵌入服务：将文本哈希为固定维度向量，仅用于演示。
      */
     private static class SimpleHashEmbeddingService implements EmbeddingService {
         private final int dimensions;
