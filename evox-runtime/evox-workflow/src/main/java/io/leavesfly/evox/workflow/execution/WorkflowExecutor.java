@@ -11,6 +11,7 @@ import lombok.extern.slf4j.Slf4j;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -110,9 +111,12 @@ public class WorkflowExecutor {
             return null;
         }
 
-        // 简单策略：返回第一个就绪的节点
-        // TODO: 实现更智能的调度策略（优先级、负载均衡等）
-        return readyNodes.get(0);
+        // 智能调度策略：按优先级降序排序，返回优先级最高的节点
+        readyNodes.sort(Comparator.comparingInt(WorkflowNode::getPriority).reversed());
+        WorkflowNode selectedNode = readyNodes.get(0);
+        
+        log.debug("Selected node {} with priority {}", selectedNode.getName(), selectedNode.getPriority());
+        return selectedNode;
     }
 
     /**

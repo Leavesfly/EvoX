@@ -1,10 +1,17 @@
 package io.leavesfly.evox.examples;
 
+import io.leavesfly.evox.agents.specialized.ChatBotAgent;
+import io.leavesfly.evox.core.message.Message;
+import io.leavesfly.evox.core.message.MessageType;
+import io.leavesfly.evox.memory.longterm.InMemoryLongTermMemory;
+import io.leavesfly.evox.memory.manager.MemoryManager;
+import io.leavesfly.evox.memory.shortterm.ShortTermMemory;
+import io.leavesfly.evox.models.config.OpenAILLMConfig;
+import io.leavesfly.evox.models.openai.OpenAILLM;
 import lombok.extern.slf4j.Slf4j;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
-import java.util.*;
+import java.util.Collections;
+import java.util.List;
 
 /**
  * 记忆智能体示例
@@ -12,83 +19,67 @@ import java.util.*;
  *
  * @author EvoX Team
  */
+@Slf4j
 public class MemoryAgentExample {
-    private static final Logger log = LoggerFactory.getLogger(MemoryAgentExample.class);
 
     public static void main(String[] args) {
-        log.info("=== 记忆智能体示例 ===");
-        log.info("注意: 此功能需要先完善 evox-memory 模块");
-        
-        // TODO: 等待 Memory 模块完善后实现
-        demonstrateMemoryFeatures();
-    }
+        log.info("=== EvoX 记忆智能体集成示例 ===");
 
-    /**
-     * 演示记忆功能
-     */
-    public static void demonstrateMemoryFeatures() {
-        log.info("\n记忆智能体核心功能:");
-        log.info("1. 添加记忆 (AddMemories)");
-        log.info("2. 检索记忆 (SearchMemories)");
-        log.info("3. 更新记忆 (UpdateMemories)");
-        log.info("4. 删除记忆 (DeleteMemories)");
-        
-        log.info("\n待实现的记忆类型:");
-        log.info("- 短期记忆 (ShortTermMemory)");
-        log.info("- 长期记忆 (LongTermMemory)");
-        log.info("- 工作记忆 (WorkingMemory)");
-        
-        log.info("\n待集成的存储后端:");
-        log.info("- 向量数据库 (FAISS, Chroma, Qdrant)");
-        log.info("- 关系数据库 (PostgreSQL, SQLite)");
-        log.info("- 内存存储 (InMemory)");
-    }
-
-    // 以下是预期的使用示例(当Memory模块完成后):
-    
-    /*
-    public static void futureMemoryExample() {
-        // 配置LLM
+        // 1. 配置 LLM
         OpenAILLMConfig config = OpenAILLMConfig.builder()
-                .model("gpt-4o-mini")
                 .apiKey(System.getenv("OPENAI_API_KEY"))
+                .model("gpt-4o-mini")
                 .build();
+        OpenAILLM llm = new OpenAILLM(config);
 
-        // 创建记忆配置
-        MemoryConfig memoryConfig = MemoryConfig.builder()
-                .storageType(StorageType.VECTOR)
-                .vectorStore(new FAISSVectorStore())
-                .maxMemories(1000)
-                .build();
-
-        // 创建长期记忆
-        LongTermMemory longTermMemory = new LongTermMemory(memoryConfig);
-
-        // 创建带记忆的智能体
-        CustomizeAgent agent = CustomizeAgent.builder()
-                .name("MemoryAgent")
-                .description("An agent with long-term memory")
-                .prompt("Answer based on conversation history: {question}")
-                .llmConfig(config)
-                .memory(longTermMemory)
-                .build();
-
-        // 添加记忆
-        Message msg1 = Message.builder()
-                .content("User likes Python programming")
-                .messageType(MessageType.SYSTEM)
-                .build();
-        longTermMemory.add(msg1);
-
-        // 搜索记忆
-        List<Message> results = longTermMemory.search("What does user like?", 5);
-
-        // 执行智能体(会自动使用记忆)
-        Map<String, Object> inputs = new HashMap<>();
-        inputs.put("question", "What programming language should I learn?");
+        // 2. 配置记忆系统
+        // 短期记忆：最近 5 条
+        ShortTermMemory stm = new ShortTermMemory(5);
+        // 长期记忆：内存实现（带去重）
+        InMemoryLongTermMemory ltm = new InMemoryLongTermMemory();
         
-        Message response = agent.execute(inputs);
-        log.info("Response: {}", response.getContent());
+        // 记忆管理器：统一管理
+        MemoryManager memoryManager = new MemoryManager(stm, null); // 简化：仅使用 stm 进行演示，或配置 ltm
+        memoryManager.initModule();
+
+        // 3. 创建智能体
+        ChatBotAgent agent = new ChatBotAgent(llm);
+        agent.setName("MemoryBot");
+        agent.initModule();
+
+        // 4. 模拟多轮对话
+        log.info("--- 开始对话 ---");
+        
+        String[] questions = {
+            "你好，我叫小明。",
+            "我喜欢喝绿茶。",
+            "你还记得我叫什么吗？",
+            "我刚才说我喜欢喝什么？"
+        };
+
+        for (String q : questions) {
+            log.info("用户: {}", q);
+            
+            Message userMsg = Message.builder()
+                    .content(q)
+                    .messageType(MessageType.INPUT)
+                    .build();
+            
+            // 存入记忆
+            memoryManager.addMessage(userMsg);
+            
+            // 获取包含历史的消息列表
+            List<Message> context = memoryManager.getLatestMessages(5);
+            
+            // 执行智能体
+            Message response = agent.execute("chat", context);
+            log.info("AI: {}", response.getContent());
+            
+            // 存入 AI 回复
+            memoryManager.addMessage(response);
+        }
+
+        log.info("--- 记忆统计 ---");
+        log.info("短期记忆消息数: {}", memoryManager.getShortTermSize());
     }
-    */
 }

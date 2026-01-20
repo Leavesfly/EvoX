@@ -31,16 +31,16 @@ public class PlanAgent extends Agent {
      * 规划提示模板
      */
     private String planningPrompt = """
-            You are a task planning expert. Break down the following goal into a sequence of concrete sub-tasks.
+            你是任务规划专家。请将以下目标拆解为一系列具体的子任务。
             
-            Goal: {goal}
+            目标：{goal}
             
-            Please provide a structured plan with the following format:
-            Task 1: [Description]
-            Task 2: [Description]
+            请按以下格式输出结构化计划：
+            Task 1: [描述]
+            Task 2: [描述]
             ...
             
-            Each task should be specific, actionable, and build upon previous tasks.
+            每个任务应具体、可执行，并与前序任务形成递进关系。
             """;
 
     @Override

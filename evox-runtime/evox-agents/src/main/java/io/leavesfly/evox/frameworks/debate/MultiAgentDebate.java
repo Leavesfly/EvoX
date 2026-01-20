@@ -1,5 +1,9 @@
 package io.leavesfly.evox.frameworks.debate;
 
+import io.leavesfly.evox.core.message.Message;
+import io.leavesfly.evox.core.message.MessageType;
+import io.leavesfly.evox.models.base.BaseLLM;
+import lombok.Builder;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
 
@@ -13,6 +17,7 @@ import java.util.*;
  */
 @Slf4j
 @Data
+@Builder
 public class MultiAgentDebate {
 
     /**
@@ -35,9 +40,19 @@ public class MultiAgentDebate {
      */
     private List<DebateRecord> history;
 
+    /**
+     * 辩论主持人（可选，用于检查共识和生成最终答案）
+     */
+    private BaseLLM moderator;
+
     public MultiAgentDebate(List<DebateAgent> agents, int maxRounds) {
+        this(agents, maxRounds, null);
+    }
+
+    public MultiAgentDebate(List<DebateAgent> agents, int maxRounds, BaseLLM moderator) {
         this.agents = agents;
         this.maxRounds = maxRounds;
+        this.moderator = moderator;
         this.currentRound = 0;
         this.history = new ArrayList<>();
     }
@@ -73,16 +88,58 @@ public class MultiAgentDebate {
      * 检查是否达成共识
      */
     private boolean checkConsensus() {
-        // TODO: 实现共识检查逻辑
-        return false;
+        if (moderator == null || history.isEmpty()) {
+            return false;
+        }
+
+        log.debug("Checking for consensus among agents...");
+
+        // 构建共识检查提示词
+        StringBuilder sb = new StringBuilder();
+        sb.append("Analyze the following debate history and determine if all participants have reached a clear consensus or agreement.\n\n");
+        sb.append("Debate History:\n");
+        for (DebateRecord record : history) {
+            sb.append(String.format("[%d] %s: %s\n", record.getRound(), record.getAgentName(), record.getResponse()));
+        }
+        sb.append("\nHas a consensus been reached? Please answer with 'YES' or 'NO' followed by a brief reason.");
+
+        String response = moderator.generate(sb.toString());
+        boolean reached = response.trim().toUpperCase().startsWith("YES");
+
+        if (reached) {
+            log.info("Consensus detected by moderator: {}", response);
+        }
+
+        return reached;
     }
 
     /**
      * 生成最终答案
      */
     private String generateFinalAnswer() {
-        // TODO: 基于辩论历史生成最终答案
-        return "Final answer based on debate";
+        if (history.isEmpty()) {
+            return "No debate history available.";
+        }
+
+        if (moderator == null) {
+            // 如果没有主持人，返回最后一条记录作为参考
+            DebateRecord last = history.get(history.size() - 1);
+            return String.format("Debate concluded without moderator. Last viewpoint from %s: %s", 
+                last.getAgentName(), last.getResponse());
+        }
+
+        log.info("Generating final answer from debate history...");
+
+        // 构建总结提示词
+        StringBuilder sb = new StringBuilder();
+        sb.append("Based on the following multi-agent debate history, please provide a comprehensive final answer or summary that synthesizes the key viewpoints and any consensus reached.\n\n");
+        sb.append("Debate History:\n");
+        for (DebateRecord record : history) {
+            sb.append(String.format("[%d] %s: %s\n", record.getRound(), record.getAgentName(), record.getResponse()));
+        }
+        sb.append("\nFinal Comprehensive Answer:");
+
+        return moderator.generate(sb.toString());
     }
 
     /**

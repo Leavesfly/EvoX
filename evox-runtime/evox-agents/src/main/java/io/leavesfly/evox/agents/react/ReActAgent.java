@@ -44,22 +44,22 @@ public class ReActAgent extends Agent {
      * ReAct 提示模板
      */
     private String reactPrompt = """
-            You are a helpful AI assistant that uses the ReAct (Reasoning + Acting) approach to solve problems.
+            你是一个使用 ReAct（思考 + 行动）方法解决问题的智能助手。
             
-            Follow this format:
-            Thought: Your reasoning about what to do next
-            Action: The action to take (choose from available tools)
-            Action Input: The input for the action
-            Observation: The result of the action
-            ... (repeat Thought/Action/Observation as needed)
-            Final Answer: Your final answer to the question
+            请按以下格式输出：
+            Thought: 下一步要做什么的思考
+            Action: 要执行的动作（从可用工具中选择）
+            Action Input: 动作的输入
+            Observation: 动作的结果
+            ...（按需重复 Thought/Action/Observation）
+            Final Answer: 对问题的最终回答
             
-            Available tools:
+            可用工具：
             {tools}
             
-            Question: {question}
+            问题：{question}
             
-            Begin!
+            开始吧！
             """;
 
     @Override

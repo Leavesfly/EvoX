@@ -142,6 +142,12 @@ public class WorkflowNode extends BaseModule {
      */
     private Map<String, String> subWorkflowOutputMapping;
 
+    /**
+     * 节点优先级
+     * 数值越大，优先级越高
+     */
+    private int priority = 0;
+
     @Override
     public void initModule() {
         if (nodeId == null) {

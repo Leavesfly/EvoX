@@ -11,9 +11,7 @@ import lombok.EqualsAndHashCode;
 import lombok.extern.slf4j.Slf4j;
 
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
 /**
  * TaskPlannerAgent - 任务规划代理
@@ -29,15 +27,14 @@ public class TaskPlannerAgent extends Agent {
     /**
      * 默认系统提示词
      */
-    private static final String DEFAULT_SYSTEM_PROMPT = 
-        "You are an expert task planner. Your role is to analyze complex goals and break them down " +
-        "into a structured sequence of smaller, more manageable sub-tasks. " +
-        "For each task, provide:\n" +
-        "1. Task description - what needs to be done\n" +
-        "2. Required inputs - what information or resources are needed\n" +
-        "3. Expected outputs - what should be produced\n" +
-        "4. Dependencies - which tasks must be completed first\n\n" +
-        "Output your plan as a numbered list of tasks with clear descriptions.";
+    private static final String DEFAULT_SYSTEM_PROMPT =
+        "你是任务规划专家。你的职责是分析复杂目标并拆解为结构化、可执行的子任务序列。"
+        + "对每个任务请给出：\n"
+        + "1. 任务描述 - 需要做什么\n"
+        + "2. 所需输入 - 需要哪些信息或资源\n"
+        + "3. 预期输出 - 应该产出什么\n"
+        + "4. 依赖关系 - 必须先完成哪些任务\n\n"
+        + "请使用编号列表输出任务，并保证描述清晰。";
 
     /**
      * 最大子任务数量
@@ -108,8 +105,9 @@ public class TaskPlannerAgent extends Agent {
             // 获取LLM响应
             String planResponse = llmInstance.chat(llmMessages);
 
-            // 解析任务列表
+            // 解析任务列表（用于日志/调试）
             List<TaskItem> tasks = parseTaskPlan(planResponse);
+            log.debug("Parsed {} tasks from plan", tasks.size());
 
             // 构造响应（使用content存储计划文本）
             return Message.builder()
@@ -146,15 +144,15 @@ public class TaskPlannerAgent extends Agent {
      */
     private String buildPlanningPrompt(String goal) {
         StringBuilder prompt = new StringBuilder();
-        prompt.append("Goal: ").append(goal).append("\n\n");
-        prompt.append("Please create a detailed task plan to achieve this goal.\n");
-        prompt.append("Maximum number of sub-tasks: ").append(maxSubTasks).append("\n");
+        prompt.append("目标：").append(goal).append("\n\n");
+        prompt.append("请为该目标制定详细的任务计划。\n");
+        prompt.append("子任务数量上限：").append(maxSubTasks).append("\n");
         
         if (includeDependencies) {
-            prompt.append("Include dependencies between tasks.\n");
+            prompt.append("请包含任务之间的依赖关系。\n");
         }
         
-        prompt.append("\nProvide the plan in a structured format.");
+        prompt.append("\n请以结构化格式输出计划（编号列表）。");
         
         return prompt.toString();
     }
