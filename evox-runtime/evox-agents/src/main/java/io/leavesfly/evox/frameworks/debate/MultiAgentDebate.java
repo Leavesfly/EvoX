@@ -96,12 +96,12 @@ public class MultiAgentDebate {
 
         // 构建共识检查提示词
         StringBuilder sb = new StringBuilder();
-        sb.append("Analyze the following debate history and determine if all participants have reached a clear consensus or agreement.\n\n");
-        sb.append("Debate History:\n");
+        sb.append("分析以下辩论历史，并判断所有参与者是否已达成明确的共识或一致意见。\n\n");
+        sb.append("辩论历史：\n");
         for (DebateRecord record : history) {
             sb.append(String.format("[%d] %s: %s\n", record.getRound(), record.getAgentName(), record.getResponse()));
         }
-        sb.append("\nHas a consensus been reached? Please answer with 'YES' or 'NO' followed by a brief reason.");
+        sb.append("\n是否已达成共识？请以 'YES' 或 'NO' 开头回答，并简要说明理由。");
 
         String response = moderator.generate(sb.toString());
         boolean reached = response.trim().toUpperCase().startsWith("YES");
@@ -118,13 +118,13 @@ public class MultiAgentDebate {
      */
     private String generateFinalAnswer() {
         if (history.isEmpty()) {
-            return "No debate history available.";
+            return "没有可用的辩论历史。";
         }
 
         if (moderator == null) {
             // 如果没有主持人，返回最后一条记录作为参考
             DebateRecord last = history.get(history.size() - 1);
-            return String.format("Debate concluded without moderator. Last viewpoint from %s: %s", 
+            return String.format("辩论结束，未配置主持人。来自 %s 的最后观点：%s", 
                 last.getAgentName(), last.getResponse());
         }
 
@@ -132,12 +132,12 @@ public class MultiAgentDebate {
 
         // 构建总结提示词
         StringBuilder sb = new StringBuilder();
-        sb.append("Based on the following multi-agent debate history, please provide a comprehensive final answer or summary that synthesizes the key viewpoints and any consensus reached.\n\n");
-        sb.append("Debate History:\n");
+        sb.append("基于以下多智能体辩论历史，请提供一个全面的最终答案或总结，综合关键观点及达成的任何共识。\n\n");
+        sb.append("辩论历史：\n");
         for (DebateRecord record : history) {
             sb.append(String.format("[%d] %s: %s\n", record.getRound(), record.getAgentName(), record.getResponse()));
         }
-        sb.append("\nFinal Comprehensive Answer:");
+        sb.append("\n最终全面回答：");
 
         return moderator.generate(sb.toString());
     }

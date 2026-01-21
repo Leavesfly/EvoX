@@ -41,6 +41,12 @@
             <artifactId>spring-ai-openai</artifactId>
         </dependency>
 
+        <!-- Spring AI Ollama -->
+        <dependency>
+            <groupId>org.springframework.ai</groupId>
+            <artifactId>spring-ai-ollama</artifactId>
+        </dependency>
+
         <!-- Alibaba Cloud DashScope SDK -->
         <dependency>
             <groupId>com.alibaba</groupId>

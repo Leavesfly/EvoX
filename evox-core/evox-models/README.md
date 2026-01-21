@@ -19,6 +19,7 @@ evox-models 为 EvoX 框架提供统一的大语言模型(LLM)抽象接口和多
 | **硅基流动** | `SiliconFlowLLM` | 可选 | 多种开源模型,成本低 |
 | **LiteLLM** | `LiteLLM` | 可选 | 统一接口,支持100+模型 |
 | **OpenRouter** | `OpenRouterLLM` | 可选 | 模型路由,灵活选择 |
+| **Ollama** | `OllamaLLM` | `llama2` | 本地部署,隐私安全,免费使用 |
 
 ### 1. BaseLLM 接口
 
@@ -136,6 +137,24 @@ LiteLLM llm = new LiteLLM(config);
 - Google (gemini-pro, ...)
 - DeepSeek, Groq, Perplexity ...
 
+#### Ollama (本地部署)
+
+通过 [Ollama](https://ollama.ai) 在本地运行开源模型,无需 API Key,支持完全离线:
+
+```java
+OllamaLLMConfig config = OllamaLLMConfig.builder()
+    .model("llama2")           // 或 qwen2、mistral、llama3 等
+    .baseUrl("http://localhost:11434")  // 默认地址,可改为远程 Ollama
+    .temperature(0.7f)
+    .maxTokens(1000)
+    .build();
+
+OllamaLLM llm = new OllamaLLM(config);
+String response = llm.generate("用三句话介绍你自己");
+```
+
+**使用前请先安装并启动 Ollama**,在终端执行 `ollama run llama2` 等拉取并运行对应模型。
+
 ### 4. 流式输出
 
 所有LLM实现都支持流式输出:
@@ -173,6 +192,7 @@ evox-models/
 │   ├── AliyunLLMConfig.java
 │   ├── SiliconFlowConfig.java
 │   ├── LiteLLMConfig.java
+│   ├── OllamaLLMConfig.java
 │   └── OpenRouterConfig.java
 ├── openai/                 # OpenAI实现
 │   └── OpenAILLM.java
@@ -183,6 +203,8 @@ evox-models/
 │   └── SiliconFlowModel.java
 ├── litellm/                # LiteLLM实现
 │   └── LiteLLM.java
+├── ollama/                 # Ollama 本地模型实现
+│   └── OllamaLLM.java
 └── openrouter/             # OpenRouter实现
     └── OpenRouterLLM.java
 ```
