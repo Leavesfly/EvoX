@@ -5,6 +5,8 @@ import lombok.extern.slf4j.Slf4j;
 
 import java.util.*;
 import java.util.concurrent.*;
+import java.util.function.BiFunction;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 /**
@@ -53,6 +55,26 @@ public class TeamFramework<T> {
      */
     private TeamStatus status;
 
+    /**
+     * 消息通道 (memberId -> 消息队列)
+     */
+    private final Map<String, BlockingQueue<TeamMessage>> messageChannels = new ConcurrentHashMap<>();
+
+    /**
+     * 任务分解器
+     */
+    private Function<String, List<SubTask>> taskDecomposer;
+
+    /**
+     * 投票策略
+     */
+    private VotingStrategy votingStrategy = VotingStrategy.MAJORITY;
+
+    /**
+     * 全局上下文
+     */
+    private final Map<String, Object> teamContext = new ConcurrentHashMap<>();
+
     public TeamFramework(List<TeamMember<T>> members, CollaborationMode mode, TeamConfig config) {
         this.members = members;
         this.mode = mode;
@@ -62,8 +84,11 @@ public class TeamFramework<T> {
         this.executionHistory = new ArrayList<>();
         this.status = TeamStatus.IDLE;
         
-        // 注册成员角色
-        members.forEach(member -> roleManager.assignRole(member.getMemberId(), member.getRole()));
+        // 注册成员角色和消息通道
+        members.forEach(member -> {
+            roleManager.assignRole(member.getMemberId(), member.getRole());
+            messageChannels.put(member.getMemberId(), new LinkedBlockingQueue<>());
+        });
     }
 
     public TeamFramework(List<TeamMember<T>> members, CollaborationMode mode) {
@@ -394,6 +419,331 @@ public class TeamFramework<T> {
     public void removeMember(String memberId) {
         members.removeIf(m -> m.getMemberId().equals(memberId));
         roleManager.removeRole(memberId);
+        messageChannels.remove(memberId);
+    }
+
+    // ============= 任务分解功能 =============
+
+    /**
+     * 设置任务分解器
+     */
+    public void setTaskDecomposer(Function<String, List<SubTask>> decomposer) {
+        this.taskDecomposer = decomposer;
+    }
+
+    /**
+     * 执行分解任务
+     */
+    public TeamResult<T> executeDecomposedTask(String task) {
+        log.info("开始执行分解任务: {}", task);
+        
+        if (taskDecomposer == null) {
+            log.warn("未配置任务分解器，回退到普通执行");
+            return executeTeamTask(task);
+        }
+        
+        long startTime = System.currentTimeMillis();
+        status = TeamStatus.WORKING;
+        
+        try {
+            // 分解任务
+            List<SubTask> subTasks = taskDecomposer.apply(task);
+            log.info("任务分解为 {} 个子任务", subTasks.size());
+            
+            // 分配子任务
+            Map<TeamMember<T>, List<SubTask>> assignments = assignSubTasks(subTasks);
+            
+            // 执行子任务
+            List<TaskExecution<T>> allExecutions = new ArrayList<>();
+            List<T> results = new ArrayList<>();
+            
+            for (Map.Entry<TeamMember<T>, List<SubTask>> entry : assignments.entrySet()) {
+                TeamMember<T> member = entry.getKey();
+                for (SubTask subTask : entry.getValue()) {
+                    long memberStart = System.currentTimeMillis();
+                    T result = member.execute(subTask.getDescription(), null, executionHistory);
+                    long memberDuration = System.currentTimeMillis() - memberStart;
+                    
+                    results.add(result);
+                    TaskExecution<T> execution = new TaskExecution<>(
+                        member.getMemberId(),
+                        subTask.getDescription(),
+                        result,
+                        memberDuration,
+                        System.currentTimeMillis()
+                    );
+                    allExecutions.add(execution);
+                    executionHistory.add(execution);
+                }
+            }
+            
+            // 聚合结果
+            T finalResult = aggregateResults(results, allExecutions);
+            
+            status = TeamStatus.IDLE;
+            
+            return TeamResult.<T>builder()
+                .success(true)
+                .result(finalResult)
+                .contributions(allExecutions)
+                .participantCount(assignments.size())
+                .duration(System.currentTimeMillis() - startTime)
+                .metadata(buildMetadata("decomposed"))
+                .build();
+                
+        } catch (Exception e) {
+            status = TeamStatus.ERROR;
+            log.error("分解任务执行失败", e);
+            
+            return TeamResult.<T>builder()
+                .success(false)
+                .error(e.getMessage())
+                .duration(System.currentTimeMillis() - startTime)
+                .build();
+        }
+    }
+
+    /**
+     * 分配子任务给成员
+     */
+    private Map<TeamMember<T>, List<SubTask>> assignSubTasks(List<SubTask> subTasks) {
+        Map<TeamMember<T>, List<SubTask>> assignments = new HashMap<>();
+        
+        for (SubTask subTask : subTasks) {
+            TeamMember<T> bestMember = findBestMemberForTask(subTask);
+            assignments.computeIfAbsent(bestMember, k -> new ArrayList<>()).add(subTask);
+        }
+        
+        return assignments;
+    }
+
+    /**
+     * 查找最适合执行子任务的成员
+     */
+    private TeamMember<T> findBestMemberForTask(SubTask subTask) {
+        // 根据所需技能匹配成员
+        if (subTask.getRequiredSkills() != null && !subTask.getRequiredSkills().isEmpty()) {
+            for (TeamMember<T> member : members) {
+                if (member.getSkills() != null && 
+                    member.getSkills().containsAll(subTask.getRequiredSkills())) {
+                    return member;
+                }
+            }
+        }
+        
+        // 根据指定角色匹配
+        if (subTask.getAssignedRole() != null) {
+            for (TeamMember<T> member : members) {
+                if (member.getRole() == subTask.getAssignedRole()) {
+                    return member;
+                }
+            }
+        }
+        
+        // 轮询分配
+        int index = subTasks.indexOf(subTask) % members.size();
+        return members.get(Math.max(0, index));
+    }
+    
+    // 子任务列表缓存（用于轮询）
+    private List<SubTask> subTasks = new ArrayList<>();
+
+    // ============= 投票决策功能 =============
+
+    /**
+     * 设置投票策略
+     */
+    public void setVotingStrategy(VotingStrategy strategy) {
+        this.votingStrategy = strategy;
+    }
+
+    /**
+     * 发起团队投票
+     */
+    public VoteResult vote(String topic, List<String> options) {
+        log.info("发起投票: {} - 选项: {}", topic, options);
+        
+        Map<String, Integer> votes = new ConcurrentHashMap<>();
+        options.forEach(opt -> votes.put(opt, 0));
+        
+        Map<String, String> memberVotes = new ConcurrentHashMap<>();
+        
+        // 收集每个成员的投票
+        for (TeamMember<T> member : members) {
+            try {
+                String choice = member.vote(topic, options);
+                if (choice != null && votes.containsKey(choice)) {
+                    votes.merge(choice, 1, Integer::sum);
+                    memberVotes.put(member.getMemberId(), choice);
+                }
+            } catch (Exception e) {
+                log.warn("成员 {} 投票失败: {}", member.getMemberId(), e.getMessage());
+            }
+        }
+        
+        // 根据策略决定结果
+        String winner = determineVoteWinner(votes, memberVotes);
+        
+        return VoteResult.builder()
+            .topic(topic)
+            .options(options)
+            .votes(votes)
+            .memberVotes(memberVotes)
+            .winner(winner)
+            .strategy(votingStrategy)
+            .totalVotes(memberVotes.size())
+            .build();
+    }
+
+    /**
+     * 根据投票策略决定获胜者
+     */
+    private String determineVoteWinner(Map<String, Integer> votes, Map<String, String> memberVotes) {
+        if (votes.isEmpty()) return null;
+        
+        return switch (votingStrategy) {
+            case MAJORITY -> {
+                // 简单多数
+                yield votes.entrySet().stream()
+                    .max(Map.Entry.comparingByValue())
+                    .map(Map.Entry::getKey)
+                    .orElse(null);
+            }
+            case SUPERMAJORITY -> {
+                // 绝对多数 (>2/3)
+                int threshold = (int) Math.ceil(members.size() * 2.0 / 3);
+                yield votes.entrySet().stream()
+                    .filter(e -> e.getValue() >= threshold)
+                    .max(Map.Entry.comparingByValue())
+                    .map(Map.Entry::getKey)
+                    .orElse(null);
+            }
+            case UNANIMITY -> {
+                // 全票通过
+                yield votes.entrySet().stream()
+                    .filter(e -> e.getValue() == members.size())
+                    .findFirst()
+                    .map(Map.Entry::getKey)
+                    .orElse(null);
+            }
+            case WEIGHTED -> {
+                // 按角色权重投票
+                Map<String, Double> weightedVotes = new HashMap<>();
+                memberVotes.forEach((memberId, choice) -> {
+                    TeamRole role = roleManager.getRole(memberId);
+                    double weight = roleManager.getRolePriority(role) > 0 ? 
+                        1.0 / roleManager.getRolePriority(role) : 1.0;
+                    weightedVotes.merge(choice, weight, Double::sum);
+                });
+                yield weightedVotes.entrySet().stream()
+                    .max(Map.Entry.comparingByValue())
+                    .map(Map.Entry::getKey)
+                    .orElse(null);
+            }
+        };
+    }
+
+    // ============= 消息传递功能 =============
+
+    /**
+     * 发送消息给指定成员
+     */
+    public void sendMessage(String fromMemberId, String toMemberId, String content) {
+        BlockingQueue<TeamMessage> channel = messageChannels.get(toMemberId);
+        if (channel == null) {
+            throw new IllegalArgumentException("目标成员不存在: " + toMemberId);
+        }
+        
+        TeamMessage message = TeamMessage.builder()
+            .fromMemberId(fromMemberId)
+            .toMemberId(toMemberId)
+            .content(content)
+            .timestamp(System.currentTimeMillis())
+            .type(MessageType.DIRECT)
+            .build();
+        
+        channel.offer(message);
+        log.debug("消息已发送: {} -> {}", fromMemberId, toMemberId);
+    }
+
+    /**
+     * 广播消息给所有成员
+     */
+    public void broadcast(String fromMemberId, String content) {
+        TeamMessage message = TeamMessage.builder()
+            .fromMemberId(fromMemberId)
+            .toMemberId(null)
+            .content(content)
+            .timestamp(System.currentTimeMillis())
+            .type(MessageType.BROADCAST)
+            .build();
+        
+        messageChannels.values().forEach(channel -> channel.offer(message));
+        log.debug("广播消息: {} -> 所有成员", fromMemberId);
+    }
+
+    /**
+     * 获取成员的未读消息
+     */
+    public List<TeamMessage> getMessages(String memberId) {
+        BlockingQueue<TeamMessage> channel = messageChannels.get(memberId);
+        if (channel == null) {
+            return Collections.emptyList();
+        }
+        
+        List<TeamMessage> messages = new ArrayList<>();
+        channel.drainTo(messages);
+        return messages;
+    }
+
+    // ============= 上下文管理 =============
+
+    /**
+     * 设置团队上下文
+     */
+    public void setContext(String key, Object value) {
+        teamContext.put(key, value);
+    }
+
+    /**
+     * 获取团队上下文
+     */
+    @SuppressWarnings("unchecked")
+    public <V> V getContext(String key) {
+        return (V) teamContext.get(key);
+    }
+
+    /**
+     * 获取所有上下文
+     */
+    public Map<String, Object> getAllContext() {
+        return new HashMap<>(teamContext);
+    }
+
+    // ============= 进度监控 =============
+
+    /**
+     * 获取团队统计信息
+     */
+    public TeamStatistics getStatistics() {
+        long totalDuration = executionHistory.stream()
+            .mapToLong(TaskExecution::getDuration)
+            .sum();
+        
+        double avgDuration = executionHistory.isEmpty() ? 0 : 
+            totalDuration / (double) executionHistory.size();
+        
+        Map<String, Long> memberContributions = executionHistory.stream()
+            .collect(Collectors.groupingBy(TaskExecution::getMemberId, Collectors.counting()));
+        
+        return TeamStatistics.builder()
+            .totalTasks(executionHistory.size())
+            .totalDuration(totalDuration)
+            .averageDuration(avgDuration)
+            .memberCount(members.size())
+            .memberContributions(memberContributions)
+            .status(status)
+            .build();
     }
 
     /**
@@ -417,5 +767,83 @@ public class TeamFramework<T> {
      */
     public interface SelectionStrategy<T> {
         T select(List<T> proposals, List<TaskExecution<T>> executions);
+    }
+
+    // ============= 内部数据类 =============
+
+    /**
+     * 子任务
+     */
+    @Data
+    @lombok.Builder
+    @lombok.AllArgsConstructor
+    @lombok.NoArgsConstructor
+    public static class SubTask {
+        private String id;
+        private String description;
+        private List<String> requiredSkills;
+        private TeamRole assignedRole;
+        private int priority;
+    }
+
+    /**
+     * 投票策略
+     */
+    public enum VotingStrategy {
+        MAJORITY,      // 简单多数
+        SUPERMAJORITY, // 绝对多数 (>2/3)
+        UNANIMITY,     // 全票通过
+        WEIGHTED       // 按角色权重
+    }
+
+    /**
+     * 投票结果
+     */
+    @Data
+    @lombok.Builder
+    public static class VoteResult {
+        private String topic;
+        private List<String> options;
+        private Map<String, Integer> votes;
+        private Map<String, String> memberVotes;
+        private String winner;
+        private VotingStrategy strategy;
+        private int totalVotes;
+    }
+
+    /**
+     * 团队消息
+     */
+    @Data
+    @lombok.Builder
+    public static class TeamMessage {
+        private String fromMemberId;
+        private String toMemberId;
+        private String content;
+        private long timestamp;
+        private MessageType type;
+    }
+
+    /**
+     * 消息类型
+     */
+    public enum MessageType {
+        DIRECT,    // 直接消息
+        BROADCAST, // 广播消息
+        SYSTEM     // 系统消息
+    }
+
+    /**
+     * 团队统计信息
+     */
+    @Data
+    @lombok.Builder
+    public static class TeamStatistics {
+        private int totalTasks;
+        private long totalDuration;
+        private double averageDuration;
+        private int memberCount;
+        private Map<String, Long> memberContributions;
+        private TeamStatus status;
     }
 }

@@ -46,7 +46,7 @@ public class PromptTemplate {
         if (instruction == null || instruction.isEmpty()) {
             return "";
         }
-        return "### Instruction\nThis is the main task instruction you must follow:\n" + instruction + "\n";
+        return "### 指令\n这是你必须遵循的主要任务指令：\n" + instruction + "\n";
     }
 
     /**
@@ -56,7 +56,7 @@ public class PromptTemplate {
         if (context == null || context.isEmpty()) {
             return "";
         }
-        return "### Context\nHere is some additional background information to help you understand the task:\n" + context + "\n";
+        return "### 上下文\n以下是帮助你理解任务的背景信息：\n" + context + "\n";
     }
 
     /**
@@ -69,7 +69,7 @@ public class PromptTemplate {
         String constraintsStr = constraints.stream()
                 .map(c -> "- " + c)
                 .collect(Collectors.joining("\n"));
-        return "### Constraints\nYou must follow these rules or constraints when generating your output:\n" + constraintsStr + "\n";
+        return "### 约束条件\n生成输出时你必须遵循以下规则或约束：\n" + constraintsStr + "\n";
     }
 
     /**
@@ -77,9 +77,9 @@ public class PromptTemplate {
      */
     public String renderOutputFormat(String format) {
         if (format == null || format.isEmpty()) {
-            return "### Output Format\nPlease generate a response that best fits the task instruction.\n";
+            return "### 输出格式\n请生成最符合任务指令的响应。\n";
         }
-        return "### Output Format\nYou MUST strictly follow the following format when generating your output:\n\n" + format + "\n";
+        return "### 输出格式\n生成输出时你必须严格遵循以下格式：\n\n" + format + "\n";
     }
 
     /**
@@ -114,7 +114,7 @@ public class PromptTemplate {
      * 渲染输入部分
      */
     protected String renderInputs(Map<String, Object> inputs) {
-        StringBuilder sb = new StringBuilder("### Inputs\nThese are the input values provided:\n");
+        StringBuilder sb = new StringBuilder("### 输入\n以下是提供的输入值：\n");
         for (Map.Entry<String, Object> entry : inputs.entrySet()) {
             sb.append("[[ **").append(entry.getKey()).append("** ]]:\n");
             sb.append(entry.getValue()).append("\n\n");

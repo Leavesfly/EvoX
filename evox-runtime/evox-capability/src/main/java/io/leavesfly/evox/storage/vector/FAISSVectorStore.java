@@ -140,6 +140,18 @@ public class FAISSVectorStore implements VectorStore {
         log.info("Cleared FAISS index");
     }
 
+    @Override
+    public void save(String path) {
+        // FAISS 索引保存需要原生 FAISS 库支持
+        throw new UnsupportedOperationException("FAISS 索引保存需要原生库支持，请使用 PersistentVectorStore");
+    }
+
+    @Override
+    public void load(String path) {
+        // FAISS 索引加载需要原生 FAISS 库支持
+        throw new UnsupportedOperationException("FAISS 索引加载需要原生库支持，请使用 PersistentVectorStore");
+    }
+
     /**
      * 计算余弦相似度
      */

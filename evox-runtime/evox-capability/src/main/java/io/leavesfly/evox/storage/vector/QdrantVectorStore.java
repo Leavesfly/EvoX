@@ -112,6 +112,18 @@ public class QdrantVectorStore implements VectorStore {
         // TODO: 实现清空操作
     }
 
+    @Override
+    public void save(String path) {
+        // Qdrant 的持久化由 Qdrant 服务器管理
+        throw new UnsupportedOperationException("Qdrant 存储由服务器管理，请使用 PersistentVectorStore");
+    }
+
+    @Override
+    public void load(String path) {
+        // Qdrant 的持久化由 Qdrant 服务器管理
+        throw new UnsupportedOperationException("Qdrant 存储由服务器管理，请使用 PersistentVectorStore");
+    }
+
     /**
      * 创建集合
      */

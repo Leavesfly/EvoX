@@ -48,4 +48,33 @@ public interface TeamMember<T> {
     default double getWorkload() {
         return 0.0;
     }
+
+    /**
+     * 对议题进行投票
+     *
+     * @param topic 议题
+     * @param options 选项列表
+     * @return 选择的选项
+     */
+    default String vote(String topic, List<String> options) {
+        // 默认选择第一个选项
+        return options.isEmpty() ? null : options.get(0);
+    }
+
+    /**
+     * 接收消息
+     *
+     * @param message 消息内容
+     * @param fromMemberId 发送者ID
+     */
+    default void receiveMessage(String message, String fromMemberId) {
+        // 默认不处理
+    }
+
+    /**
+     * 检查成员是否可用
+     */
+    default boolean isAvailable() {
+        return true;
+    }
 }

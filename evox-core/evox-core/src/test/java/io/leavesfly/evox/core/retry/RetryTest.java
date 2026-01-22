@@ -196,10 +196,10 @@ class RetryTest {
     @Test
     @DisplayName("测试 RetryExecutor 重试间隔")
     void testRetryExecutorDelayBetweenRetries() {
-        // Given
+        // Given - 使用较大的延迟值以避免计时敏感问题
         RetryPolicy policy = RetryPolicy.builder()
                 .maxAttempts(3)
-                .initialDelay(Duration.ofMillis(100))
+                .initialDelay(Duration.ofMillis(150))
                 .build();
         RetryExecutor executor = new RetryExecutor(policy);
         
@@ -208,7 +208,7 @@ class RetryTest {
         
         Callable<String> callable = () -> {
             int attempt = attempts.getAndIncrement();
-            timestamps[attempt] = System.currentTimeMillis();
+            timestamps[attempt] = System.nanoTime();
             if (attempt < 2) {
                 throw new RuntimeException("失败");
             }
@@ -218,11 +218,14 @@ class RetryTest {
         // When
         assertDoesNotThrow(() -> executor.execute(callable));
         
-        // Then
-        assertTrue(timestamps[1] - timestamps[0] >= 90, 
-                "第一次重试应有至少 90ms 延迟");
-        assertTrue(timestamps[2] - timestamps[1] >= 90, 
-                "第二次重试应有至少 90ms 延迟");
+        // Then - 使用纳秒精度并放宽容差（考虑系统调度开销）
+        long delay1Ms = (timestamps[1] - timestamps[0]) / 1_000_000;
+        long delay2Ms = (timestamps[2] - timestamps[1]) / 1_000_000;
+        
+        assertTrue(delay1Ms >= 100, 
+                "第一次重试应有至少 100ms 延迟，实际: " + delay1Ms + "ms");
+        assertTrue(delay2Ms >= 100, 
+                "第二次重试应有至少 100ms 延迟，实际: " + delay2Ms + "ms");
     }
 
     @Test

@@ -152,6 +152,18 @@ public class ChromaVectorStore implements VectorStore {
         vectorStorage.clear();
     }
 
+    @Override
+    public void save(String path) {
+        // Chroma 的持久化由 Chroma 服务器管理
+        throw new UnsupportedOperationException("Chroma 存储由服务器管理，请使用 PersistentVectorStore");
+    }
+
+    @Override
+    public void load(String path) {
+        // Chroma 的持久化由 Chroma 服务器管理
+        throw new UnsupportedOperationException("Chroma 存储由服务器管理，请使用 PersistentVectorStore");
+    }
+
     /**
      * 创建集合
      */

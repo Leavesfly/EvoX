@@ -7,6 +7,7 @@ import io.leavesfly.evox.frameworks.team.CollaborationMode;
 import io.leavesfly.evox.frameworks.team.TeamFramework;
 import io.leavesfly.evox.frameworks.team.TeamMember;
 import io.leavesfly.evox.frameworks.team.TeamRole;
+import io.leavesfly.evox.frameworks.team.TeamResult;
 import io.leavesfly.evox.frameworks.team.TaskExecution;
 import io.leavesfly.evox.frameworks.team.DefaultTeamMember;
 import io.leavesfly.evox.frameworks.consensus.ConsensusFramework;
@@ -113,10 +114,10 @@ public class MultiAgentFrameworksExample {
 
         // 执行辩论
         System.out.println("开始辩论...");
-        String result = debate.debate("AI是否会完全取代程序员的工作？");
+        MultiAgentDebate.DebateResult result = debate.debate("AI是否会完全取代程序员的工作？");
         
         System.out.println("\n辩论结果:");
-        System.out.println(result);
+        System.out.println(result.getFinalAnswer());
         System.out.println("\n✅ 辩论框架演示完成\n");
     }
 

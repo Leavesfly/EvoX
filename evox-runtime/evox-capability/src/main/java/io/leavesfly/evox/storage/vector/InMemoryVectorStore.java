@@ -142,6 +142,21 @@ public class InMemoryVectorStore implements VectorStore {
         return vectors.size();
     }
 
+    @Override
+    public void save(String path) {
+        throw new UnsupportedOperationException("InMemoryVectorStore 不支持持久化，请使用 PersistentVectorStore");
+    }
+
+    @Override
+    public void load(String path) {
+        throw new UnsupportedOperationException("InMemoryVectorStore 不支持持久化，请使用 PersistentVectorStore");
+    }
+
+    @Override
+    public boolean supportsPersistence() {
+        return false;
+    }
+
     /**
      * 计算余弦相似度
      */

@@ -74,6 +74,29 @@ public interface VectorStore extends BaseStorage {
     long getVectorCount();
 
     /**
+     * 保存向量存储到指定路径
+     * 
+     * @param path 保存路径
+     */
+    void save(String path);
+
+    /**
+     * 从指定路径加载向量存储
+     * 
+     * @param path 加载路径
+     */
+    void load(String path);
+
+    /**
+     * 检查是否支持持久化
+     * 
+     * @return true如果支持持久化
+     */
+    default boolean supportsPersistence() {
+        return false;
+    }
+
+    /**
      * 搜索结果类
      */
     class SearchResult {
