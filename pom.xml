@@ -27,8 +27,6 @@
         <!-- Spring AI Version -->
         <spring-ai.version>1.0.0-M1</spring-ai.version>
         
-        <!-- Spring Cloud Alibaba Version -->
-        <spring-cloud-alibaba.version>2023.0.1.0</spring-cloud-alibaba.version>
         
         <!-- Dependency Versions -->
         <jackson.version>2.15.4</jackson.version>
@@ -93,15 +91,6 @@
                 <groupId>org.springframework.ai</groupId>
                 <artifactId>spring-ai-bom</artifactId>
                 <version>${spring-ai.version}</version>
-                <type>pom</type>
-                <scope>import</scope>
-            </dependency>
-
-            <!-- Spring Cloud Alibaba BOM -->
-            <dependency>
-                <groupId>com.alibaba.cloud</groupId>
-                <artifactId>spring-cloud-alibaba-dependencies</artifactId>
-                <version>${spring-cloud-alibaba.version}</version>
                 <type>pom</type>
                 <scope>import</scope>
             </dependency>

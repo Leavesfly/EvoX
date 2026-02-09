@@ -1,96 +1,104 @@
 # EvoX ClaudeCode
 
-基于 EvoX 实现的 **Claude Code 风格编程助手**：通过 Agent + 工具（文件系统、代码解释器、Shell 命令）实现读代码库、执行命令、修改文件、运行测试等能力。
+基于 EvoX 框架构建的 **Agentic 编码 CLI 工具**，提供类似 Claude Code 的终端交互式编程体验。
 
-## 可行性说明
+## 功能特性
 
-**可行。** Claude Code 的核心是“Agent + 编程相关工具”的编排：
+- **🖥️ 终端 REPL 交互** - 命令行对话式编程，支持 JLine3 增强终端
+- **📁 文件操作** - 读取、创建、精确编辑（diff 式替换）、删除文件
+- **⚡ Shell 命令执行** - 在项目目录下执行任意 Shell 命令，支持超时控制
+- **🔍 代码搜索** - Grep（正则文本搜索）和 Glob（文件路径搜索）
+- **🔧 Git 操作** - 状态查看、提交、分支管理、日志查看
+- **📊 项目感知** - 自动识别项目类型、扫描目录结构
+- **🔐 权限控制** - 危险操作需用户确认，支持会话级批准
+- **🤖 Function Calling 循环** - LLM → 工具调用 → 结果反馈 → 继续推理
+- **📝 项目规则** - 支持 `CLAUDE.md` 项目级指令文件
+- **🔌 多模型支持** - OpenAI、阿里云通义千问、Ollama、SiliconFlow
 
-- **读代码库**：使用 EvoX 的 `FileSystemTool`（list/read）
-- **修改文件**：使用 `FileSystemTool`（write/append）
-- **执行命令**：本模块提供的 `ShellCommandTool`（mvn、git、npm、python 等）
-- **运行代码片段**：使用 EvoX 的 `CodeInterpreterTool`（JavaScript/Groovy/Python）
+## 快速开始
 
-本模块在 `evox-application` 下将上述能力封装为 **ClaudeCodeAgent**，并提供一个控制台运行入口 **ClaudeCodeRunner**，便于在本地项目目录中与助手交互。
+### 1. 构建
 
-## 模块结构
+```bash
+cd /path/to/evox
+mvn clean package -DskipTests -pl evox-application/evox-claudecode -am
+```
+
+### 2. 配置 API Key
+
+```bash
+# OpenAI
+export OPENAI_API_KEY=your-key
+
+# 或阿里云通义千问
+export DASHSCOPE_API_KEY=your-key
+```
+
+### 3. 运行
+
+```bash
+# 交互模式（默认使用 OpenAI gpt-4o）
+java -jar evox-application/evox-claudecode/target/evox-claudecode-1.0.0-SNAPSHOT.jar
+
+# 使用阿里云通义千问
+java -jar evox-claudecode.jar --provider aliyun
+
+# 使用本地 Ollama
+java -jar evox-claudecode.jar --provider ollama --model llama3
+
+# 单次执行模式
+java -jar evox-claudecode.jar -p "fix the bug in Main.java"
+```
+
+### 4. 交互命令
+
+| 命令 | 说明 |
+|------|------|
+| `/help` | 显示帮助信息 |
+| `/clear` | 清除对话历史 |
+| `/compact` | 压缩对话历史 |
+| `/tools` | 列出可用工具 |
+| `/context` | 显示项目上下文 |
+| `/quit` | 退出 |
+
+## 架构设计
 
 ```
 evox-claudecode/
-├── pom.xml
-├── README.md
-└── src/main/java/io/leavesfly/evox/claudecode/
-    ├── ClaudeCodeRunner.java          # 控制台入口
-    ├── agent/
-    │   └── ClaudeCodeAgent.java       # 编程助手 Agent 工厂
-    └── tools/
-        └── ShellCommandTool.java      # Shell 命令执行工具
+├── cli/                    # CLI 交互层
+│   ├── ClaudeCodeRepl      # REPL 循环（JLine3）
+│   └── CliRenderer         # 终端渲染（ANSI 着色）
+├── agent/                  # 智能体层
+│   └── CodingAgent         # 编码 Agent（Function Calling 循环）
+├── tool/                   # 工具注册层
+│   └── ToolRegistry        # 工具注册中心
+├── config/                 # 配置层
+│   └── ClaudeCodeConfig    # 配置管理
+├── context/                # 上下文层
+│   └── ProjectContext      # 项目上下文
+├── permission/             # 权限层
+│   └── PermissionManager   # 权限管理
+└── ClaudeCodeApplication   # 应用入口
 ```
 
-## 依赖
+### 依赖的 EvoX 模块
 
-- evox-core, evox-models, evox-actions, evox-agents, evox-workflow, evox-capability
-
-## 使用方式
-
-### 1. 在代码中创建 ClaudeCode Agent
-
-```java
-import io.leavesfly.evox.claudecode.agent.ClaudeCodeAgent;
-import io.leavesfly.evox.agents.specialized.ToolAwareAgent;
-import io.leavesfly.evox.models.config.OpenAILLMConfig;
-import io.leavesfly.evox.models.openai.OpenAILLM;
-
-// 项目根目录
-String projectRoot = "/path/to/your/project";
-OpenAILLMConfig config = OpenAILLMConfig.builder()
-    .apiKey(System.getenv("OPENAI_API_KEY"))
-    .model("gpt-4o-mini")
-    .temperature(0.2f)
-    .build();
-BaseLLM llm = new OpenAILLM(config);
-
-ToolAwareAgent agent = ClaudeCodeAgent.create(projectRoot, config, llm);
-
-// 执行用户请求（例如："list files in src/main/java"）
-Message response = agent.execute(null, List.of(
-    Message.builder().messageType(MessageType.INPUT).content("List files in src/main/java").build()));
-```
-
-### 2. 运行控制台入口
-
-```bash
-# 设置 API Key 后运行（默认使用当前目录为项目根）
-export OPENAI_API_KEY=sk-xxx
-mvn -pl evox-application/evox-claudecode exec:java -Dexec.mainClass="io.leavesfly.evox.claudecode.ClaudeCodeRunner"
-
-# 或指定项目根
-mvn -pl evox-application/evox-claudecode exec:java -Dexec.mainClass="io.leavesfly.evox.claudecode.ClaudeCodeRunner" -Dexec.args="/path/to/project"
-```
-
-在控制台输入自然语言指令，例如：
-
-- “list files in src”
-- “read the content of pom.xml”
-- “run mvn test”
-- “create a file hello.txt with content Hello World”
-
-## 工具说明
-
-| 工具 | 说明 |
+| 模块 | 用途 |
 |------|------|
-| **file_system** | 读/写/追加/删除/列出文件，创建目录；支持常见代码与配置文件扩展名。 |
-| **code_interpreter** | 在沙箱中执行 JavaScript/Groovy/Python 片段，适合快速计算或脚本验证。 |
-| **shell_command** | 在项目目录下执行 shell 命令（mvn、git、npm、python 等），可配置超时与工作目录。 |
+| `evox-core` | 核心抽象（Message、BaseModule） |
+| `evox-models` | LLM 模型适配（OpenAI、阿里云、Ollama） |
+| `evox-actions` | Action 引擎 |
+| `evox-agents` | Agent 框架 |
+| `evox-capability` | 工具集（文件、Shell、搜索、Git） |
+| `evox-mcp` | MCP 协议支持 |
 
-## 安全与限制
+### 新增到 evox-capability 的工具
 
-- **Shell 命令**：默认允许任意命令（`allowAllCommands=true`），生产或共享环境建议改为白名单（仅允许 mvn、git、npm 等）或由人工审批。
-- **文件系统**：工作目录与扩展名白名单已做限制，避免随意读写系统文件。
-- **代码解释器**：在沙箱内执行，超时 30 秒。
-
-## 扩展建议
-
-- 接入更多 LLM（如 Claude、本地模型）：实现/配置对应的 `LLMConfig` 与 `BaseLLM`，再传给 `ClaudeCodeAgent.create`。
-- 增加 Git 专用工具：封装 `git status/diff/add/commit` 等，便于 Agent 理解版本变更。
-- 与 EvoX Workflow / MCP 集成：将 ClaudeCode Agent 作为工作流节点或 MCP 工具暴露给 IDE/其他应用。
+| 工具 | 包路径 | 说明 |
+|------|--------|------|
+| `ShellTool` | `tools.shell` | Shell 命令执行 |
+| `GrepTool` | `tools.grep` | 正则文本搜索 |
+| `GlobTool` | `tools.grep` | 文件路径搜索 |
+| `FileEditTool` | `tools.file` | Diff 式精确编辑 |
+| `GitTool` | `tools.git` | Git 操作 |
+| `ProjectContextTool` | `tools.project` | 项目结构分析 |

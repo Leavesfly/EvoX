@@ -16,56 +16,76 @@
     <packaging>jar</packaging>
 
     <name>EvoX ClaudeCode</name>
-    <description>Claude Code 风格编程助手：基于 EvoX 的 Agent 与工具实现读代码库、执行命令、修改文件、运行测试等能力</description>
+    <description>Claude Code style agentic coding CLI tool built on EvoX framework</description>
 
     <dependencies>
+        <!-- EvoX Core Modules -->
         <dependency>
             <groupId>io.leavesfly.evox</groupId>
             <artifactId>evox-core</artifactId>
-            <version>${project.version}</version>
         </dependency>
+
         <dependency>
             <groupId>io.leavesfly.evox</groupId>
             <artifactId>evox-models</artifactId>
-            <version>${project.version}</version>
         </dependency>
+
         <dependency>
             <groupId>io.leavesfly.evox</groupId>
             <artifactId>evox-actions</artifactId>
-            <version>${project.version}</version>
         </dependency>
+
         <dependency>
             <groupId>io.leavesfly.evox</groupId>
             <artifactId>evox-agents</artifactId>
-            <version>${project.version}</version>
         </dependency>
-        <dependency>
-            <groupId>io.leavesfly.evox</groupId>
-            <artifactId>evox-workflow</artifactId>
-            <version>${project.version}</version>
-        </dependency>
+
         <dependency>
             <groupId>io.leavesfly.evox</groupId>
             <artifactId>evox-capability</artifactId>
-            <version>${project.version}</version>
         </dependency>
 
+        <dependency>
+            <groupId>io.leavesfly.evox</groupId>
+            <artifactId>evox-mcp</artifactId>
+        </dependency>
+
+        <!-- Spring Boot -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter</artifactId>
         </dependency>
+
+        <!-- JLine3 for terminal interaction -->
+        <dependency>
+            <groupId>org.jline</groupId>
+            <artifactId>jline</artifactId>
+            <version>3.25.1</version>
+        </dependency>
+
+        <!-- Logging -->
         <dependency>
             <groupId>org.slf4j</groupId>
             <artifactId>slf4j-api</artifactId>
         </dependency>
+
         <dependency>
             <groupId>ch.qos.logback</groupId>
             <artifactId>logback-classic</artifactId>
         </dependency>
+
+        <!-- Lombok -->
         <dependency>
             <groupId>org.projectlombok</groupId>
             <artifactId>lombok</artifactId>
-            <optional>true</optional>
+            <scope>provided</scope>
+        </dependency>
+
+        <!-- Test -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-test</artifactId>
+            <scope>test</scope>
         </dependency>
     </dependencies>
 
@@ -87,12 +107,13 @@
                     </annotationProcessorPaths>
                 </configuration>
             </plugin>
+
+            <!-- Build executable JAR -->
             <plugin>
-                <groupId>org.codehaus.mojo</groupId>
-                <artifactId>exec-maven-plugin</artifactId>
-                <version>3.1.0</version>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-maven-plugin</artifactId>
                 <configuration>
-                    <mainClass>io.leavesfly.evox.claudecode.ClaudeCodeRunner</mainClass>
+                    <mainClass>io.leavesfly.evox.claudecode.ClaudeCodeApplication</mainClass>
                 </configuration>
             </plugin>
         </plugins>
