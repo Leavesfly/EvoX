@@ -1,5 +1,7 @@
 package io.leavesfly.evox.tools.api;
 
+import io.leavesfly.evox.core.agent.IAgent;
+import io.leavesfly.evox.tools.agent.AgentTool;
 import io.leavesfly.evox.tools.base.BaseTool;
 import io.leavesfly.evox.tools.database.DatabaseTool;
 import io.leavesfly.evox.tools.file.FileSystemTool;
@@ -16,6 +18,12 @@ import java.util.concurrent.ConcurrentHashMap;
 /**
  * 工具注册表
  * 集中管理和获取所有可用工具
+ *
+ * <p>支持两种使用方式：</p>
+ * <ul>
+ *   <li><b>Spring 环境</b>：通过 {@code new ToolRegistry()} 创建实例并注册为 Spring Bean</li>
+ *   <li><b>非 Spring 环境</b>：通过 {@link #getInstance()} 获取全局单例</li>
+ * </ul>
  * 
  * @author EvoX Team
  */
@@ -33,21 +41,30 @@ public class ToolRegistry {
     private final Map<String, List<String>> categories = new ConcurrentHashMap<>();
     
     /**
-     * 单例实例
+     * 全局单例实例（仅用于非 Spring 环境）
      */
     private static volatile ToolRegistry instance;
     
-    private ToolRegistry() {
+    /**
+     * 创建一个新的 ToolRegistry 实例
+     * <p>Spring 环境下推荐直接 new 并注册为 Bean；
+     * 非 Spring 环境使用 {@link #getInstance()} 即可。</p>
+     */
+    public ToolRegistry() {
         // 初始化分类
         categories.put("api", new ArrayList<>());
         categories.put("search", new ArrayList<>());
         categories.put("file", new ArrayList<>());
         categories.put("data", new ArrayList<>());
         categories.put("utility", new ArrayList<>());
+        categories.put("agent", new ArrayList<>());
     }
     
     /**
-     * 获取单例实例
+     * 获取全局单例实例（非 Spring 环境使用）
+     *
+     * <p>在 Spring 环境中，建议通过依赖注入获取 ToolRegistry Bean，
+     * 而非调用此方法，以保证与 Spring 生命周期一致。</p>
      */
     public static ToolRegistry getInstance() {
         if (instance == null) {
@@ -58,6 +75,15 @@ public class ToolRegistry {
             }
         }
         return instance;
+    }
+    
+    /**
+     * 重置全局单例（仅用于测试隔离）
+     */
+    public static void resetInstance() {
+        synchronized (ToolRegistry.class) {
+            instance = null;
+        }
     }
     
     /**
@@ -86,6 +112,32 @@ public class ToolRegistry {
      */
     public void register(BaseTool tool) {
         register(tool, "utility");
+    }
+    
+    /**
+     * 将智能体注册为工具（Subagent as Tool）
+     * 
+     * @param agent 要注册为工具的智能体
+     * @return 创建的 AgentTool 实例
+     */
+    public AgentTool registerAgent(IAgent agent) {
+        AgentTool agentTool = AgentTool.wrap(agent);
+        register(agentTool, "agent");
+        return agentTool;
+    }
+    
+    /**
+     * 将智能体注册为工具（自定义名称和描述）
+     * 
+     * @param agent       要注册为工具的智能体
+     * @param toolName    工具名称
+     * @param description 工具描述
+     * @return 创建的 AgentTool 实例
+     */
+    public AgentTool registerAgent(IAgent agent, String toolName, String description) {
+        AgentTool agentTool = AgentTool.wrap(agent, toolName, description);
+        register(agentTool, "agent");
+        return agentTool;
     }
     
     /**
@@ -284,6 +336,7 @@ public class ToolRegistry {
             case "file" -> "文件工具";
             case "data" -> "数据工具";
             case "utility" -> "实用工具";
+            case "agent" -> "智能体工具";
             default -> category;
         };
     }

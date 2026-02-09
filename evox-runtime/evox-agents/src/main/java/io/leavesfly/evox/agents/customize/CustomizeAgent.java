@@ -61,6 +61,11 @@ public class CustomizeAgent extends Agent {
     private String primaryActionName = "customize_action";
 
     @Override
+    protected String getPrimaryActionName() {
+        return primaryActionName;
+    }
+
+    @Override
     public void initModule() {
         super.initModule();
         // 创建主要动作
@@ -88,11 +93,12 @@ public class CustomizeAgent extends Agent {
 
     @Override
     public Message execute(String actionName, List<Message> messages) {
-        Action action = getAction(actionName);
+        String resolvedName = resolveActionName(actionName);
+        Action action = getAction(resolvedName);
         if (action == null) {
             return Message.builder()
                     .messageType(MessageType.ERROR)
-                    .content("Action not found: " + actionName)
+                    .content("Action not found: " + resolvedName)
                     .build();
         }
 
@@ -110,31 +116,12 @@ public class CustomizeAgent extends Agent {
                     .content(output.getData())
                     .build();
         } catch (Exception e) {
-            log.error("Failed to execute action: {}", actionName, e);
+            log.error("Failed to execute action: {}", resolvedName, e);
             return Message.builder()
                     .messageType(MessageType.ERROR)
                     .content("Execution failed: " + e.getMessage())
                     .build();
         }
-    }
-
-    /**
-     * 使用默认动作执行
-     */
-    public Message call(Map<String, Object> inputs) {
-        return execute(primaryActionName, createMessagesFromInput(inputs));
-    }
-
-    /**
-     * 从输入创建消息列表
-     */
-    private List<Message> createMessagesFromInput(Map<String, Object> inputs) {
-        List<Message> messages = new ArrayList<>();
-        messages.add(Message.builder()
-                .messageType(MessageType.INPUT)
-                .content(inputs)
-                .build());
-        return messages;
     }
 
     /**
@@ -183,6 +170,98 @@ public class CustomizeAgent extends Agent {
         };
     }
 
+    // ===================================================================
+    // Builder 模式 — build() 自动调 initModule()
+    // ===================================================================
+
+    /**
+     * 创建 CustomizeAgent Builder
+     */
+    public static CustomizeAgentBuilder builder() {
+        return new CustomizeAgentBuilder();
+    }
+
+    /**
+     * CustomizeAgent 专用 Builder
+     */
+    public static class CustomizeAgentBuilder {
+        private String name;
+        private String description;
+        private String promptTemplate;
+        private LLMConfig llmConfig;
+        private BaseLLM llm;
+        private ParseMode parseMode = ParseMode.JSON;
+        private List<InputSpec> inputs = new ArrayList<>();
+        private List<OutputSpec> outputs = new ArrayList<>();
+
+        public CustomizeAgentBuilder name(String name) {
+            this.name = name;
+            return this;
+        }
+
+        public CustomizeAgentBuilder description(String description) {
+            this.description = description;
+            return this;
+        }
+
+        public CustomizeAgentBuilder promptTemplate(String promptTemplate) {
+            this.promptTemplate = promptTemplate;
+            return this;
+        }
+
+        public CustomizeAgentBuilder llmConfig(LLMConfig llmConfig) {
+            this.llmConfig = llmConfig;
+            return this;
+        }
+
+        public CustomizeAgentBuilder llm(BaseLLM llm) {
+            this.llm = llm;
+            return this;
+        }
+
+        public CustomizeAgentBuilder parseMode(ParseMode parseMode) {
+            this.parseMode = parseMode;
+            return this;
+        }
+
+        /**
+         * 设置输入字段（varargs）
+         */
+        public CustomizeAgentBuilder inputs(InputSpec... specs) {
+            this.inputs = new ArrayList<>(List.of(specs));
+            return this;
+        }
+
+        /**
+         * 设置输出字段（varargs）
+         */
+        public CustomizeAgentBuilder outputs(OutputSpec... specs) {
+            this.outputs = new ArrayList<>(List.of(specs));
+            return this;
+        }
+
+        /**
+         * 构建并自动调用 initModule()
+         */
+        public CustomizeAgent build() {
+            CustomizeAgent agent = new CustomizeAgent();
+            agent.setName(name);
+            agent.setDescription(description);
+            agent.setPromptTemplate(promptTemplate);
+            agent.setParseMode(parseMode);
+            agent.setInputs(inputs);
+            agent.setOutputs(outputs);
+            if (llmConfig != null) agent.setLlmConfig(llmConfig);
+            if (llm != null) agent.setLlm(llm);
+            agent.initModule();
+            return agent;
+        }
+    }
+
+    // ===================================================================
+    // InputSpec / OutputSpec — 增加 of() 静态工厂
+    // ===================================================================
+
     /**
      * 输入字段规格
      */
@@ -204,6 +283,16 @@ public class CustomizeAgent extends Agent {
             this.type = type;
             this.description = description;
             this.required = required;
+        }
+
+        /** 静态工厂方法（必填字段） */
+        public static InputSpec of(String name, String type, String description) {
+            return new InputSpec(name, type, description);
+        }
+
+        /** 静态工厂方法（可选字段） */
+        public static InputSpec optional(String name, String type, String description) {
+            return new InputSpec(name, type, description, false);
         }
     }
 
@@ -228,6 +317,11 @@ public class CustomizeAgent extends Agent {
             this.type = type;
             this.description = description;
             this.required = required;
+        }
+
+        /** 静态工厂方法 */
+        public static OutputSpec of(String name, String type, String description) {
+            return new OutputSpec(name, type, description);
         }
     }
 

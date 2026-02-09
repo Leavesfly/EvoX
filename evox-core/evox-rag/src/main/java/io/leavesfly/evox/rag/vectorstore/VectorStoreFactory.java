@@ -25,9 +25,9 @@ public class VectorStoreFactory {
      *
      * @param type 存储类型
      * @param dimensions 向量维度
-     * @return VectorStore实例
+     * @return DocumentVectorStore 实例
      */
-    public static VectorStore create(VectorStoreType type, int dimensions) {
+    public static DocumentVectorStore create(VectorStoreType type, int dimensions) {
         return switch (type) {
             case IN_MEMORY -> {
                 log.info("Creating InMemoryVectorStore");
@@ -47,14 +47,14 @@ public class VectorStoreFactory {
     /**
      * 创建默认向量存储(InMemory)
      */
-    public static VectorStore createDefault() {
+    public static DocumentVectorStore createDefault() {
         return create(VectorStoreType.IN_MEMORY, 1536);
     }
 
     /**
      * 创建持久化向量存储
      */
-    public static VectorStore createPersistent(int dimensions) {
+    public static DocumentVectorStore createPersistent(int dimensions) {
         return create(VectorStoreType.PERSISTENT, dimensions);
     }
 }

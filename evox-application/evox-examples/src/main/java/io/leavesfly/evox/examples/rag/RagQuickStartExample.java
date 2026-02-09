@@ -5,8 +5,8 @@ import io.leavesfly.evox.rag.config.RAGConfig;
 import io.leavesfly.evox.rag.embedding.EmbeddingService;
 import io.leavesfly.evox.rag.schema.Document;
 import io.leavesfly.evox.rag.schema.RetrievalResult;
+import io.leavesfly.evox.rag.vectorstore.DocumentVectorStore;
 import io.leavesfly.evox.rag.vectorstore.InMemoryVectorStore;
-import io.leavesfly.evox.rag.vectorstore.VectorStore;
 import lombok.extern.slf4j.Slf4j;
 
 import java.util.ArrayList;
@@ -43,7 +43,7 @@ public class RagQuickStartExample {
 
         // 使用简易嵌入服务与内存向量库，方便本地演示
         EmbeddingService embeddingService = new SimpleHashEmbeddingService(EMBEDDING_DIMENSIONS);
-        VectorStore vectorStore = new InMemoryVectorStore();
+        DocumentVectorStore vectorStore = new InMemoryVectorStore();
 
         // 初始化 RAG 引擎
         RAGEngine ragEngine = new RAGEngine(config, embeddingService, vectorStore);

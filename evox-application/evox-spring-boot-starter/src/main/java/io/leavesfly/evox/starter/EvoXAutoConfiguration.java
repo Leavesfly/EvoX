@@ -4,6 +4,7 @@ import io.leavesfly.evox.memory.shortterm.ShortTermMemory;
 import io.leavesfly.evox.models.base.BaseLLM;
 import io.leavesfly.evox.models.config.OpenAILLMConfig;
 import io.leavesfly.evox.models.openai.OpenAILLM;
+import io.leavesfly.evox.tools.api.ToolRegistry;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
@@ -84,6 +85,19 @@ public class EvoXAutoConfiguration {
         return new OpenAILLM(config);
     }
     
+    /**
+     * 自动配置工具注册表
+     *
+     * <p>在 Spring 环境中，通过 Bean 管理 ToolRegistry 的生命周期，
+     * 避免全局单例带来的测试隔离问题。</p>
+     */
+    @Bean
+    @ConditionalOnMissingBean
+    public ToolRegistry toolRegistry() {
+        log.info("Auto-configuring ToolRegistry as Spring Bean");
+        return ToolRegistry.createLightweight();
+    }
+
     /**
      * 自动配置短期记忆
      */

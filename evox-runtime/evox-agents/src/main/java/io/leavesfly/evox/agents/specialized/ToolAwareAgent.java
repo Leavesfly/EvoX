@@ -1,10 +1,15 @@
 package io.leavesfly.evox.agents.specialized;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import io.leavesfly.evox.agents.base.Agent;
+import io.leavesfly.evox.core.agent.IAgent;
 import io.leavesfly.evox.core.message.Message;
 import io.leavesfly.evox.core.message.MessageType;
 import io.leavesfly.evox.models.base.BaseLLM;
 import io.leavesfly.evox.models.config.LLMConfig;
+import io.leavesfly.evox.tools.agent.AgentTool;
 import io.leavesfly.evox.tools.base.BaseTool;
 import lombok.Builder;
 import lombok.Data;
@@ -64,6 +69,8 @@ public class ToolAwareAgent extends Agent {
 
     /**
      * 构建器构造函数
+     * 注意: @Builder 生成的 build() 不会自动调用 initModule()，
+     * 使用 ToolAwareAgent.create() 系列方法可自动初始化
      */
     @Builder
     public ToolAwareAgent(
@@ -74,7 +81,8 @@ public class ToolAwareAgent extends Agent {
             BaseLLM llm,
             List<BaseTool> tools,
             Boolean autoExecuteTools,
-            Integer maxToolCalls
+            Integer maxToolCalls,
+            Boolean autoInit
     ) {
         this.setName(name != null ? name : "ToolAwareAgent");
         this.setDescription(description != null ? description :
@@ -92,6 +100,11 @@ public class ToolAwareAgent extends Agent {
             for (BaseTool tool : tools) {
                 toolMap.put(tool.getName(), tool);
             }
+        }
+
+        // P0: Builder.build() 自动调用 initModule()
+        if (autoInit == null || autoInit) {
+            initModule();
         }
     }
 
@@ -192,47 +205,172 @@ public class ToolAwareAgent extends Agent {
     }
 
     /**
+     * JSON 解析器（线程安全，可复用）
+     */
+    private static final ObjectMapper JSON_MAPPER = new ObjectMapper();
+
+    /**
      * 解析工具调用
+     *
+     * <p>支持两种格式：</p>
+     * <ol>
+     *   <li>文本协议格式（TOOL: / PARAMS: / END_TOOL）</li>
+     *   <li>JSON 数组格式（LLM 原生 function calling 返回的 JSON）</li>
+     * </ol>
+     *
+     * PARAMS 中的 JSON 会被真正解析为 Map，解析失败时回退到原始字符串。
      */
     private List<ToolCall> parseToolCalls(String llmResponse) {
         List<ToolCall> toolCalls = new ArrayList<>();
-        
+
         if (llmResponse == null || llmResponse.trim().isEmpty()) {
             return toolCalls;
         }
 
-        // 简单解析：查找 TOOL: 和 PARAMS: 块
+        // 策略1：尝试解析为 JSON 数组格式 [{"tool": "xxx", "parameters": {...}}, ...]
+        toolCalls = tryParseJsonArray(llmResponse);
+        if (!toolCalls.isEmpty()) {
+            return toolCalls.size() > maxToolCalls ? toolCalls.subList(0, maxToolCalls) : toolCalls;
+        }
+
+        // 策略2：文本协议格式（TOOL: / PARAMS: / END_TOOL）
+        toolCalls = parseTextProtocol(llmResponse);
+        return toolCalls.size() > maxToolCalls ? toolCalls.subList(0, maxToolCalls) : toolCalls;
+    }
+
+    /**
+     * 尝试将 LLM 响应解析为 JSON 数组格式的工具调用
+     *
+     * <p>支持格式：</p>
+     * <pre>{@code
+     * [
+     *   {"tool": "calculator", "parameters": {"expression": "2+3"}},
+     *   {"tool": "search",     "parameters": {"query": "weather"}}
+     * ]
+     * }</pre>
+     */
+    private List<ToolCall> tryParseJsonArray(String llmResponse) {
+        List<ToolCall> toolCalls = new ArrayList<>();
+        String trimmed = llmResponse.trim();
+
+        // 提取 JSON 数组（可能被包裹在 markdown 代码块中）
+        String jsonStr = extractJsonBlock(trimmed);
+        if (jsonStr == null || !jsonStr.startsWith("[")) {
+            return toolCalls;
+        }
+
+        try {
+            List<Map<String, Object>> parsed = JSON_MAPPER.readValue(
+                    jsonStr, new TypeReference<List<Map<String, Object>>>() {});
+            for (Map<String, Object> item : parsed) {
+                String toolName = getStringValue(item, "tool", "name", "tool_name");
+                if (toolName == null) continue;
+
+                @SuppressWarnings("unchecked")
+                Map<String, Object> params = item.containsKey("parameters")
+                        ? (Map<String, Object>) item.get("parameters")
+                        : item.containsKey("arguments")
+                            ? (Map<String, Object>) item.get("arguments")
+                            : new HashMap<>();
+                toolCalls.add(ToolCall.builder().toolName(toolName).parameters(params).build());
+            }
+        } catch (JsonProcessingException e) {
+            log.debug("LLM response is not a valid JSON tool-call array, falling back to text protocol");
+        }
+        return toolCalls;
+    }
+
+    /**
+     * 解析文本协议格式的工具调用（TOOL: / PARAMS: / END_TOOL）
+     */
+    private List<ToolCall> parseTextProtocol(String llmResponse) {
+        List<ToolCall> toolCalls = new ArrayList<>();
         String[] lines = llmResponse.split("\n");
         String currentTool = null;
-        Map<String, Object> currentParams = new HashMap<>();
+        StringBuilder paramsBuilder = new StringBuilder();
+        boolean collectingParams = false;
 
         for (String line : lines) {
             String trimmed = line.trim();
-            
+
             if (trimmed.startsWith("TOOL:")) {
                 currentTool = trimmed.substring(5).trim();
+                paramsBuilder.setLength(0);
+                collectingParams = false;
             } else if (trimmed.startsWith("PARAMS:")) {
-                // 简化处理：假设参数已经是可解析的格式
-                String paramsStr = trimmed.substring(7).trim();
-                // 这里应该用JSON解析，简化为直接使用
-                currentParams = new HashMap<>();
-                currentParams.put("raw_params", paramsStr);
+                String inline = trimmed.substring(7).trim();
+                paramsBuilder.setLength(0);
+                paramsBuilder.append(inline);
+                collectingParams = true;
             } else if (trimmed.equals("END_TOOL") && currentTool != null) {
+                Map<String, Object> params = parseJsonParams(paramsBuilder.toString().trim());
                 toolCalls.add(ToolCall.builder()
                         .toolName(currentTool)
-                        .parameters(currentParams)
+                        .parameters(params)
                         .build());
-                
                 currentTool = null;
-                currentParams = new HashMap<>();
-                
+                paramsBuilder.setLength(0);
+                collectingParams = false;
+
                 if (toolCalls.size() >= maxToolCalls) {
                     break;
                 }
+            } else if (collectingParams) {
+                // 多行 PARAMS 内容
+                paramsBuilder.append("\n").append(trimmed);
             }
         }
 
         return toolCalls;
+    }
+
+    /**
+     * 将参数字符串解析为 Map。
+     * 优先 JSON 解析，失败则回退为 raw_params。
+     */
+    private Map<String, Object> parseJsonParams(String paramsStr) {
+        if (paramsStr == null || paramsStr.isEmpty()) {
+            return new HashMap<>();
+        }
+        try {
+            return JSON_MAPPER.readValue(paramsStr, new TypeReference<Map<String, Object>>() {});
+        } catch (JsonProcessingException e) {
+            log.debug("Failed to parse PARAMS as JSON, using raw string: {}", paramsStr);
+            Map<String, Object> fallback = new HashMap<>();
+            fallback.put("raw_params", paramsStr);
+            return fallback;
+        }
+    }
+
+    /**
+     * 从可能被 markdown 代码块包裹的文本中提取 JSON 内容
+     */
+    private String extractJsonBlock(String text) {
+        // 处理 ```json ... ``` 包裹
+        if (text.contains("```")) {
+            int start = text.indexOf("```");
+            int contentStart = text.indexOf('\n', start);
+            int end = text.indexOf("```", contentStart);
+            if (contentStart >= 0 && end > contentStart) {
+                return text.substring(contentStart + 1, end).trim();
+            }
+        }
+        // 找到第一个 '[' 开始
+        int idx = text.indexOf('[');
+        return idx >= 0 ? text.substring(idx) : null;
+    }
+
+    /**
+     * 从 Map 中按多个候选 key 取第一个非 null 的 String 值
+     */
+    private String getStringValue(Map<String, Object> map, String... keys) {
+        for (String key : keys) {
+            Object val = map.get(key);
+            if (val != null) {
+                return String.valueOf(val);
+            }
+        }
+        return null;
     }
 
     /**
@@ -277,6 +415,51 @@ public class ToolAwareAgent extends Agent {
             setSystemPrompt(buildSystemPrompt(tools));
             log.debug("Removed tool {} from agent {}", toolName, getName());
         }
+    }
+
+    /**
+     * 将另一个Agent作为工具添加（使用默认配置）
+     * 这是 "Subagent as Tool" 模式的快捷方法
+     *
+     * @param agent 要作为工具使用的智能体
+     */
+    public void addAgentAsTool(IAgent agent) {
+        if (agent == null) {
+            log.warn("Cannot add null agent as tool");
+            return;
+        }
+        AgentTool agentTool = AgentTool.wrap(agent);
+        addTool(agentTool);
+        log.info("Added agent '{}' as tool '{}' to agent '{}'",
+                agent.getName(), agentTool.getName(), getName());
+    }
+
+    /**
+     * 将另一个Agent作为工具添加（自定义名称和描述）
+     *
+     * @param agent       要作为工具使用的智能体
+     * @param toolName    工具名称
+     * @param description 工具描述
+     */
+    public void addAgentAsTool(IAgent agent, String toolName, String description) {
+        if (agent == null) {
+            log.warn("Cannot add null agent as tool");
+            return;
+        }
+        AgentTool agentTool = AgentTool.wrap(agent, toolName, description);
+        addTool(agentTool);
+        log.info("Added agent '{}' as tool '{}' to agent '{}'",
+                agent.getName(), agentTool.getName(), getName());
+    }
+
+    /**
+     * 将另一个Agent作为工具添加（使用Builder进行完整配置）
+     *
+     * @param agent 要作为工具使用的智能体
+     * @return AgentTool.Builder 供进一步配置
+     */
+    public AgentTool.Builder agentAsToolBuilder(IAgent agent) {
+        return AgentTool.builder(agent);
     }
 
     /**

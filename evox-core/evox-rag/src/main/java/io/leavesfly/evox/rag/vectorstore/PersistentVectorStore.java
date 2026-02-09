@@ -20,7 +20,7 @@ import java.util.stream.Collectors;
  * @author EvoX Team
  */
 @Slf4j
-public class PersistentVectorStore implements VectorStore {
+public class PersistentVectorStore implements DocumentVectorStore {
 
     private final Map<String, Chunk> chunkStore = new ConcurrentHashMap<>();
     private final int dimensions;

@@ -3,20 +3,19 @@ package io.leavesfly.evox.agents.base;
 import io.leavesfly.evox.actions.base.Action;
 import io.leavesfly.evox.core.agent.IAgent;
 import io.leavesfly.evox.core.message.Message;
+import io.leavesfly.evox.core.message.MessageType;
 import io.leavesfly.evox.core.module.BaseModule;
 import io.leavesfly.evox.models.base.BaseLLM;
 import io.leavesfly.evox.models.config.LLMConfig;
+import io.leavesfly.evox.models.factory.LLMFactory;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.experimental.SuperBuilder;
 import lombok.extern.slf4j.Slf4j;
 import reactor.core.publisher.Mono;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.UUID;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.Map;
 
 /**
  * Agent基类
@@ -83,8 +82,33 @@ public abstract class Agent extends BaseModule implements IAgent {
         super();
     }
 
+    /**
+     * 获取 LLM 实例（支持懒初始化）
+     *
+     * <p>如果 llm 未直接设置但 llmConfig 已配置，
+     * 会自动通过 LLMFactory 创建 LLM 实例。
+     * 这意味着用户只需设置 llmConfig，无需手动创建 LLM 对象。</p>
+     *
+     * @return LLM 实例，如果既没有设置 llm 也没有设置 llmConfig 则返回 null
+     */
+    public BaseLLM getLlm() {
+        if (llm == null && llmConfig != null) {
+            try {
+                llm = LLMFactory.create(llmConfig);
+                log.debug("Auto-created LLM from config: provider={}, model={}",
+                        llmConfig.getProvider(), llmConfig.getModel());
+            } catch (Exception e) {
+                log.error("Failed to auto-create LLM from config: {}", e.getMessage(), e);
+            }
+        }
+        return llm;
+    }
+
     @Override
     public void initModule() {
+        // P0: 必填校验 — 快速失败
+        validateRequiredFields();
+        
         super.initModule();
         // 初始化动作映射
         if (actions != null) {
@@ -95,9 +119,32 @@ public abstract class Agent extends BaseModule implements IAgent {
     }
 
     /**
+     * 校验 Agent 基本必填字段
+     * 子类可以覆写此方法添加额外校验
+     *
+     * @throws IllegalStateException 如果必填字段缺失
+     */
+    protected void validateRequiredFields() {
+        if (name == null || name.trim().isEmpty()) {
+            throw new IllegalStateException(
+                    getClass().getSimpleName() + ": 'name' must be set before initModule()");
+        }
+    }
+
+    /**
+     * 获取主要动作名称（供 execute(null, messages) 时使用）
+     * 子类应该覆写此方法返回自己的 primaryActionName
+     *
+     * @return 主要动作名称
+     */
+    protected String getPrimaryActionName() {
+        return null;
+    }
+
+    /**
      * 执行指定动作
      *
-     * @param actionName 动作名称
+     * @param actionName 动作名称（传 null 使用默认动作）
      * @param messages 消息列表
      * @return 执行结果消息
      */
@@ -106,12 +153,95 @@ public abstract class Agent extends BaseModule implements IAgent {
     /**
      * 异步执行指定动作
      *
+     * <p>默认实现将同步 {@link #execute} 包装为 {@link Mono}。
+     * 如果子类的底层 LLM 支持原生异步（如 {@code chatAsync}），
+     * 应覆写此方法以获得真正的非阻塞执行。</p>
+     *
      * @param actionName 动作名称
      * @param messages 消息列表
      * @return 执行结果消息(Mono)
      */
     public Mono<Message> executeAsync(String actionName, List<Message> messages) {
-        return Mono.fromCallable(() -> execute(actionName, messages));
+        return Mono.fromCallable(() -> execute(actionName, messages))
+                .onErrorResume(e -> {
+                    log.error("Async execution failed for agent {}: {}", name, e.getMessage(), e);
+                    return Mono.just(Message.builder()
+                            .messageType(MessageType.ERROR)
+                            .content("Async execution failed: " + e.getMessage())
+                            .build());
+                });
+    }
+
+    /**
+     * 异步执行（使用默认动作，便捷方法）
+     *
+     * @param input 输入字符串
+     * @return 执行结果消息(Mono)
+     */
+    public Mono<Message> callAsync(String input) {
+        List<Message> messages = List.of(Message.builder()
+                .messageType(MessageType.INPUT)
+                .content(input)
+                .build());
+        return executeAsync(getPrimaryActionName(), messages);
+    }
+
+    /**
+     * 异步执行（使用默认动作，Map 输入）
+     *
+     * @param inputs 输入参数
+     * @return 执行结果消息(Mono)
+     */
+    public Mono<Message> callAsync(Map<String, Object> inputs) {
+        List<Message> messages = List.of(Message.builder()
+                .messageType(MessageType.INPUT)
+                .content(inputs)
+                .build());
+        return executeAsync(getPrimaryActionName(), messages);
+    }
+
+    /**
+     * 使用默认动作执行（Map 输入，统一调用入口）
+     *
+     * <p>所有 Agent 子类均可通过此方法调用，无需知道内部 actionName</p>
+     *
+     * @param inputs 输入参数
+     * @return 执行结果消息
+     */
+    public Message call(Map<String, Object> inputs) {
+        List<Message> messages = List.of(Message.builder()
+                .messageType(MessageType.INPUT)
+                .content(inputs)
+                .build());
+        return execute(getPrimaryActionName(), messages);
+    }
+
+    /**
+     * 使用默认动作执行（字符串输入，便捷方法）
+     *
+     * @param input 输入字符串
+     * @return 执行结果消息
+     */
+    public Message call(String input) {
+        List<Message> messages = List.of(Message.builder()
+                .messageType(MessageType.INPUT)
+                .content(input)
+                .build());
+        return execute(getPrimaryActionName(), messages);
+    }
+
+    /**
+     * 解析 actionName，如果为 null 则使用 primaryActionName
+     *
+     * @param actionName 传入的 actionName
+     * @return 实际使用的 actionName
+     */
+    protected String resolveActionName(String actionName) {
+        if (actionName != null) {
+            return actionName;
+        }
+        String primary = getPrimaryActionName();
+        return primary != null ? primary : "default";
     }
 
     /**

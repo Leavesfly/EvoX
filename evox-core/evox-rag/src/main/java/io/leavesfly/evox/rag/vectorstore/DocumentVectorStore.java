@@ -7,11 +7,19 @@ import io.leavesfly.evox.rag.schema.RetrievalResult;
 import java.util.List;
 
 /**
- * 向量存储接口
+ * 文档向量存储接口（RAG 专用）
+ *
+ * <p>操作 {@link Chunk}（文档分块）级别的向量存储和检索。
+ * 用于 RAG 管线中文档的索引和语义搜索。</p>
+ *
+ * <p>如果需要底层原始向量（{@code float[]}）操作，
+ * 请使用 {@code io.leavesfly.evox.storage.vector.VectorStore}。</p>
  *
  * @author EvoX Team
+ * @see io.leavesfly.evox.rag.schema.Chunk
+ * @see io.leavesfly.evox.rag.schema.Query
  */
-public interface VectorStore {
+public interface DocumentVectorStore {
 
     /**
      * 添加分块到向量存储

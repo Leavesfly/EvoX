@@ -3,7 +3,7 @@ package io.leavesfly.evox.rag.retriever;
 import io.leavesfly.evox.rag.embedding.EmbeddingService;
 import io.leavesfly.evox.rag.schema.Query;
 import io.leavesfly.evox.rag.schema.RetrievalResult;
-import io.leavesfly.evox.rag.vectorstore.VectorStore;
+import io.leavesfly.evox.rag.vectorstore.DocumentVectorStore;
 import lombok.extern.slf4j.Slf4j;
 
 import java.util.List;
@@ -17,15 +17,15 @@ import java.util.List;
 @Slf4j
 public class VectorRetriever implements Retriever {
 
-    private final VectorStore vectorStore;
+    private final DocumentVectorStore vectorStore;
     private final EmbeddingService embeddingService;
     private final int defaultTopK;
 
-    public VectorRetriever(VectorStore vectorStore, EmbeddingService embeddingService) {
+    public VectorRetriever(DocumentVectorStore vectorStore, EmbeddingService embeddingService) {
         this(vectorStore, embeddingService, 5);
     }
 
-    public VectorRetriever(VectorStore vectorStore, EmbeddingService embeddingService, int defaultTopK) {
+    public VectorRetriever(DocumentVectorStore vectorStore, EmbeddingService embeddingService, int defaultTopK) {
         this.vectorStore = vectorStore;
         this.embeddingService = embeddingService;
         this.defaultTopK = defaultTopK;

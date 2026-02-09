@@ -6,8 +6,13 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * 向量存储接口
- * 定义向量数据存储和检索的统一接口
+ * 底层向量存储接口
+ *
+ * <p>定义对原始向量（{@code float[]}）的存储和检索操作。
+ * 用于通用向量数据库集成（Qdrant, FAISS, Chroma 等）。</p>
+ *
+ * <p>如果在 RAG 管线中操作文档分块（{@code Chunk}），
+ * 请使用 {@code io.leavesfly.evox.rag.vectorstore.DocumentVectorStore}。</p>
  * 
  * @author EvoX Team
  */

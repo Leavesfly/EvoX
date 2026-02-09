@@ -16,7 +16,7 @@ import io.leavesfly.evox.rag.schema.Chunk;
 import io.leavesfly.evox.rag.schema.Document;
 import io.leavesfly.evox.rag.schema.Query;
 import io.leavesfly.evox.rag.schema.RetrievalResult;
-import io.leavesfly.evox.rag.vectorstore.VectorStore;
+import io.leavesfly.evox.rag.vectorstore.DocumentVectorStore;
 import io.leavesfly.evox.models.base.BaseLLM;
 import lombok.extern.slf4j.Slf4j;
 
@@ -37,14 +37,14 @@ public class RAGEngine {
     private final DocumentReader reader;
     private final Chunker chunker;
     private final EmbeddingService embeddingService;
-    private final VectorStore vectorStore;
+    private final DocumentVectorStore vectorStore;
     private final Retriever retriever;
     private final Reranker reranker;
 
     public RAGEngine(
             RAGConfig config,
             EmbeddingService embeddingService,
-            VectorStore vectorStore) {
+            DocumentVectorStore vectorStore) {
         this(config, new UniversalDocumentReader(), embeddingService, vectorStore, null);
     }
 
@@ -52,7 +52,7 @@ public class RAGEngine {
             RAGConfig config,
             DocumentReader reader,
             EmbeddingService embeddingService,
-            VectorStore vectorStore) {
+            DocumentVectorStore vectorStore) {
         this(config, reader, embeddingService, vectorStore, null);
     }
 
@@ -60,7 +60,7 @@ public class RAGEngine {
             RAGConfig config,
             DocumentReader reader,
             EmbeddingService embeddingService,
-            VectorStore vectorStore,
+            DocumentVectorStore vectorStore,
             BaseLLM llm) {
         this.config = config;
         this.reader = reader;

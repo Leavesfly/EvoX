@@ -16,7 +16,7 @@ import java.util.stream.Collectors;
  * @author EvoX Team
  */
 @Slf4j
-public class InMemoryVectorStore implements VectorStore {
+public class InMemoryVectorStore implements DocumentVectorStore {
 
     private final Map<String, Chunk> chunkStore = new ConcurrentHashMap<>();
 

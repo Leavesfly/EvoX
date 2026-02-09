@@ -11,14 +11,23 @@ import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.extern.slf4j.Slf4j;
 
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.function.Function;
 
 /**
  * ActionAgent 是一个专用智能体,直接执行提供的函数而不使用 LLM
  * 它创建一个使用提供的函数作为执行骨干的动作
+ *
+ * <p>支持 Builder 模式快速创建:</p>
+ * <pre>{@code
+ * ActionAgent agent = ActionAgent.builder()
+ *     .name("Calculator")
+ *     .description("数学计算")
+ *     .inputs(FieldSpec.of("a", "int", "第一个数"), FieldSpec.of("b", "int", "第二个数"))
+ *     .outputs(FieldSpec.of("result", "int", "计算结果"))
+ *     .executeFunction(params -> Map.of("result", (int)params.get("a") + (int)params.get("b")))
+ *     .build();  // 自动 initModule()
+ * }</pre>
  *
  * @author EvoX Team
  */
@@ -48,6 +57,20 @@ public class ActionAgent extends Agent {
     private String primaryActionName = "function_action";
 
     @Override
+    protected String getPrimaryActionName() {
+        return primaryActionName;
+    }
+
+    @Override
+    protected void validateRequiredFields() {
+        super.validateRequiredFields();
+        if (executeFunction == null) {
+            throw new IllegalStateException(
+                    "ActionAgent '" + getName() + "': 'executeFunction' must be set before initModule()");
+        }
+    }
+
+    @Override
     public void initModule() {
         super.initModule();
         // 创建函数动作
@@ -72,11 +95,12 @@ public class ActionAgent extends Agent {
 
     @Override
     public Message execute(String actionName, List<Message> messages) {
-        Action action = getAction(actionName);
+        String resolvedName = resolveActionName(actionName);
+        Action action = getAction(resolvedName);
         if (action == null) {
             return Message.builder()
                     .messageType(MessageType.ERROR)
-                    .content("Action not found: " + actionName)
+                    .content("Action not found: " + resolvedName)
                     .build();
         }
 
@@ -94,23 +118,12 @@ public class ActionAgent extends Agent {
                     .content(output.getData())
                     .build();
         } catch (Exception e) {
-            log.error("Failed to execute action: {}", actionName, e);
+            log.error("Failed to execute action: {}", resolvedName, e);
             return Message.builder()
                     .messageType(MessageType.ERROR)
                     .content("Execution failed: " + e.getMessage())
                     .build();
         }
-    }
-
-    /**
-     * 使用默认动作执行
-     */
-    public Message call(Map<String, Object> inputs) {
-        List<Message> messages = List.of(Message.builder()
-                .messageType(MessageType.INPUT)
-                .content(inputs)
-                .build());
-        return execute(primaryActionName, messages);
     }
 
     /**
@@ -147,7 +160,6 @@ public class ActionAgent extends Agent {
 
             @Override
             public boolean validate() {
-                // 验证所有必需字段
                 if (inputs != null) {
                     for (FieldSpec spec : inputs) {
                         if (spec.isRequired() && !data.containsKey(spec.getName())) {
@@ -159,6 +171,78 @@ public class ActionAgent extends Agent {
             }
         };
     }
+
+    // ===================================================================
+    // Builder 模式 — build() 自动调 initModule()
+    // ===================================================================
+
+    /**
+     * 创建 ActionAgent Builder
+     */
+    public static ActionAgentBuilder builder() {
+        return new ActionAgentBuilder();
+    }
+
+    /**
+     * ActionAgent 专用 Builder
+     * build() 自动调用 initModule()，无需手动调用
+     */
+    public static class ActionAgentBuilder {
+        private String name;
+        private String description;
+        private List<FieldSpec> inputs;
+        private List<FieldSpec> outputs;
+        private Function<Map<String, Object>, Map<String, Object>> executeFunction;
+
+        public ActionAgentBuilder name(String name) {
+            this.name = name;
+            return this;
+        }
+
+        public ActionAgentBuilder description(String description) {
+            this.description = description;
+            return this;
+        }
+
+        /**
+         * 设置输入字段（varargs，减少样板代码）
+         */
+        public ActionAgentBuilder inputs(FieldSpec... specs) {
+            this.inputs = List.of(specs);
+            return this;
+        }
+
+        /**
+         * 设置输出字段（varargs）
+         */
+        public ActionAgentBuilder outputs(FieldSpec... specs) {
+            this.outputs = List.of(specs);
+            return this;
+        }
+
+        public ActionAgentBuilder executeFunction(Function<Map<String, Object>, Map<String, Object>> fn) {
+            this.executeFunction = fn;
+            return this;
+        }
+
+        /**
+         * 构建 ActionAgent 并自动调用 initModule()
+         */
+        public ActionAgent build() {
+            ActionAgent agent = new ActionAgent();
+            agent.setName(name);
+            agent.setDescription(description);
+            agent.setInputs(inputs);
+            agent.setOutputs(outputs);
+            agent.setExecuteFunction(executeFunction);
+            agent.initModule();
+            return agent;
+        }
+    }
+
+    // ===================================================================
+    // FieldSpec — 增加 of() 静态工厂
+    // ===================================================================
 
     /**
      * 字段规格
@@ -182,6 +266,20 @@ public class ActionAgent extends Agent {
             this.description = description;
             this.required = required;
         }
+
+        /**
+         * 静态工厂方法（必填字段）
+         */
+        public static FieldSpec of(String name, String type, String description) {
+            return new FieldSpec(name, type, description);
+        }
+
+        /**
+         * 静态工厂方法（可选字段）
+         */
+        public static FieldSpec optional(String name, String type, String description) {
+            return new FieldSpec(name, type, description, false);
+        }
     }
 
     /**
@@ -197,7 +295,6 @@ public class ActionAgent extends Agent {
         @Override
         public ActionOutput execute(ActionInput input) {
             try {
-                // 直接执行函数
                 Map<String, Object> result = executeFunction.apply(input.toMap());
                 return SimpleActionOutput.success(result);
             } catch (Exception e) {
@@ -208,22 +305,14 @@ public class ActionAgent extends Agent {
 
         @Override
         public String[] getInputFields() {
-            if (inputs == null) {
-                return new String[0];
-            }
-            return inputs.stream()
-                    .map(FieldSpec::getName)
-                    .toArray(String[]::new);
+            if (inputs == null) return new String[0];
+            return inputs.stream().map(FieldSpec::getName).toArray(String[]::new);
         }
 
         @Override
         public String[] getOutputFields() {
-            if (outputs == null) {
-                return new String[0];
-            }
-            return outputs.stream()
-                    .map(FieldSpec::getName)
-                    .toArray(String[]::new);
+            if (outputs == null) return new String[0];
+            return outputs.stream().map(FieldSpec::getName).toArray(String[]::new);
         }
     }
 }

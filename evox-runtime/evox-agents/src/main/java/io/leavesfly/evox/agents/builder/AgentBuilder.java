@@ -4,11 +4,14 @@ import io.leavesfly.evox.actions.base.Action;
 import io.leavesfly.evox.agents.base.Agent;
 import io.leavesfly.evox.agents.specialized.ChatBotAgent;
 import io.leavesfly.evox.models.base.BaseLLM;
+import io.leavesfly.evox.models.config.LLMConfig;
 import io.leavesfly.evox.models.config.OpenAILLMConfig;
+import io.leavesfly.evox.models.factory.LLMFactory;
 import io.leavesfly.evox.models.openai.OpenAILLM;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.function.Supplier;
 
 /**
  * Agent 流式构建器
@@ -38,7 +41,8 @@ import java.util.List;
  */
 public class AgentBuilder<T extends Agent> {
     
-    private final Class<T> agentClass;
+    private final Supplier<T> agentFactory;
+    private final String agentTypeName;
     private String name;
     private String description;
     private String systemPrompt;
@@ -46,24 +50,58 @@ public class AgentBuilder<T extends Agent> {
     private List<Action> actions = new ArrayList<>();
     
     /**
-     * 私有构造函数
+     * 通过 Supplier 工厂构造（推荐）
+     *
+     * @param agentFactory 创建 Agent 实例的工厂函数
+     * @param agentTypeName Agent 类型名（用于默认命名和错误提示）
      */
-    private AgentBuilder(Class<T> agentClass) {
-        this.agentClass = agentClass;
+    private AgentBuilder(Supplier<T> agentFactory, String agentTypeName) {
+        this.agentFactory = agentFactory;
+        this.agentTypeName = agentTypeName;
     }
     
     /**
      * 创建聊天机器人构建器
      */
     public static AgentBuilder<ChatBotAgent> chatBot() {
-        return new AgentBuilder<>(ChatBotAgent.class);
+        // 使用延迟 Supplier — llm 在 build() 时才设置
+        return new AgentBuilder<>(() -> null, "ChatBotAgent");
     }
     
     /**
-     * 创建自定义 Agent 构建器
+     * 创建自定义 Agent 构建器（推荐：使用 Supplier）
+     *
+     * <pre>{@code
+     * AgentBuilder.custom(MyAgent::new)
+     *     .name("my-agent")
+     *     .withOpenAI(apiKey)
+     *     .build();
+     * }</pre>
+     *
+     * @param factory 创建 Agent 实例的工厂函数
+     * @param <T> Agent 类型
+     * @return AgentBuilder 实例
+     */
+    public static <T extends Agent> AgentBuilder<T> custom(Supplier<T> factory) {
+        return new AgentBuilder<>(factory, "CustomAgent");
+    }
+
+    /**
+     * 创建自定义 Agent 构建器（兼容旧 API：使用 Class）
+     *
+     * @param agentClass Agent 类（必须有无参构造函数）
+     * @param <T> Agent 类型
+     * @return AgentBuilder 实例
      */
     public static <T extends Agent> AgentBuilder<T> custom(Class<T> agentClass) {
-        return new AgentBuilder<>(agentClass);
+        return new AgentBuilder<>(() -> {
+            try {
+                return agentClass.getDeclaredConstructor().newInstance();
+            } catch (Exception e) {
+                throw new RuntimeException("Failed to instantiate " + agentClass.getName() +
+                        ". Ensure it has a no-arg constructor, or use custom(Supplier) instead.", e);
+            }
+        }, agentClass.getSimpleName());
     }
     
     /**
@@ -132,6 +170,100 @@ public class AgentBuilder<T extends Agent> {
         this.llm = llm;
         return this;
     }
+
+    /**
+     * 从 LLMConfig 自动创建 LLM（支持所有已注册的 provider）
+     *
+     * <pre>{@code
+     * AgentBuilder.chatBot()
+     *     .withConfig(LLMConfig.ofAliyun("sk-xxx", "qwen-max"))
+     *     .build();
+     * }</pre>
+     */
+    public AgentBuilder<T> withConfig(LLMConfig config) {
+        this.llm = LLMFactory.create(config);
+        return this;
+    }
+
+    /**
+     * 配置阿里云通义千问（使用环境变量 DASHSCOPE_API_KEY）
+     */
+    public AgentBuilder<T> withAliyun() {
+        this.llm = LLMFactory.aliyun();
+        return this;
+    }
+
+    /**
+     * 配置阿里云通义千问
+     */
+    public AgentBuilder<T> withAliyun(String apiKey) {
+        this.llm = LLMFactory.aliyun(apiKey);
+        return this;
+    }
+
+    /**
+     * 配置阿里云通义千问
+     */
+    public AgentBuilder<T> withAliyun(String apiKey, String model) {
+        this.llm = LLMFactory.aliyun(apiKey, model);
+        return this;
+    }
+
+    /**
+     * 配置 Ollama 本地模型
+     */
+    public AgentBuilder<T> withOllama(String model) {
+        this.llm = LLMFactory.ollama(model);
+        return this;
+    }
+
+    /**
+     * 配置 Ollama（自定义地址）
+     */
+    public AgentBuilder<T> withOllama(String model, String baseUrl) {
+        this.llm = LLMFactory.ollama(model, baseUrl);
+        return this;
+    }
+
+    /**
+     * 配置 SiliconFlow（使用环境变量 SILICONFLOW_API_KEY）
+     */
+    public AgentBuilder<T> withSiliconFlow() {
+        this.llm = LLMFactory.siliconflow();
+        return this;
+    }
+
+    /**
+     * 配置 SiliconFlow
+     */
+    public AgentBuilder<T> withSiliconFlow(String apiKey) {
+        this.llm = LLMFactory.siliconflow(apiKey);
+        return this;
+    }
+
+    /**
+     * 配置 SiliconFlow
+     */
+    public AgentBuilder<T> withSiliconFlow(String apiKey, String model) {
+        this.llm = LLMFactory.siliconflow(apiKey, model);
+        return this;
+    }
+
+    /**
+     * 配置 LiteLLM 多模型代理
+     */
+    public AgentBuilder<T> withLiteLLM(String model) {
+        this.llm = LLMFactory.litellm(model);
+        return this;
+    }
+
+    /**
+     * 配置 LiteLLM（自定义代理地址）
+     */
+    public AgentBuilder<T> withLiteLLM(String model, String baseUrl) {
+        this.llm = LLMFactory.litellm(model, baseUrl);
+        return this;
+    }
     
     /**
      * 添加动作
@@ -151,22 +283,29 @@ public class AgentBuilder<T extends Agent> {
     
     /**
      * 构建 Agent
+     *
+     * <p>自动完成属性设置和 {@code initModule()} 初始化。</p>
      */
+    @SuppressWarnings("unchecked")
     public T build() {
         try {
             // 创建 Agent 实例
             T agent;
-            if (agentClass == ChatBotAgent.class) {
-                agent = agentClass.getConstructor(BaseLLM.class).newInstance(llm);
+            if (agentTypeName.equals("ChatBotAgent")) {
+                // ChatBotAgent 需要 BaseLLM 构造参数
+                agent = (T) new ChatBotAgent(llm);
             } else {
-                agent = agentClass.getDeclaredConstructor().newInstance();
+                agent = agentFactory.get();
+                if (agent == null) {
+                    throw new IllegalStateException("Agent factory returned null");
+                }
             }
             
             // 设置属性
             if (name != null) {
                 agent.setName(name);
             } else {
-                agent.setName(agentClass.getSimpleName() + "-" + System.currentTimeMillis());
+                agent.setName(agentTypeName + "-" + System.currentTimeMillis());
             }
             
             if (description != null) {
@@ -192,7 +331,7 @@ public class AgentBuilder<T extends Agent> {
             return agent;
             
         } catch (Exception e) {
-            throw new RuntimeException("Failed to build agent: " + agentClass.getName(), e);
+            throw new RuntimeException("Failed to build agent: " + agentTypeName, e);
         }
     }
 }
