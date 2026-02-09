@@ -1,0 +1,10 @@
+server:
+  port: 8090
+
+spring:
+  application:
+    name: evox-cowork
+
+logging:
+  level:
+    io.leavesfly.evox: INFO

@@ -1,0 +1,525 @@
+/*
+ * EvoX Cowork - Dark Theme Stylesheet
+ * Inspired by OpenWork / Claude Code dark UI
+ */
+
+/* ==================== Root & Global ==================== */
+.root {
+    -fx-base: #1a1a2e;
+    -fx-background: #0f0f1a;
+    -fx-control-inner-background: #16213e;
+    -fx-accent: #6c63ff;
+    -fx-focus-color: #6c63ff;
+    -fx-faint-focus-color: transparent;
+    -fx-font-family: "SF Pro Display", "Segoe UI", "Helvetica Neue", sans-serif;
+    -fx-font-size: 14px;
+    -fx-text-fill: #e0e0e0;
+}
+
+/* ==================== Main Layout ==================== */
+.main-container {
+    -fx-background-color: #0f0f1a;
+}
+
+/* ==================== Sidebar ==================== */
+.sidebar {
+    -fx-background-color: #12122a;
+    -fx-border-color: #2a2a4a;
+    -fx-border-width: 0 1 0 0;
+    -fx-padding: 0;
+}
+
+.sidebar-header {
+    -fx-background-color: #16163a;
+    -fx-padding: 16 16 12 16;
+    -fx-border-color: #2a2a4a;
+    -fx-border-width: 0 0 1 0;
+}
+
+.sidebar-title {
+    -fx-font-size: 18px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #ffffff;
+}
+
+.sidebar-subtitle {
+    -fx-font-size: 11px;
+    -fx-text-fill: #8888aa;
+}
+
+/* ==================== Buttons ==================== */
+.new-session-button {
+    -fx-background-color: #6c63ff;
+    -fx-text-fill: #ffffff;
+    -fx-font-size: 13px;
+    -fx-font-weight: bold;
+    -fx-padding: 10 16;
+    -fx-background-radius: 8;
+    -fx-cursor: hand;
+    -fx-effect: dropshadow(gaussian, rgba(108, 99, 255, 0.3), 8, 0, 0, 2);
+}
+
+.new-session-button:hover {
+    -fx-background-color: #7b73ff;
+    -fx-effect: dropshadow(gaussian, rgba(108, 99, 255, 0.5), 12, 0, 0, 3);
+}
+
+.new-session-button:pressed {
+    -fx-background-color: #5a52e0;
+}
+
+.icon-button {
+    -fx-background-color: transparent;
+    -fx-text-fill: #8888aa;
+    -fx-font-size: 14px;
+    -fx-padding: 6 10;
+    -fx-background-radius: 6;
+    -fx-cursor: hand;
+}
+
+.icon-button:hover {
+    -fx-background-color: #2a2a4a;
+    -fx-text-fill: #ffffff;
+}
+
+.danger-button {
+    -fx-background-color: #ff4757;
+    -fx-text-fill: #ffffff;
+    -fx-font-size: 13px;
+    -fx-padding: 8 16;
+    -fx-background-radius: 6;
+    -fx-cursor: hand;
+}
+
+.danger-button:hover {
+    -fx-background-color: #ff6b81;
+}
+
+/* ==================== Session List ==================== */
+.session-list {
+    -fx-background-color: transparent;
+    -fx-padding: 8;
+}
+
+.session-list .list-cell {
+    -fx-background-color: transparent;
+    -fx-padding: 10 12;
+    -fx-background-radius: 8;
+    -fx-text-fill: #c0c0d0;
+}
+
+.session-list .list-cell:hover {
+    -fx-background-color: #1e1e3a;
+}
+
+.session-list .list-cell:selected {
+    -fx-background-color: #2a2a5a;
+    -fx-text-fill: #ffffff;
+}
+
+.session-list .list-cell:selected:hover {
+    -fx-background-color: #333370;
+}
+
+.session-list .list-cell:empty {
+    -fx-background-color: transparent;
+}
+
+.session-title {
+    -fx-font-size: 13px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #e0e0f0;
+}
+
+.session-meta {
+    -fx-font-size: 11px;
+    -fx-text-fill: #7777aa;
+}
+
+/* ==================== Section Headers ==================== */
+.section-header {
+    -fx-padding: 12 16 6 16;
+}
+
+.section-label {
+    -fx-font-size: 11px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #6666aa;
+    -fx-text-transform: uppercase;
+}
+
+/* ==================== Chat Area ==================== */
+.chat-area {
+    -fx-background-color: #0f0f1a;
+}
+
+.chat-header {
+    -fx-background-color: #12122a;
+    -fx-padding: 12 20;
+    -fx-border-color: #2a2a4a;
+    -fx-border-width: 0 0 1 0;
+}
+
+.chat-title {
+    -fx-font-size: 16px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #ffffff;
+}
+
+.chat-status {
+    -fx-font-size: 11px;
+    -fx-text-fill: #6c63ff;
+}
+
+/* ==================== Messages ==================== */
+.message-scroll {
+    -fx-background-color: #0f0f1a;
+    -fx-background: #0f0f1a;
+}
+
+.message-scroll .viewport {
+    -fx-background-color: #0f0f1a;
+}
+
+.message-scroll .scroll-bar:vertical {
+    -fx-background-color: transparent;
+    -fx-pref-width: 8;
+}
+
+.message-scroll .scroll-bar:vertical .thumb {
+    -fx-background-color: #3a3a5a;
+    -fx-background-radius: 4;
+}
+
+.message-scroll .scroll-bar:vertical .thumb:hover {
+    -fx-background-color: #5a5a7a;
+}
+
+.message-scroll .scroll-bar:vertical .track {
+    -fx-background-color: transparent;
+}
+
+.message-scroll .scroll-bar:vertical .increment-button,
+.message-scroll .scroll-bar:vertical .decrement-button {
+    -fx-pref-height: 0;
+    -fx-padding: 0;
+}
+
+.message-container {
+    -fx-padding: 16 20;
+    -fx-spacing: 12;
+    -fx-background-color: #0f0f1a;
+}
+
+.user-message {
+    -fx-background-color: #1e1e4a;
+    -fx-background-radius: 12 12 4 12;
+    -fx-padding: 12 16;
+    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.2), 4, 0, 0, 1);
+}
+
+.user-message-text {
+    -fx-text-fill: #e8e8ff;
+    -fx-font-size: 14px;
+    -fx-wrap-text: true;
+}
+
+.assistant-message {
+    -fx-background-color: #16213e;
+    -fx-background-radius: 12 12 12 4;
+    -fx-padding: 12 16;
+    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.2), 4, 0, 0, 1);
+}
+
+.assistant-message-text {
+    -fx-text-fill: #d0d0e0;
+    -fx-font-size: 14px;
+    -fx-wrap-text: true;
+}
+
+.system-message {
+    -fx-background-color: #1a2a1a;
+    -fx-background-radius: 8;
+    -fx-padding: 8 12;
+}
+
+.system-message-text {
+    -fx-text-fill: #88cc88;
+    -fx-font-size: 12px;
+    -fx-font-style: italic;
+}
+
+.message-role-label {
+    -fx-font-size: 11px;
+    -fx-font-weight: bold;
+    -fx-padding: 0 0 4 0;
+}
+
+.user-role-label {
+    -fx-text-fill: #8888ff;
+}
+
+.assistant-role-label {
+    -fx-text-fill: #6c63ff;
+}
+
+.message-timestamp {
+    -fx-font-size: 10px;
+    -fx-text-fill: #555577;
+    -fx-padding: 4 0 0 0;
+}
+
+/* ==================== Input Area ==================== */
+.input-area {
+    -fx-background-color: #12122a;
+    -fx-padding: 16 20;
+    -fx-border-color: #2a2a4a;
+    -fx-border-width: 1 0 0 0;
+}
+
+.input-field {
+    -fx-background-color: #1a1a3a;
+    -fx-text-fill: #e0e0e0;
+    -fx-prompt-text-fill: #555577;
+    -fx-font-size: 14px;
+    -fx-padding: 12 16;
+    -fx-background-radius: 12;
+    -fx-border-color: #2a2a5a;
+    -fx-border-radius: 12;
+    -fx-border-width: 1;
+}
+
+.input-field:focused {
+    -fx-border-color: #6c63ff;
+    -fx-effect: dropshadow(gaussian, rgba(108, 99, 255, 0.2), 8, 0, 0, 0);
+}
+
+.send-button {
+    -fx-background-color: #6c63ff;
+    -fx-text-fill: #ffffff;
+    -fx-font-size: 14px;
+    -fx-font-weight: bold;
+    -fx-padding: 10 20;
+    -fx-background-radius: 12;
+    -fx-cursor: hand;
+    -fx-effect: dropshadow(gaussian, rgba(108, 99, 255, 0.3), 6, 0, 0, 2);
+}
+
+.send-button:hover {
+    -fx-background-color: #7b73ff;
+}
+
+.send-button:pressed {
+    -fx-background-color: #5a52e0;
+}
+
+.send-button:disabled {
+    -fx-background-color: #3a3a5a;
+    -fx-text-fill: #666688;
+    -fx-effect: none;
+}
+
+/* ==================== Welcome Screen ==================== */
+.welcome-container {
+    -fx-background-color: #0f0f1a;
+    -fx-alignment: center;
+}
+
+.welcome-title {
+    -fx-font-size: 28px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #ffffff;
+}
+
+.welcome-subtitle {
+    -fx-font-size: 14px;
+    -fx-text-fill: #8888aa;
+}
+
+.welcome-hint {
+    -fx-font-size: 12px;
+    -fx-text-fill: #555577;
+    -fx-padding: 20 0 0 0;
+}
+
+/* ==================== Permission Dialog ==================== */
+.permission-dialog {
+    -fx-background-color: #1a1a3a;
+    -fx-background-radius: 12;
+    -fx-padding: 24;
+    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.5), 20, 0, 0, 4);
+}
+
+.permission-title {
+    -fx-font-size: 16px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #ffaa00;
+}
+
+.permission-tool-name {
+    -fx-font-size: 14px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #ffffff;
+    -fx-font-family: "JetBrains Mono", "Fira Code", monospace;
+}
+
+.permission-params {
+    -fx-background-color: #0f0f2a;
+    -fx-text-fill: #aaaacc;
+    -fx-font-size: 12px;
+    -fx-font-family: "JetBrains Mono", "Fira Code", monospace;
+    -fx-padding: 12;
+    -fx-background-radius: 8;
+}
+
+.approve-once-button {
+    -fx-background-color: #4caf50;
+    -fx-text-fill: #ffffff;
+    -fx-font-size: 13px;
+    -fx-font-weight: bold;
+    -fx-padding: 8 16;
+    -fx-background-radius: 6;
+    -fx-cursor: hand;
+}
+
+.approve-once-button:hover {
+    -fx-background-color: #66bb6a;
+}
+
+.approve-always-button {
+    -fx-background-color: #2196f3;
+    -fx-text-fill: #ffffff;
+    -fx-font-size: 13px;
+    -fx-font-weight: bold;
+    -fx-padding: 8 16;
+    -fx-background-radius: 6;
+    -fx-cursor: hand;
+}
+
+.approve-always-button:hover {
+    -fx-background-color: #42a5f5;
+}
+
+.reject-button {
+    -fx-background-color: #ff4757;
+    -fx-text-fill: #ffffff;
+    -fx-font-size: 13px;
+    -fx-font-weight: bold;
+    -fx-padding: 8 16;
+    -fx-background-radius: 6;
+    -fx-cursor: hand;
+}
+
+.reject-button:hover {
+    -fx-background-color: #ff6b81;
+}
+
+/* ==================== Workspace & Template Items ==================== */
+.workspace-item {
+    -fx-background-color: #1a1a3a;
+    -fx-background-radius: 8;
+    -fx-padding: 10 12;
+    -fx-cursor: hand;
+}
+
+.workspace-item:hover {
+    -fx-background-color: #2a2a5a;
+}
+
+.workspace-name {
+    -fx-font-size: 13px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #e0e0f0;
+}
+
+.workspace-path {
+    -fx-font-size: 11px;
+    -fx-text-fill: #7777aa;
+}
+
+.workspace-pin-icon {
+    -fx-text-fill: #ffaa00;
+    -fx-font-size: 12px;
+}
+
+.template-item {
+    -fx-background-color: #1a1a3a;
+    -fx-background-radius: 8;
+    -fx-padding: 10 12;
+    -fx-cursor: hand;
+}
+
+.template-item:hover {
+    -fx-background-color: #2a2a5a;
+}
+
+.template-name {
+    -fx-font-size: 13px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #e0e0f0;
+}
+
+.template-description {
+    -fx-font-size: 11px;
+    -fx-text-fill: #7777aa;
+}
+
+.template-category {
+    -fx-font-size: 10px;
+    -fx-text-fill: #6c63ff;
+    -fx-font-weight: bold;
+}
+
+/* ==================== Streaming Indicator ==================== */
+.streaming-indicator {
+    -fx-background-color: #1a2a3a;
+    -fx-background-radius: 8;
+    -fx-padding: 8 12;
+}
+
+.streaming-dot {
+    -fx-fill: #6c63ff;
+}
+
+.streaming-text {
+    -fx-font-size: 12px;
+    -fx-text-fill: #6c63ff;
+    -fx-font-style: italic;
+}
+
+/* ==================== Tooltip ==================== */
+.tooltip {
+    -fx-background-color: #2a2a4a;
+    -fx-text-fill: #e0e0e0;
+    -fx-font-size: 12px;
+    -fx-background-radius: 6;
+    -fx-padding: 6 10;
+}
+
+/* ==================== Separator ==================== */
+.separator .line {
+    -fx-border-color: #2a2a4a;
+    -fx-border-width: 1 0 0 0;
+}
+
+/* ==================== Context Menu ==================== */
+.context-menu {
+    -fx-background-color: #1a1a3a;
+    -fx-background-radius: 8;
+    -fx-padding: 4;
+    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.4), 12, 0, 0, 2);
+}
+
+.menu-item {
+    -fx-background-color: transparent;
+    -fx-padding: 8 16;
+}
+
+.menu-item:hover {
+    -fx-background-color: #2a2a5a;
+}
+
+.menu-item .label {
+    -fx-text-fill: #e0e0e0;
+    -fx-font-size: 13px;
+}
