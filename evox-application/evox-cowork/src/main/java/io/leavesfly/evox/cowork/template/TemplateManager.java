@@ -31,6 +31,7 @@ public class TemplateManager {
         loadBuiltinTemplates();
     }
 
+    // 从指定目录加载 JSON 模板文件
     private void loadTemplates() {
         File dir = new File(templateDirectory);
         if (!dir.exists()) {
@@ -59,8 +60,9 @@ public class TemplateManager {
         log.info("Loaded {} templates from {}", templates.size(), templateDirectory);
     }
 
+    // 加载内置模板
     private void loadBuiltinTemplates() {
-        // daily-briefing template
+        // daily-briefing template / 每日简报模板
         WorkflowTemplate dailyBriefing = new WorkflowTemplate();
         dailyBriefing.setName("daily-briefing");
         dailyBriefing.setDescription("Create a comprehensive daily briefing");
@@ -77,7 +79,7 @@ public class TemplateManager {
         dailyBriefing.getTags().add("daily");
         templates.put(dailyBriefing.getTemplateId(), dailyBriefing);
 
-        // file-organizer template
+        // file-organizer template / 文件整理模板
         WorkflowTemplate fileOrganizer = new WorkflowTemplate();
         fileOrganizer.setName("file-organizer");
         fileOrganizer.setDescription("Organize files by type and naming conventions");
@@ -94,7 +96,7 @@ public class TemplateManager {
         fileOrganizer.getTags().add("files");
         templates.put(fileOrganizer.getTemplateId(), fileOrganizer);
 
-        // research-report template
+        // research-report template / 研究报告模板
         WorkflowTemplate researchReport = new WorkflowTemplate();
         researchReport.setName("research-report");
         researchReport.setDescription("Create a structured research report");
@@ -111,7 +113,7 @@ public class TemplateManager {
         researchReport.getTags().add("report");
         templates.put(researchReport.getTemplateId(), researchReport);
 
-        // data-analysis template
+        // data-analysis template / 数据分析模板
         WorkflowTemplate dataAnalysis = new WorkflowTemplate();
         dataAnalysis.setName("data-analysis");
         dataAnalysis.setDescription("Analyze data file and generate insights");
@@ -128,7 +130,7 @@ public class TemplateManager {
         dataAnalysis.getTags().add("analysis");
         templates.put(dataAnalysis.getTemplateId(), dataAnalysis);
 
-        // meeting-notes template
+        // meeting-notes template / 会议纪要模板
         WorkflowTemplate meetingNotes = new WorkflowTemplate();
         meetingNotes.setName("meeting-notes");
         meetingNotes.setDescription("Process meeting notes into structured summary");
@@ -148,6 +150,7 @@ public class TemplateManager {
         log.info("Loaded {} builtin templates", 5);
     }
 
+    // 保存模板到文件
     public void saveTemplate(WorkflowTemplate template) {
         try {
             File dir = new File(templateDirectory);
@@ -165,6 +168,7 @@ public class TemplateManager {
         }
     }
 
+    // 删除模板
     public void deleteTemplate(String templateId) {
         WorkflowTemplate template = templates.remove(templateId);
         if (template != null) {
@@ -190,6 +194,7 @@ public class TemplateManager {
                 .collect(Collectors.toList());
     }
 
+    // 搜索模板（按名称、描述或标签）
     public List<WorkflowTemplate> searchTemplates(String keyword) {
         String lowerKeyword = keyword.toLowerCase();
         return templates.values().stream()
@@ -199,6 +204,7 @@ public class TemplateManager {
                 .collect(Collectors.toList());
     }
 
+    // 渲染模板（替换变量）
     public String renderTemplate(String templateId, Map<String, String> variables) {
         WorkflowTemplate template = getTemplate(templateId);
         if (template == null) {

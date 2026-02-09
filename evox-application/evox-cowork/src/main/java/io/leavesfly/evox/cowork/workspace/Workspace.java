@@ -25,10 +25,12 @@ public class Workspace {
         this.settings = new HashMap<>();
     }
 
+    // 更新最后访问时间
     public void touch() {
         this.lastAccessedAt = System.currentTimeMillis();
     }
 
+    // 生成工作区摘要信息
     public Map<String, Object> toSummary() {
         Map<String, Object> summary = new HashMap<>();
         summary.put("workspaceId", workspaceId);

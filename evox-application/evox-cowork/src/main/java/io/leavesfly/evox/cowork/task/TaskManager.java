@@ -25,6 +25,7 @@ public class TaskManager {
         this.executionHistory = Collections.synchronizedList(new ArrayList<>());
     }
 
+    // 提交任务
     public void submitTask(CoworkTask task) {
         taskMap.put(task.getTaskId(), task);
         taskQueue.add(task);
@@ -39,6 +40,7 @@ public class TaskManager {
         return new ArrayList<>(taskMap.values());
     }
 
+    // 获取活跃任务（Pending 或 InProgress）
     public List<CoworkTask> getActiveTasks() {
         return taskMap.values().stream()
             .filter(task -> task.getStatus() == CoworkTask.TaskStatus.PENDING || 
@@ -46,6 +48,7 @@ public class TaskManager {
             .collect(Collectors.toList());
     }
 
+    // 取消任务
     public void cancelTask(String taskId) {
         CoworkTask task = getTask(taskId);
         if (task != null) {
@@ -54,6 +57,7 @@ public class TaskManager {
         }
     }
 
+    // 分解任务并提交子任务
     public CoworkTask decomposeAndSubmit(String description, String prompt) {
         CoworkTask parentTask = CoworkTask.of(description, prompt);
         List<CoworkTask> subtasks = decomposer.decompose(description);
@@ -77,6 +81,7 @@ public class TaskManager {
         }
     }
 
+    // 标记任务完成
     public void completeTask(String taskId, String result) {
         CoworkTask task = getTask(taskId);
         if (task != null) {
@@ -88,6 +93,7 @@ public class TaskManager {
         }
     }
 
+    // 标记任务失败
     public void failTask(String taskId, String errorMessage) {
         CoworkTask task = getTask(taskId);
         if (task != null) {
@@ -99,6 +105,7 @@ public class TaskManager {
         }
     }
 
+    // 清除任务历史
     public void clearHistory() {
         synchronized (executionHistory) {
             executionHistory.clear();

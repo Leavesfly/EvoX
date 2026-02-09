@@ -11,6 +11,10 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
+/**
+ * 连接器管理器
+ * 负责注册、管理和执行所有连接器
+ */
 @Slf4j
 @Data
 public class ConnectorManager {
@@ -65,6 +69,7 @@ public class ConnectorManager {
                 .collect(Collectors.toList());
     }
 
+    // 连接指定连接器
     public void connectConnector(String connectorId, Map<String, String> credentials) {
         Connector connector = connectors.get(connectorId);
         if (connector != null) {
@@ -75,6 +80,7 @@ public class ConnectorManager {
         }
     }
 
+    // 断开指定连接器
     public void disconnectConnector(String connectorId) {
         Connector connector = connectors.get(connectorId);
         if (connector != null) {
@@ -83,6 +89,7 @@ public class ConnectorManager {
         }
     }
 
+    // 执行连接器动作
     public Map<String, Object> executeConnectorAction(String connectorId, String action, Map<String, Object> parameters) {
         Connector connector = connectors.get(connectorId);
         if (connector == null) {
@@ -93,7 +100,7 @@ public class ConnectorManager {
             throw new IllegalStateException("Connector '" + connectorId + "' is not connected");
         }
 
-        if (connector.getType() == ConnectorType.BROWSER && parameters != null && parameters.containsKey("url")) {
+        if (connector.getType() == Connector.ConnectorType.BROWSER && parameters != null && parameters.containsKey("url")) {
             String url = (String) parameters.get("url");
             if (!isNetworkAllowed(url)) {
                 throw new SecurityException("URL not allowed: " + url);
@@ -103,6 +110,7 @@ public class ConnectorManager {
         return connector.execute(action, parameters);
     }
 
+    // 检查网络请求是否允许
     public boolean isNetworkAllowed(String url) {
         if (networkAllowlist == null || networkAllowlist.isEmpty()) {
             return true;
@@ -111,6 +119,7 @@ public class ConnectorManager {
         return networkAllowlist.stream().anyMatch(url::matches);
     }
 
+    // 生成连接器描述（用于 LLM 上下文）
     public String generateConnectorDescriptions() {
         StringBuilder sb = new StringBuilder();
         sb.append("Available Connectors:\n\n");

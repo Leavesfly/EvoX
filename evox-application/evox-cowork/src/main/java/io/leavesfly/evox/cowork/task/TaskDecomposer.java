@@ -17,6 +17,7 @@ public class TaskDecomposer {
         this.llm = llm;
     }
 
+    // 使用 LLM 分解复杂任务
     public List<CoworkTask> decompose(String taskDescription) {
         String systemPrompt = "You are a task planning assistant. Break down the following task into independent, actionable subtasks. For each subtask, provide a description and a detailed prompt. Format your response as XML: <subtasks><subtask><description>...</description><prompt>...</prompt></subtask>...</subtasks>. If the task is simple and does not need decomposition, return a single subtask.";
         
@@ -34,6 +35,7 @@ public class TaskDecomposer {
         }
     }
 
+    // 解析 LLM 返回的任务分解结果
     private List<CoworkTask> parseSubtasks(String response, String originalDescription) {
         List<CoworkTask> subtasks = new ArrayList<>();
         Pattern pattern = Pattern.compile("<subtask>\\s*<description>(.*?)</description>\\s*<prompt>(.*?)</prompt>\\s*</subtask>", Pattern.DOTALL);

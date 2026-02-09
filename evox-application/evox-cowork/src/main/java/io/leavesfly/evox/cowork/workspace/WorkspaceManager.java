@@ -30,6 +30,7 @@ public class WorkspaceManager {
         loadWorkspaces();
     }
 
+    // 从配置文件加载工作区列表
     private void loadWorkspaces() {
         File dir = new File(configDirectory);
         if (!dir.exists()) {
@@ -60,6 +61,7 @@ public class WorkspaceManager {
         }
     }
 
+    // 保存工作区列表到配置文件
     private void saveWorkspaces() {
         File dir = new File(configDirectory);
         if (!dir.exists()) {
@@ -76,6 +78,7 @@ public class WorkspaceManager {
         }
     }
 
+    // 添加新的工作区
     public Workspace addWorkspace(String name, String directory) {
         File dir = new File(directory);
         if (!dir.exists()) {
@@ -93,6 +96,7 @@ public class WorkspaceManager {
         return workspace;
     }
 
+    // 移除工作区
     public void removeWorkspace(String workspaceId) {
         Workspace removed = workspaces.remove(workspaceId);
         if (removed != null) {
@@ -108,6 +112,7 @@ public class WorkspaceManager {
         return workspaces.get(workspaceId);
     }
 
+    // 获取所有工作区（按固定状态和最后访问时间排序）
     public List<Workspace> getAllWorkspaces() {
         return workspaces.values().stream()
                 .sorted(Comparator.comparing(Workspace::isPinned).reversed()
@@ -122,6 +127,7 @@ public class WorkspaceManager {
         return workspaces.get(activeWorkspaceId);
     }
 
+    // 切换当前激活的工作区
     public Workspace switchWorkspace(String workspaceId) {
         Workspace workspace = workspaces.get(workspaceId);
         if (workspace == null) {
@@ -136,6 +142,7 @@ public class WorkspaceManager {
         return workspace;
     }
 
+    // 获取最近访问的工作区
     public List<Workspace> getRecentWorkspaces(int limit) {
         return workspaces.values().stream()
                 .sorted(Comparator.comparing(Workspace::getLastAccessedAt).reversed())
@@ -143,6 +150,7 @@ public class WorkspaceManager {
                 .collect(Collectors.toList());
     }
 
+    // 固定工作区（置顶）
     public void pinWorkspace(String workspaceId) {
         Workspace workspace = workspaces.get(workspaceId);
         if (workspace != null) {
@@ -152,6 +160,7 @@ public class WorkspaceManager {
         }
     }
 
+    // 取消固定工作区
     public void unpinWorkspace(String workspaceId) {
         Workspace workspace = workspaces.get(workspaceId);
         if (workspace != null) {

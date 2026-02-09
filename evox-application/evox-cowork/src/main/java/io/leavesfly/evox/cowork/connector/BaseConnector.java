@@ -6,6 +6,10 @@ import lombok.extern.slf4j.Slf4j;
 import java.util.List;
 import java.util.Map;
 
+/**
+ * 连接器基类
+ * 提供连接器的通用属性和基础实现
+ */
 @Slf4j
 @Data
 public abstract class BaseConnector implements Connector {
@@ -69,9 +73,12 @@ public abstract class BaseConnector implements Connector {
         return doExecute(action, parameters);
     }
     
+    // 执行具体的连接逻辑
     protected abstract void doConnect() throws Exception;
     
+    // 执行具体的断开连接逻辑
     protected abstract void doDisconnect();
     
+    // 执行具体的操作
     protected abstract Map<String, Object> doExecute(String action, Map<String, Object> parameters);
 }

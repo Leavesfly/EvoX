@@ -48,6 +48,7 @@ public class TemplateDialog extends Stage {
         setScene(scene);
     }
 
+    // 构建对话框主要内容
     private VBox buildDialogContent() {
         VBox root = new VBox();
         root.getStyleClass().add("dialog-content");
@@ -61,6 +62,7 @@ public class TemplateDialog extends Stage {
         return root;
     }
 
+    // 构建对话框头部（标题和关闭按钮）
     private HBox buildHeader() {
         HBox header = new HBox();
         header.setAlignment(Pos.CENTER_LEFT);
@@ -80,6 +82,7 @@ public class TemplateDialog extends Stage {
         return header;
     }
 
+    // 构建模板列表视图
     private ScrollPane buildTemplateList() {
         templateListContainer = new VBox(8);
         templateListContainer.setPadding(new Insets(4, 0, 4, 0));
@@ -95,6 +98,7 @@ public class TemplateDialog extends Stage {
         } else {
             Map<String, VBox> categoryGroups = new HashMap<>();
 
+            // 按分类分组显示模板
             for (WorkflowTemplate template : templates) {
                 String category = template.getCategory() != null ? template.getCategory() : "General";
                 VBox group = categoryGroups.computeIfAbsent(category, key -> {
@@ -121,6 +125,7 @@ public class TemplateDialog extends Stage {
         return scrollPane;
     }
 
+    // 构建单个模板卡片
     private VBox buildTemplateCard(WorkflowTemplate template) {
         VBox card = new VBox(6);
         card.getStyleClass().add("template-card");
@@ -138,6 +143,7 @@ public class TemplateDialog extends Stage {
             card.getChildren().add(descLabel);
         }
 
+        // 显示标签
         if (template.getTags() != null && !template.getTags().isEmpty()) {
             HBox tagsRow = new HBox(6);
             tagsRow.setAlignment(Pos.CENTER_LEFT);
@@ -155,6 +161,7 @@ public class TemplateDialog extends Stage {
         List<WorkflowTemplate.TemplateVariable> variables = template.getVariables();
         boolean hasRequiredVariables = variables != null && variables.stream().anyMatch(WorkflowTemplate.TemplateVariable::isRequired);
 
+        // 如果有必需变量则显示输入表单，否则直接选择
         if (hasRequiredVariables) {
             card.setOnMouseClicked(event -> showVariableInputForm(template));
         } else {
@@ -170,6 +177,7 @@ public class TemplateDialog extends Stage {
         return card;
     }
 
+    // 显示变量输入表单
     private void showVariableInputForm(WorkflowTemplate template) {
         templateListContainer.getChildren().clear();
 
@@ -190,6 +198,7 @@ public class TemplateDialog extends Stage {
 
         Map<String, TextField> fieldMap = new HashMap<>();
 
+        // 为每个变量生成输入框
         for (WorkflowTemplate.TemplateVariable variable : template.getVariables()) {
             VBox fieldGroup = new VBox(4);
 
@@ -247,6 +256,7 @@ public class TemplateDialog extends Stage {
                 }
             }
 
+            // 验证必需字段
             boolean missingRequired = template.getVariables().stream()
                 .filter(WorkflowTemplate.TemplateVariable::isRequired)
                 .anyMatch(variable -> {

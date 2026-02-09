@@ -22,6 +22,7 @@ public class PluginLoader {
         this.yamlMapper = new YAMLMapper();
     }
 
+    // 从指定目录加载插件（支持 yaml/json 格式）
     public List<CoworkPlugin> loadFromDirectory(String directoryPath) {
         List<CoworkPlugin> plugins = new ArrayList<>();
         Path directory = Paths.get(directoryPath);
@@ -60,6 +61,7 @@ public class PluginLoader {
         return plugins;
     }
 
+    // 从单个文件加载插件
     public CoworkPlugin loadFromFile(Path filePath) {
         try {
             String fileName = filePath.getFileName().toString().toLowerCase();
@@ -76,9 +78,11 @@ public class PluginLoader {
         return null;
     }
 
+    // 加载内置插件
     public List<CoworkPlugin> loadBuiltinPlugins() {
         List<CoworkPlugin> plugins = new ArrayList<>();
 
+        // 生产力插件
         CoworkPlugin productivityPlugin = new CoworkPlugin();
         productivityPlugin.setPluginId("productivity");
         productivityPlugin.setName("Productivity");
@@ -92,6 +96,7 @@ public class PluginLoader {
         productivityPlugin.setCommands(List.of(dailyBriefingCommand));
         plugins.add(productivityPlugin);
 
+        // 数据分析插件
         CoworkPlugin dataPlugin = new CoworkPlugin();
         dataPlugin.setPluginId("data");
         dataPlugin.setName("Data Analysis");
@@ -105,6 +110,7 @@ public class PluginLoader {
         dataPlugin.setCommands(List.of(analyzeDataCommand));
         plugins.add(dataPlugin);
 
+        // 研究插件
         CoworkPlugin researchPlugin = new CoworkPlugin();
         researchPlugin.setPluginId("research");
         researchPlugin.setName("Research & Analysis");
@@ -118,6 +124,7 @@ public class PluginLoader {
         researchPlugin.setCommands(List.of(researchCommand));
         plugins.add(researchPlugin);
 
+        // 文档管理插件
         CoworkPlugin documentPlugin = new CoworkPlugin();
         documentPlugin.setPluginId("document");
         documentPlugin.setName("Document Management");

@@ -33,6 +33,7 @@ public class CoworkServiceBridge {
     private final WorkspaceManager workspaceManager;
     private final ExecutorService executor;
 
+    // 回调函数接口
     private Consumer<String> onStreamContent;
     private Consumer<PermissionRequest> onPermissionRequest;
     private Consumer<CoworkSession> onSessionCreated;
@@ -58,11 +59,13 @@ public class CoworkServiceBridge {
         setupEventCallbacks();
     }
 
+    // 初始化服务实例
     public static CoworkServiceBridge initialize() {
         CoworkConfig config = CoworkConfig.createDefault(System.getProperty("user.dir"));
         return new CoworkServiceBridge(config);
     }
 
+    // 设置内部事件监听与回调转发
     private void setupEventCallbacks() {
         sessionManager.setEventCallback(sessionEvent -> {
             if (sessionEvent.type() == SessionManager.SessionEventType.STREAM) {
@@ -96,6 +99,7 @@ public class CoworkServiceBridge {
         this.onError = callback;
     }
 
+    // 创建新会话
     public CoworkSession createSession(String workingDirectory) {
         CoworkSession session = sessionManager.createSession(workingDirectory);
         permissionManager.setCurrentSessionId(session.getSessionId());
@@ -130,6 +134,7 @@ public class CoworkServiceBridge {
         sessionManager.abortSession(sessionId);
     }
 
+    // 发送用户指令
     public void sendPrompt(String sessionId, String message, Consumer<String> onComplete) {
         CompletableFuture.supplyAsync(() -> {
             try {
@@ -149,6 +154,7 @@ public class CoworkServiceBridge {
         });
     }
 
+    // 回复权限请求
     public boolean replyPermission(String requestId, PermissionRequest.PermissionReply reply) {
         return permissionManager.replyPermission(requestId, reply);
     }
@@ -165,6 +171,7 @@ public class CoworkServiceBridge {
         return templateManager.getTemplate(templateId);
     }
 
+    // 渲染模板
     public String renderTemplate(String templateId, Map<String, String> variables) {
         try {
             return templateManager.renderTemplate(templateId, variables);
@@ -198,6 +205,7 @@ public class CoworkServiceBridge {
         workspaceManager.removeWorkspace(workspaceId);
     }
 
+    // 关闭服务
     public void shutdown() {
         log.info("Shutting down CoworkServiceBridge...");
         executor.shutdownNow();

@@ -28,13 +28,16 @@ public class WorkflowTemplate {
         this.tags = new ArrayList<>();
     }
 
+    // 渲染模板：使用提供的变量值替换占位符
     public String render(Map<String, String> variableValues) {
         String rendered = promptTemplate;
         
         // Extract variable names from promptTemplate
+        // 从模板中提取变量名
         List<String> requiredVariables = getVariableNames();
         
         // Check required variables
+        // 检查必需变量是否存在
         for (TemplateVariable varDef : variables) {
             if (varDef.isRequired() && !variableValues.containsKey(varDef.getName())) {
                 throw new IllegalArgumentException("Required variable '" + varDef.getName() + "' is missing");
@@ -42,6 +45,7 @@ public class WorkflowTemplate {
         }
         
         // Replace placeholders with actual values
+        // 替换占位符为实际值
         Pattern pattern = Pattern.compile("\\{\\{(\\w+)\\}\\}");
         Matcher matcher = pattern.matcher(rendered);
         StringBuilder result = new StringBuilder();
@@ -52,6 +56,7 @@ public class WorkflowTemplate {
             
             if (value == null) {
                 // Find variable definition
+                // 查找变量定义
                 TemplateVariable varDef = variables.stream()
                     .filter(v -> v.getName().equals(varName))
                     .findFirst()
@@ -71,6 +76,7 @@ public class WorkflowTemplate {
         return result.toString();
     }
 
+    // 提取模板中所有变量名
     public List<String> getVariableNames() {
         List<String> variableNames = new ArrayList<>();
         Pattern pattern = Pattern.compile("\\{\\{(\\w+)\\}\\}");
@@ -83,6 +89,7 @@ public class WorkflowTemplate {
         return variableNames.stream().distinct().collect(Collectors.toList());
     }
 
+    // 增加使用计数
     public void incrementUsage() {
         this.usageCount++;
         this.updatedAt = System.currentTimeMillis();

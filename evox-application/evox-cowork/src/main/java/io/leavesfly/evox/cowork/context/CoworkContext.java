@@ -3,6 +3,7 @@ package io.leavesfly.evox.cowork.context;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
 
+import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -16,6 +17,7 @@ import java.util.Map;
 public class CoworkContext {
     private String workingDirectory;
     private List<String> accessibleDirectories = new ArrayList<>();
+    // 文件类型分布统计
     private Map<String, Integer> fileTypeDistribution = new LinkedHashMap<>();
     private List<String> recentFiles = new ArrayList<>();
     private String workspaceRules;
@@ -25,6 +27,7 @@ public class CoworkContext {
         this.accessibleDirectories.add(workingDirectory);
     }
 
+    // 扫描工作区文件结构和类型
     public void scanWorkspace() {
         try {
             Path workspacePath = Paths.get(workingDirectory);
@@ -47,6 +50,7 @@ public class CoworkContext {
         }
     }
 
+    // 检查路径是否允许访问
     public boolean isPathAccessible(String path) {
         Path normalizedPath = Paths.get(path).normalize();
         for (String accessibleDir : accessibleDirectories) {
@@ -58,6 +62,7 @@ public class CoworkContext {
         return false;
     }
 
+    // 记录最近访问的文件
     public void recordFileAccess(String filePath) {
         recentFiles.remove(filePath);
         recentFiles.add(0, filePath);
@@ -66,6 +71,7 @@ public class CoworkContext {
         }
     }
 
+    // 生成上下文摘要信息
     public String toContextSummary() {
         StringBuilder summary = new StringBuilder();
         summary.append("Working Directory: ").append(workingDirectory).append("\n");
@@ -80,6 +86,7 @@ public class CoworkContext {
         return summary.toString();
     }
 
+    // 加载工作区规则配置
     public void loadWorkspaceRules(String rulesFileName) {
         try {
             Path rulesPath = Paths.get(workingDirectory, rulesFileName);

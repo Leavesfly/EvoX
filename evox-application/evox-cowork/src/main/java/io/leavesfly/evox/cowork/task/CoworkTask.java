@@ -32,6 +32,7 @@ public class CoworkTask {
         this.metadata = new HashMap<>();
     }
 
+    // 创建新任务
     public static CoworkTask of(String description, String prompt) {
         CoworkTask task = new CoworkTask();
         task.setDescription(description);
@@ -39,6 +40,7 @@ public class CoworkTask {
         return task;
     }
 
+    // 创建子任务
     public static CoworkTask ofSubTask(String parentTaskId, String description, String prompt) {
         CoworkTask task = new CoworkTask();
         task.setParentTaskId(parentTaskId);
@@ -72,6 +74,7 @@ public class CoworkTask {
         this.subTasks.add(subTask);
     }
 
+    // 计算任务耗时
     public long getDurationMs() {
         if (completedAt > 0) {
             return completedAt - createdAt;
@@ -79,6 +82,7 @@ public class CoworkTask {
         return System.currentTimeMillis() - createdAt;
     }
 
+    // 检查是否为终态
     public boolean isTerminal() {
         return status == TaskStatus.COMPLETED || status == TaskStatus.FAILED || status == TaskStatus.CANCELLED;
     }

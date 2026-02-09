@@ -14,12 +14,14 @@ public class CoworkMainLayout extends BorderPane {
         this.serviceBridge = serviceBridge;
         getStyleClass().add("main-layout");
 
+        // 初始化子组件
         this.chatPanel = new ChatPanel(serviceBridge);
         this.sidebarPanel = new SidebarPanel(serviceBridge, chatPanel);
 
         setLeft(sidebarPanel);
         setCenter(chatPanel);
 
+        // 设置事件监听器
         serviceBridge.setOnStreamContent(content -> chatPanel.appendStreamContent(content));
         serviceBridge.setOnPermissionRequest(request -> chatPanel.showPermissionCard(request));
         serviceBridge.setOnSessionCreated(session -> {
@@ -31,6 +33,7 @@ public class CoworkMainLayout extends BorderPane {
 
     public void onAppReady() {
         log.info("EvoX Cowork desktop application ready");
+        // 应用启动就绪后刷新会话列表
         sidebarPanel.refreshSessionList();
     }
 }

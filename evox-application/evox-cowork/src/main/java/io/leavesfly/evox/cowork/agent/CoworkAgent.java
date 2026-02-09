@@ -5,7 +5,7 @@ import io.leavesfly.evox.cowork.config.CoworkConfig;
 import io.leavesfly.evox.cowork.context.CoworkContext;
 import io.leavesfly.evox.cowork.permission.CoworkPermissionManager;
 import io.leavesfly.evox.cowork.tool.CoworkToolRegistry;
-import io.leavesfly.evox.cowork.tool.CoworkToolRegistry.SubAgentTool;
+import io.leavesfly.evox.tools.agent.SubAgentTool;
 import io.leavesfly.evox.memory.manager.MemoryManager;
 import io.leavesfly.evox.memory.shortterm.ShortTermMemory;
 import io.leavesfly.evox.models.base.BaseLLM;
@@ -19,6 +19,10 @@ import java.util.function.Consumer;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+/**
+ * Cowork 智能代理核心类
+ * 负责协调 LLM、工具注册表、权限管理器和上下文，执行对话和任务。
+ */
 @Slf4j
 public class CoworkAgent {
 
@@ -56,6 +60,13 @@ public class CoworkAgent {
         this.streamCallback = callback;
     }
 
+    /**
+     * 处理用户输入并进行对话
+     * 包含核心的 ReAct (Reasoning + Acting) 循环
+     *
+     * @param userInput 用户输入文本
+     * @return 代理的最终响应
+     */
     public String chat(String userInput) {
         Message userMessage = Message.inputMessage(userInput);
         userMessage.setAgent("user");

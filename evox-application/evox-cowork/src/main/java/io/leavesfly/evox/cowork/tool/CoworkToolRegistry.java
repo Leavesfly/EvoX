@@ -8,13 +8,12 @@ import io.leavesfly.evox.agents.skill.builtin.WriteTestSkill;
 import io.leavesfly.evox.tools.agent.SubAgentTool;
 import io.leavesfly.evox.tools.base.BaseTool;
 import io.leavesfly.evox.tools.base.Toolkit;
-import io.leavesfly.evox.tools.browser.BrowserTool;
 import io.leavesfly.evox.tools.file.FileEditTool;
 import io.leavesfly.evox.tools.file.FileSystemTool;
 import io.leavesfly.evox.tools.grep.GlobTool;
 import io.leavesfly.evox.tools.grep.GrepTool;
 import io.leavesfly.evox.tools.http.HttpTool;
-import io.leavesfly.evox.tools.image.ImageTool;
+import io.leavesfly.evox.tools.image.OpenAIImageGenerationTool;
 import io.leavesfly.evox.tools.search.WebSearchTool;
 import io.leavesfly.evox.tools.shell.ShellTool;
 import lombok.Getter;
@@ -51,8 +50,10 @@ public class CoworkToolRegistry {
         toolkit.addTool(new SkillTool(skillRegistry));
         toolkit.addTool(new HttpTool());
         toolkit.addTool(new WebSearchTool());
-        toolkit.addTool(new BrowserTool());
-        toolkit.addTool(new ImageTool());
+        String imageApiKey = System.getenv("OPENAI_API_KEY");
+        if (imageApiKey != null && !imageApiKey.isEmpty()) {
+            toolkit.addTool(new OpenAIImageGenerationTool(imageApiKey));
+        }
 
         log.info("Registered {} default tools for Cowork", toolkit.getToolCount());
     }
@@ -96,14 +97,15 @@ public class CoworkToolRegistry {
 
             if (tool.getInputs() != null && !tool.getInputs().isEmpty()) {
                 descriptions.append("**Parameters:**\n");
-                for (Map.Entry<String, Map<String, Object>> entry : tool.getInputs().entrySet()) {
+                for (Map.Entry<String, Map<String, String>> entry : tool.getInputs().entrySet()) {
                     String paramName = entry.getKey();
-                    Map<String, Object> paramInfo = entry.getValue();
-                    String type = (String) paramInfo.get("type");
-                    String required = (Boolean) paramInfo.getOrDefault("required", false) ? "required" : "optional";
-                    String description = (String) paramInfo.get("description");
+                    Map<String, String> paramInfo = entry.getValue();
+                    String type = paramInfo.get("type");
+                    boolean isRequired = tool.getRequired() != null && tool.getRequired().contains(paramName);
+                    String requiredLabel = isRequired ? "required" : "optional";
+                    String description = paramInfo.get("description");
                     descriptions.append("- `").append(paramName).append("` (").append(type).append(") ")
-                        .append(required).append(": ").append(description).append("\n");
+                        .append(requiredLabel).append(": ").append(description).append("\n");
                 }
                 descriptions.append("\n");
             }

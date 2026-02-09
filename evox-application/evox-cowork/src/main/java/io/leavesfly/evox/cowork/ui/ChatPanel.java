@@ -28,6 +28,7 @@ public class ChatPanel extends VBox {
     private final CoworkServiceBridge serviceBridge;
     private CoworkSession currentSession;
 
+    // UI 组件
     private final Label chatTitleLabel;
     private final Label chatStatusLabel;
     private final Button abortButton;
@@ -38,6 +39,7 @@ public class ChatPanel extends VBox {
     private final VBox welcomeView;
     private final VBox chatView;
 
+    // 流式响应处理相关变量
     private VBox streamingMessageBox;
     private TextFlow streamingTextFlow;
     private final StringBuilder streamingBuffer = new StringBuilder();
@@ -47,7 +49,7 @@ public class ChatPanel extends VBox {
         this.serviceBridge = serviceBridge;
         getStyleClass().add("chat-area");
 
-        // Chat header
+        // Chat header / 聊天头部区域
         HBox chatHeader = new HBox(12);
         chatHeader.getStyleClass().add("chat-header");
         chatHeader.setAlignment(Pos.CENTER_LEFT);
@@ -60,6 +62,7 @@ public class ChatPanel extends VBox {
         headerInfo.getChildren().addAll(chatTitleLabel, chatStatusLabel);
         HBox.setHgrow(headerInfo, Priority.ALWAYS);
 
+        // 中止生成按钮
         abortButton = new Button("\u23F9 Abort");
         abortButton.getStyleClass().addAll("chat-header-button", "chat-header-button-danger");
         abortButton.setVisible(false);
@@ -73,7 +76,7 @@ public class ChatPanel extends VBox {
 
         chatHeader.getChildren().addAll(headerInfo, abortButton);
 
-        // Message area
+        // Message area / 消息展示区域
         messageContainer = new VBox(8);
         messageContainer.getStyleClass().add("messages-container");
 
@@ -84,11 +87,12 @@ public class ChatPanel extends VBox {
         messageScrollPane.setVbarPolicy(ScrollPane.ScrollBarPolicy.AS_NEEDED);
         VBox.setVgrow(messageScrollPane, Priority.ALWAYS);
 
+        // 自动滚动到底部
         messageContainer.heightProperty().addListener((observable, oldValue, newValue) -> {
             messageScrollPane.setVvalue(1.0);
         });
 
-        // Input area
+        // Input area / 输入区域
         HBox inputArea = new HBox(12);
         inputArea.getStyleClass().add("input-area");
         inputArea.setAlignment(Pos.BOTTOM_CENTER);
@@ -101,6 +105,7 @@ public class ChatPanel extends VBox {
         inputField.setWrapText(true);
         HBox.setHgrow(inputField, Priority.ALWAYS);
 
+        // 处理回车发送消息
         inputField.setOnKeyPressed(keyEvent -> {
             if (keyEvent.getCode() == KeyCode.ENTER && !keyEvent.isShiftDown()) {
                 keyEvent.consume();
@@ -114,18 +119,19 @@ public class ChatPanel extends VBox {
 
         inputArea.getChildren().addAll(inputField, sendButton);
 
-        // Chat view
+        // Chat view / 聊天主视图
         chatView = new VBox();
         chatView.getChildren().addAll(chatHeader, messageScrollPane, inputArea);
         VBox.setVgrow(messageScrollPane, Priority.ALWAYS);
 
-        // Welcome view
+        // Welcome view / 欢迎视图
         welcomeView = buildWelcomeView();
 
         getChildren().add(welcomeView);
         VBox.setVgrow(welcomeView, Priority.ALWAYS);
     }
 
+    // 构建欢迎界面
     private VBox buildWelcomeView() {
         VBox welcome = new VBox(16);
         welcome.getStyleClass().add("welcome-container");
@@ -163,6 +169,7 @@ public class ChatPanel extends VBox {
         return welcome;
     }
 
+    // 加载会话
     public void loadSession(CoworkSession session) {
         Platform.runLater(() -> {
             this.currentSession = session;
@@ -177,6 +184,7 @@ public class ChatPanel extends VBox {
 
             messageContainer.getChildren().clear();
 
+            // 加载历史消息
             List<CoworkSession.SessionMessage> messages = serviceBridge.getMessages(session.getSessionId());
             if (messages != null) {
                 for (CoworkSession.SessionMessage message : messages) {
@@ -188,6 +196,7 @@ public class ChatPanel extends VBox {
         });
     }
 
+    // 发送消息逻辑
     private void sendMessage() {
         String text = inputField.getText();
         if (text == null || text.trim().isEmpty() || currentSession == null || isStreaming) {
@@ -197,14 +206,17 @@ public class ChatPanel extends VBox {
         String message = text.trim();
         inputField.clear();
 
+        // 添加用户消息气泡
         addMessageBubble("user", message, System.currentTimeMillis());
         setStreamingState(true);
         beginStreamingMessage();
 
+        // 异步调用服务
         serviceBridge.sendPrompt(currentSession.getSessionId(), message, response -> {
             finalizeStreamingMessage(response);
             setStreamingState(false);
 
+            // 刷新会话状态（如标题更新）
             CoworkSession refreshed = serviceBridge.getSession(currentSession.getSessionId());
             if (refreshed != null) {
                 currentSession = refreshed;
@@ -214,6 +226,7 @@ public class ChatPanel extends VBox {
         });
     }
 
+    // 添加消息气泡
     private void addMessageBubble(String role, String content, long timestamp) {
         Platform.runLater(() -> {
             VBox bubble = new VBox(4);
@@ -233,6 +246,7 @@ public class ChatPanel extends VBox {
             HBox wrapper = new HBox();
             wrapper.setPadding(new Insets(2, 0, 2, 0));
 
+            // 根据角色设置样式和对齐方式
             switch (role) {
                 case "user" -> {
                     roleLabel.setText("You");
@@ -265,6 +279,7 @@ public class ChatPanel extends VBox {
         });
     }
 
+    // 开始流式消息显示
     private void beginStreamingMessage() {
         Platform.runLater(() -> {
             streamingBuffer.setLength(0);
@@ -301,6 +316,7 @@ public class ChatPanel extends VBox {
         });
     }
 
+    // 追加流式内容
     public void appendStreamContent(String content) {
         Platform.runLater(() -> {
             if (streamingTextFlow == null) return;
@@ -312,15 +328,17 @@ public class ChatPanel extends VBox {
             updatedText.setStyle("-fx-fill: #e0e0e0;");
             streamingTextFlow.getChildren().add(updatedText);
 
-            // Remove "Thinking..." indicator after first content arrives
+            // 收到首个内容后移除“思考中”指示器
             if (streamingMessageBox != null && streamingMessageBox.getChildren().size() > 2) {
                 streamingMessageBox.getChildren().remove(2);
             }
         });
     }
 
+    // 完成流式消息
     private void finalizeStreamingMessage(String fullResponse) {
         Platform.runLater(() -> {
+            // 移除临时的流式消息框
             if (streamingMessageBox != null) {
                 messageContainer.getChildren().removeIf(node -> {
                     if (node instanceof HBox wrapper) {
@@ -332,6 +350,7 @@ public class ChatPanel extends VBox {
                 streamingTextFlow = null;
             }
 
+            // 添加完整的消息气泡
             String responseContent = fullResponse != null ? fullResponse : streamingBuffer.toString();
             if (!responseContent.isEmpty()) {
                 addMessageBubble("assistant", responseContent, System.currentTimeMillis());
@@ -341,6 +360,7 @@ public class ChatPanel extends VBox {
         });
     }
 
+    // 显示权限请求卡片
     public void showPermissionCard(PermissionRequest request) {
         Platform.runLater(() -> {
             PermissionCardView card = new PermissionCardView(request, serviceBridge);
@@ -358,6 +378,7 @@ public class ChatPanel extends VBox {
         addMessageBubble("system", message, System.currentTimeMillis());
     }
 
+    // 设置输入框内容
     public void setInputText(String text) {
         Platform.runLater(() -> {
             inputField.setText(text);
@@ -366,6 +387,7 @@ public class ChatPanel extends VBox {
         });
     }
 
+    // 设置流式传输状态（禁用/启用输入）
     private void setStreamingState(boolean streaming) {
         Platform.runLater(() -> {
             this.isStreaming = streaming;

@@ -52,6 +52,7 @@ public class SidebarPanel extends VBox {
         setMinWidth(280);
         setMaxWidth(280);
 
+        // 构建侧边栏各部分
         VBox header = buildHeader();
         VBox buttonContainer = buildNewSessionButtonContainer();
         VBox sessionSection = buildSessionSection();
@@ -71,6 +72,7 @@ public class SidebarPanel extends VBox {
         getChildren().addAll(header, buttonContainer, scrollPane);
     }
 
+    // 构建头部标题区域
     private VBox buildHeader() {
         VBox header = new VBox(2);
         header.getStyleClass().add("sidebar-header");
@@ -85,6 +87,7 @@ public class SidebarPanel extends VBox {
         return header;
     }
 
+    // 构建新建会话按钮区域
     private VBox buildNewSessionButtonContainer() {
         Button newSessionButton = new Button("\uFF0B  New Session");
         newSessionButton.getStyleClass().add("new-session-button");
@@ -104,6 +107,7 @@ public class SidebarPanel extends VBox {
         return container;
     }
 
+    // 构建会话列表区域
     private VBox buildSessionSection() {
         VBox section = new VBox(4);
         section.setPadding(new Insets(0, 8, 0, 8));
@@ -115,6 +119,7 @@ public class SidebarPanel extends VBox {
         sessionListView.setPrefHeight(280);
         sessionListView.setStyle("-fx-background-color: transparent;");
         sessionListView.setCellFactory(listView -> new SessionListCell());
+        // 处理会话选中事件
         sessionListView.getSelectionModel().selectedItemProperty().addListener((observable, oldValue, newValue) -> {
             if (newValue != null) {
                 serviceBridge.switchSession(newValue.getSessionId());
@@ -126,6 +131,7 @@ public class SidebarPanel extends VBox {
         return section;
     }
 
+    // 构建工作区列表区域
     private VBox buildWorkspaceSection() {
         VBox section = new VBox(4);
         section.setPadding(new Insets(0, 8, 0, 8));
@@ -152,6 +158,7 @@ public class SidebarPanel extends VBox {
         return section;
     }
 
+    // 构建模板列表区域
     private VBox buildTemplateSection() {
         VBox section = new VBox(4);
         section.setPadding(new Insets(0, 8, 0, 8));
@@ -178,6 +185,7 @@ public class SidebarPanel extends VBox {
         return section;
     }
 
+    // 打开模板选择对话框
     private void openTemplateDialog() {
         Stage ownerStage = (Stage) getScene().getWindow();
         TemplateDialog dialog = new TemplateDialog(ownerStage, serviceBridge, (templateName, renderedContent) -> {
@@ -186,6 +194,7 @@ public class SidebarPanel extends VBox {
         dialog.showAndWait();
     }
 
+    // 刷新会话列表
     public void refreshSessionList() {
         Platform.runLater(() -> {
             List<CoworkSession> sessions = serviceBridge.listSessions();
@@ -193,6 +202,7 @@ public class SidebarPanel extends VBox {
         });
     }
 
+    // 刷新工作区列表项
     private void refreshWorkspaceItems() {
         Platform.runLater(() -> {
             List<Workspace> workspaces = serviceBridge.getAllWorkspaces();
@@ -213,6 +223,7 @@ public class SidebarPanel extends VBox {
         });
     }
 
+    // 刷新模板列表项
     private void refreshTemplateItems() {
         Platform.runLater(() -> {
             List<WorkflowTemplate> templates = serviceBridge.getAllTemplates();
@@ -233,6 +244,7 @@ public class SidebarPanel extends VBox {
         });
     }
 
+    // 创建工作区列表项 UI
     private HBox createWorkspaceItem(Workspace workspace) {
         HBox item = new HBox(8);
         item.setAlignment(Pos.CENTER_LEFT);
@@ -271,6 +283,7 @@ public class SidebarPanel extends VBox {
             }
         });
 
+        // 右键菜单：固定/取消固定、移除
         ContextMenu contextMenu = new ContextMenu();
         MenuItem pinItem = new MenuItem(workspace.isPinned() ? "Unpin" : "Pin");
         pinItem.setOnAction(event -> {
@@ -292,6 +305,7 @@ public class SidebarPanel extends VBox {
         return item;
     }
 
+    // 创建模板列表项 UI
     private HBox createTemplateItem(WorkflowTemplate template) {
         HBox item = new HBox(8);
         item.setAlignment(Pos.CENTER_LEFT);
@@ -324,6 +338,7 @@ public class SidebarPanel extends VBox {
         return item;
     }
 
+    // 显示添加工作区对话框
     private void showAddWorkspaceDialog() {
         DirectoryChooser directoryChooser = new DirectoryChooser();
         directoryChooser.setTitle("Select Workspace Directory");
@@ -357,6 +372,7 @@ public class SidebarPanel extends VBox {
         return path;
     }
 
+    // 自定义会话列表单元格渲染
     private class SessionListCell extends ListCell<CoworkSession> {
         @Override
         protected void updateItem(CoworkSession session, boolean empty) {
@@ -390,6 +406,7 @@ public class SidebarPanel extends VBox {
             Region spacer = new Region();
             HBox.setHgrow(spacer, Priority.ALWAYS);
 
+            // 删除会话按钮
             Button deleteButton = new Button("\u2715");
             deleteButton.setStyle("-fx-background-color: transparent; -fx-text-fill: #555577; -fx-font-size: 10px; -fx-padding: 2 6; -fx-cursor: hand;");
             deleteButton.setOnMouseEntered(event -> deleteButton.setStyle("-fx-background-color: #4a1a1a; -fx-text-fill: #f87171; -fx-font-size: 10px; -fx-padding: 2 6; -fx-cursor: hand; -fx-background-radius: 4;"));

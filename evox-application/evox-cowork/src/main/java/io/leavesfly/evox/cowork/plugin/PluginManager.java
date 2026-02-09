@@ -22,6 +22,7 @@ public class PluginManager {
         loadPlugins();
     }
 
+    // 加载所有插件（内置 + 自定义目录）
     public void loadPlugins() {
         List<CoworkPlugin> builtinPlugins = pluginLoader.loadBuiltinPlugins();
         for (CoworkPlugin plugin : builtinPlugins) {
@@ -34,11 +35,13 @@ public class PluginManager {
         }
     }
 
+    // 注册插件
     public void registerPlugin(CoworkPlugin plugin) {
         plugins.put(plugin.getPluginId(), plugin);
         log.info("Registered plugin: {} ({})", plugin.getName(), plugin.getPluginId());
     }
 
+    // 注销插件
     public void unregisterPlugin(String pluginId) {
         CoworkPlugin removed = plugins.remove(pluginId);
         if (removed != null) {
@@ -54,18 +57,21 @@ public class PluginManager {
         return List.copyOf(plugins.values());
     }
 
+    // 获取已启用的插件列表
     public List<CoworkPlugin> getEnabledPlugins() {
         return plugins.values().stream()
                 .filter(CoworkPlugin::isEnabled)
                 .collect(Collectors.toList());
     }
 
+    // 按类别获取插件
     public List<CoworkPlugin> getPluginsByCategory(String category) {
         return plugins.values().stream()
                 .filter(plugin -> category.equals(plugin.getCategory()))
                 .collect(Collectors.toList());
     }
 
+    // 启用插件
     public void enablePlugin(String pluginId) {
         CoworkPlugin plugin = plugins.get(pluginId);
         if (plugin != null) {
@@ -74,6 +80,7 @@ public class PluginManager {
         }
     }
 
+    // 禁用插件
     public void disablePlugin(String pluginId) {
         CoworkPlugin plugin = plugins.get(pluginId);
         if (plugin != null) {
@@ -82,6 +89,7 @@ public class PluginManager {
         }
     }
 
+    // 查找命令（在所有已启用插件中）
     public PluginCommandResult findCommand(String commandName) {
         for (CoworkPlugin plugin : getEnabledPlugins()) {
             CoworkPlugin.PluginCommand command = plugin.getCommand(commandName);
@@ -92,6 +100,7 @@ public class PluginManager {
         return null;
     }
 
+    // 获取所有可用命令及其描述
     public Map<String, String> getAvailableCommands() {
         Map<String, String> commands = new ConcurrentHashMap<>();
         for (CoworkPlugin plugin : getEnabledPlugins()) {
@@ -102,6 +111,7 @@ public class PluginManager {
         return commands;
     }
 
+    // 生成插件描述信息（用于 LLM 上下文）
     public String generatePluginDescriptions() {
         StringBuilder sb = new StringBuilder();
         sb.append("Available Plugins:\n\n");

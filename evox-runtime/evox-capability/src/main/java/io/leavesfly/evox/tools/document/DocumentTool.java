@@ -21,7 +21,6 @@ import java.util.Map;
  */
 @Slf4j
 @Data
-@NoArgsConstructor
 @EqualsAndHashCode(callSuper = true)
 public class DocumentTool extends BaseTool {
 
