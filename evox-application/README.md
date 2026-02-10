@@ -66,7 +66,10 @@ graph TD
     subgraph "Runtime Layer"
         Agents[evox-agents]
         Workflow[evox-workflow]
-        Capability[evox-capability]
+        Tools[evox-tools]
+        Memory[evox-memory]
+        Storage[evox-storage]
+        RAG[evox-rag]
     end
 
     subgraph "Core Layer"
@@ -74,10 +77,10 @@ graph TD
         Models[evox-models]
     end
 
-    Cowork --> Agents & Workflow & Capability
-    ClaudeCode --> Agents & Capability
-    Examples --> Agents & Workflow & Capability
-    Starter --> Agents
+    Cowork --> Agents & Workflow & Tools & Memory
+    ClaudeCode --> Agents & Tools
+    Examples --> Agents & Workflow & Tools & RAG
+    Starter --> Agents & Memory
     Benchmark --> Core
 ```
 

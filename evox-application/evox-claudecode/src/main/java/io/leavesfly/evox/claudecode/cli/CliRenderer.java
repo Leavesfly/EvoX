@@ -19,13 +19,21 @@ public class CliRenderer {
     private static final String WHITE = "\033[37m";
 
     private final boolean colorEnabled;
+    private final boolean markdownRendering;
+    private final MarkdownStreamRenderer markdownRenderer;
 
     public CliRenderer() {
-        this(true);
+        this(true, true);
     }
 
     public CliRenderer(boolean colorEnabled) {
+        this(colorEnabled, true);
+    }
+
+    public CliRenderer(boolean colorEnabled, boolean markdownRendering) {
         this.colorEnabled = colorEnabled;
+        this.markdownRendering = markdownRendering;
+        this.markdownRenderer = new MarkdownStreamRenderer(colorEnabled);
     }
 
     public void printWelcome() {
@@ -81,7 +89,29 @@ public class CliRenderer {
     }
 
     public void printStream(String text) {
-        print(text);
+        if (markdownRendering) {
+            markdownRenderer.feed(text);
+        } else {
+            print(text);
+        }
+    }
+
+    /**
+     * 刷新 Markdown 渲染缓冲区（流结束时调用）
+     */
+    public void flushStream() {
+        if (markdownRendering) {
+            markdownRenderer.flush();
+        }
+    }
+
+    /**
+     * 重置 Markdown 渲染状态（新对话开始时调用）
+     */
+    public void resetStream() {
+        if (markdownRendering) {
+            markdownRenderer.reset();
+        }
     }
 
     public void printApprovalRequest(String toolName, java.util.Map<String, Object> parameters) {
@@ -112,50 +142,73 @@ public class CliRenderer {
         println("");
     }
 
-    // color helper methods
-    private String bold(String text) {
+    // ==================== Color formatting (package-visible for ClaudeCodeRepl) ====================
+
+    String bold(String text) {
         return colorEnabled ? BOLD + text + RESET : text;
     }
 
-    private String dim(String text) {
+    String dim(String text) {
         return colorEnabled ? DIM + text + RESET : text;
     }
 
-    private String red(String text) {
+    String red(String text) {
         return colorEnabled ? RED + text + RESET : text;
     }
 
-    private String green(String text) {
+    String green(String text) {
         return colorEnabled ? GREEN + text + RESET : text;
     }
 
-    private String yellow(String text) {
+    String yellow(String text) {
         return colorEnabled ? YELLOW + text + RESET : text;
     }
 
-    private String blue(String text) {
+    String blue(String text) {
         return colorEnabled ? BLUE + text + RESET : text;
     }
 
-    private String cyan(String text) {
+    String cyan(String text) {
         return colorEnabled ? CYAN + text + RESET : text;
     }
 
-    private String white(String text) {
+    String white(String text) {
         return colorEnabled ? WHITE + text + RESET : text;
     }
 
-    @SuppressWarnings("unused")
-    private String magenta(String text) {
+    String magenta(String text) {
         return colorEnabled ? MAGENTA + text + RESET : text;
     }
 
-    private void println(String text) {
+    void println(String text) {
         System.out.println(text);
     }
 
-    private void print(String text) {
+    void print(String text) {
         System.out.print(text);
         System.out.flush();
+    }
+
+    /**
+     * 打印带格式的标题行（如 "  Token Usage:"）
+     */
+    public void printSectionHeader(String title) {
+        println("");
+        println("  " + bold(title));
+        println("");
+    }
+
+    /**
+     * 打印带格式的命令帮助行（如 "  /help       Show this help message"）
+     */
+    public void printCommandEntry(String command, String description) {
+        println("  " + cyan(command) + "  " + description);
+    }
+
+    /**
+     * 打印带格式的键值对行
+     */
+    public void printKeyValue(String key, String value) {
+        println("  " + key + "  " + value);
     }
 }

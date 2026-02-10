@@ -1,7 +1,7 @@
 package io.leavesfly.evox.workflow.builder;
 
-import io.leavesfly.evox.agents.base.Agent;
-import io.leavesfly.evox.agents.manager.AgentManager;
+import io.leavesfly.evox.core.agent.IAgent;
+import io.leavesfly.evox.core.agent.IAgentManager;
 import io.leavesfly.evox.workflow.base.Workflow;
 import io.leavesfly.evox.workflow.base.WorkflowNode;
 import io.leavesfly.evox.workflow.graph.WorkflowGraph;
@@ -45,7 +45,7 @@ public class WorkflowBuilder {
     private String name;
     private String goal;
     private WorkflowGraph graph;
-    private AgentManager agentManager;
+    private IAgentManager agentManager;
     private List<StepConfig> steps = new ArrayList<>();
     private int maxExecutionSteps = 100;
     private boolean isSequential = true;
@@ -54,7 +54,14 @@ public class WorkflowBuilder {
      * 私有构造函数
      */
     private WorkflowBuilder() {
-        this.agentManager = new AgentManager();
+    }
+
+    /**
+     * 设置AgentManager
+     */
+    public WorkflowBuilder agentManager(IAgentManager agentManager) {
+        this.agentManager = agentManager;
+        return this;
     }
     
     /**
@@ -102,15 +109,17 @@ public class WorkflowBuilder {
     /**
      * 添加步骤（仅 Agent 名称）
      */
-    public WorkflowBuilder step(String stepName, Agent agent) {
+    public WorkflowBuilder step(String stepName, IAgent agent) {
         return step(stepName, agent, null);
     }
     
     /**
      * 添加步骤（带描述）
      */
-    public WorkflowBuilder step(String stepName, Agent agent, String description) {
-        agentManager.addAgent(agent);
+    public WorkflowBuilder step(String stepName, IAgent agent, String description) {
+        if (agentManager != null) {
+            agentManager.addAgent(agent);
+        }
         steps.add(new StepConfig(stepName, agent.getName(), description));
         return this;
     }

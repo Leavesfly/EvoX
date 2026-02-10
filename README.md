@@ -1,4 +1,4 @@
-# EvoX：一个用于构建可演化的多Agent系统的代理框架
+# EvoX：一个用于构建可自演化的多Agent系统的代理框架
 
 <div align="center">
 
@@ -282,8 +282,8 @@ EvoX 提供了完整的智能代理生态，支持从单代理到多代理协同
 
 **依赖关系说明:**
 - **核心层**: Core 是所有模块的基础，Models 和 Actions 依赖 Core
-- **运行时层**: Capability 统一提供记忆、存储、工具能力；Agents 依赖 Core/Models/Actions/Capability；Workflow 依赖 Core/Models/Agents/Capability
-- **扩展层**: RAG 依赖 Core/Models/Capability；Optimizers 依赖 Core/Models/Agents/Workflow；HITL 依赖 Core/Agents
+- **运行时层**: Storage/Tools/Memory 提供基础能力；Agents 依赖 Core/Models/Actions/Memory/Tools；Workflow 仅依赖 Core/Memory（通过接口解耦）
+- **扩展层**: RAG 依赖 Core/Models/Storage；Optimizers 依赖 Core/Models/Agents/Workflow；HITL 依赖 Core/Agents
 - **应用层**: Examples 和 Benchmark 可依赖所有下层模块；Starter 提供 Spring Boot 自动配置
 
 ### 模块依赖关系图
@@ -292,49 +292,55 @@ EvoX 提供了完整的智能代理生态，支持从单代理到多代理协同
 应用层:
   evox-examples ──┬──> evox-agents
                   ├──> evox-workflow
-                  ├──> evox-capability
-                  └──> evox-rag
+                  ├──> evox-rag
+                  └──> evox-tools
 
   evox-benchmark ──┬──> evox-core
                    ├──> evox-models
-                   ├──> evox-agents
-                   └──> evox-capability
+                   └──> evox-agents
 
   evox-spring-boot-starter ──┬──> evox-core
                              ├──> evox-models
                              ├──> evox-agents
-                             └──> evox-capability
+                             └──> evox-memory
 
 扩展层:
-  evox-rag ──┬──> evox-core
-             ├──> evox-models
-             └──> evox-capability
-
   evox-optimizers ──┬──> evox-core
                     ├──> evox-models
                     ├──> evox-agents
                     └──> evox-workflow
 
   evox-hitl ──┬──> evox-core
-              └──> evox-agents
+              ├──> evox-agents
+              └──> evox-workflow
 
 运行时层:
   evox-agents ──┬──> evox-core
                 ├──> evox-models
                 ├──> evox-actions
-                └──> evox-capability
+                ├──> evox-memory
+                └──> evox-tools
 
   evox-workflow ──┬──> evox-core
-                  ├──> evox-models
-                  ├──> evox-agents
-                  └──> evox-capability
+                  └──> evox-memory
 
-  evox-capability ──> evox-core
+  evox-rag ──┬──> evox-core
+             ├──> evox-models
+             └──> evox-storage
+
+  evox-memory ──┬──> evox-core
+                └──> evox-storage
+
+  evox-tools ──> evox-core
+
+  evox-storage ──> evox-core
 
 核心层:
   evox-models ──> evox-core
 
   evox-actions ──> evox-core
+
+  evox-mcp ──> evox-core
 
   evox-core (基础)
 ```
@@ -379,7 +385,10 @@ EvoX 提供了完整的智能代理生态，支持从单代理到多代理协同
 
 | 模块 | 功能描述 | 主要类/接口 | 状态 |
 |------|---------|-----------|------|
-| **evox-capability** | 记忆、存储、工具集成 | `ShortTermMemory`, `LongTermMemory`, `VectorStore`, `FileSystemTool` | ✅ |
+| **evox-storage** | 存储适配（内存、数据库、向量、图） | `BaseStorage`, `InMemoryStore`, `VectorStore` | ✅ |
+| **evox-tools** | 工具集（文件、HTTP、数据库、搜索） | `BaseTool`, `Toolkit`, `FileSystemTool` | ✅ |
+| **evox-memory** | 记忆管理（短期、长期） | `ShortTermMemory`, `LongTermMemory`, `MemoryManager` | ✅ |
+| **evox-rag** | RAG 检索增强生成 | `RAGEngine`, `DocumentLoader`, `VectorRetriever` | ✅ |
 | **evox-agents** | 多种 Agent 实现和管理 | `ActionAgent`, `ReActAgent`, `ChatBotAgent` | ✅ |
 | **evox-workflow** | DAG 工作流编排引擎 | `Workflow`, `WorkflowGraph`, `WorkflowNode` | ✅ |
 
@@ -387,8 +396,8 @@ EvoX 提供了完整的智能代理生态，支持从单代理到多代理协同
 
 | 模块 | 功能描述 | 主要类/接口 | 状态 |
 |------|---------|-----------|------|
-| **evox-rag** | RAG 检索增强生成 | `RAGEngine`, `DocumentLoader`, `VectorRetriever` | ✅ |
 | **evox-optimizers** | 提示词和工作流优化 | `TextGrad`, `MIPRO`, `AFlow` | ✅ |
+| **evox-evaluation** | 评估框架 | `Evaluator`, `Metric` | ✅ |
 | **evox-hitl** | 人机协同机制 | `HITLManager`, `HITLInterceptorAgent` | ✅ |
 
 ### 应用层模块 (Application Layer)
@@ -979,15 +988,18 @@ evox/
 ├── evox-core/                        # 核心层
 │   ├── evox-core/                    # 核心抽象
 │   ├── evox-models/                  # 模型适配
-│   └── evox-actions/                 # 动作引擎
+│   ├── evox-actions/                 # 动作引擎
+│   └── evox-mcp/                     # MCP 协议支持
 │
 ├── evox-runtime/                     # 运行时层
-│   ├── evox-capability/              # 能力集成（记忆/存储/工具）
+│   ├── evox-storage/                 # 存储适配
+│   ├── evox-tools/                   # 工具集
+│   ├── evox-memory/                  # 记忆管理
+│   ├── evox-rag/                     # RAG 检索增强
 │   ├── evox-agents/                  # 智能代理
 │   └── evox-workflow/                # 工作流编排
 │
 ├── evox-extensions/                  # 扩展层
-│   ├── evox-rag/                     # RAG 检索增强
 │   ├── evox-optimizers/              # 优化器
 │   └── evox-hitl/                    # 人机协同
 │

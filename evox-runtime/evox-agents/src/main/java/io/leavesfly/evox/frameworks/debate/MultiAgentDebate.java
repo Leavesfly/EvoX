@@ -1,7 +1,7 @@
 package io.leavesfly.evox.frameworks.debate;
 
 
-import io.leavesfly.evox.models.base.BaseLLM;
+import io.leavesfly.evox.models.base.LLMProvider;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
 
@@ -43,7 +43,7 @@ public class MultiAgentDebate {
     /**
      * 辩论主持人（可选，用于检查共识和生成最终答案）
      */
-    private BaseLLM moderator;
+    private LLMProvider moderator;
 
     /**
      * 辩论模式
@@ -84,7 +84,7 @@ public class MultiAgentDebate {
         this(agents, maxRounds, null);
     }
 
-    public MultiAgentDebate(List<DebateAgent> agents, int maxRounds, BaseLLM moderator) {
+    public MultiAgentDebate(List<DebateAgent> agents, int maxRounds, LLMProvider moderator) {
         this.agents = agents;
         this.maxRounds = maxRounds;
         this.moderator = moderator;
@@ -96,7 +96,7 @@ public class MultiAgentDebate {
         agents.forEach(agent -> scores.put(agent.getName(), 0.0));
     }
 
-    public MultiAgentDebate(List<DebateAgent> agents, int maxRounds, BaseLLM moderator, DebateConfig config) {
+    public MultiAgentDebate(List<DebateAgent> agents, int maxRounds, LLMProvider moderator, DebateConfig config) {
         this(agents, maxRounds, moderator);
         this.config = config != null ? config : DebateConfig.builder().build();
     }

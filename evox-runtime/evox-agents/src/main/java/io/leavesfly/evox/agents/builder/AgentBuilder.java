@@ -3,7 +3,7 @@ package io.leavesfly.evox.agents.builder;
 import io.leavesfly.evox.actions.base.Action;
 import io.leavesfly.evox.agents.base.Agent;
 import io.leavesfly.evox.agents.specialized.ChatBotAgent;
-import io.leavesfly.evox.models.base.BaseLLM;
+import io.leavesfly.evox.core.llm.ILLM;
 import io.leavesfly.evox.models.config.LLMConfig;
 import io.leavesfly.evox.models.config.OpenAILLMConfig;
 import io.leavesfly.evox.models.factory.LLMFactory;
@@ -46,7 +46,7 @@ public class AgentBuilder<T extends Agent> {
     private String name;
     private String description;
     private String systemPrompt;
-    private BaseLLM llm;
+    private ILLM llm;
     private List<Action> actions = new ArrayList<>();
     
     /**
@@ -166,7 +166,7 @@ public class AgentBuilder<T extends Agent> {
     /**
      * 配置自定义 LLM
      */
-    public AgentBuilder<T> withLLM(BaseLLM llm) {
+    public AgentBuilder<T> withLLM(ILLM llm) {
         this.llm = llm;
         return this;
     }
@@ -176,7 +176,7 @@ public class AgentBuilder<T extends Agent> {
      *
      * <pre>{@code
      * AgentBuilder.chatBot()
-     *     .withConfig(LLMConfig.ofAliyun("sk-xxx", "qwen-max"))
+     *     .withConfig(LLMConfigs.aliyun("sk-xxx", "qwen-max"))
      *     .build();
      * }</pre>
      */
@@ -292,7 +292,7 @@ public class AgentBuilder<T extends Agent> {
             // 创建 Agent 实例
             T agent;
             if (agentTypeName.equals("ChatBotAgent")) {
-                // ChatBotAgent 需要 BaseLLM 构造参数
+                // ChatBotAgent 需要 LLMProvider 构造参数
                 agent = (T) new ChatBotAgent(llm);
             } else {
                 agent = agentFactory.get();

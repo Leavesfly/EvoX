@@ -1,30 +1,27 @@
 package io.leavesfly.evox.models.openrouter;
 
 import io.leavesfly.evox.core.message.Message;
-import io.leavesfly.evox.models.base.BaseLLM;
+import io.leavesfly.evox.models.base.LLMProvider;
+import io.leavesfly.evox.models.client.ChatCompletionRequest;
+import io.leavesfly.evox.models.client.OpenAiCompatibleClient;
 import io.leavesfly.evox.models.config.LLMConfig;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.ai.chat.model.ChatModel;
-import org.springframework.ai.chat.model.ChatResponse;
-import org.springframework.ai.chat.prompt.Prompt;
-import org.springframework.ai.openai.OpenAiChatModel;
-import org.springframework.ai.openai.OpenAiChatOptions;
-import org.springframework.ai.openai.api.OpenAiApi;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
+import java.time.Duration;
 import java.util.List;
 
 /**
  * OpenRouter模型实现
- * 通过OpenRouter API访问多种LLM模型
- * 
+ * 通过 OpenAI 兼容 HTTP 客户端访问 OpenRouter API
+ *
  * @author EvoX Team
  */
 @Slf4j
 @Data
-public class OpenRouterModel implements BaseLLM {
+public class OpenRouterModel implements LLMProvider {
 
     private static final String OPENROUTER_API_BASE = "https://openrouter.ai/api/v1";
 
@@ -39,9 +36,9 @@ public class OpenRouterModel implements BaseLLM {
     private String model;
 
     /**
-     * Spring AI ChatModel
+     * HTTP 客户端
      */
-    private transient ChatModel chatModel;
+    private transient OpenAiCompatibleClient client;
 
     /**
      * 配置
@@ -67,17 +64,8 @@ public class OpenRouterModel implements BaseLLM {
         }
 
         try {
-            // 使用OpenRouter的API endpoint
-            OpenAiApi openAiApi = new OpenAiApi(OPENROUTER_API_BASE, apiKey);
-            
-            OpenAiChatOptions options = OpenAiChatOptions.builder()
-                .withModel(model)
-                .withTemperature(0.7f)
-                .withMaxTokens(2000)
-                .build();
-
-            this.chatModel = new OpenAiChatModel(openAiApi, options);
-            
+            Duration timeout = config != null ? config.getTimeout() : Duration.ofSeconds(60);
+            this.client = new OpenAiCompatibleClient(OPENROUTER_API_BASE, apiKey, timeout);
             log.info("OpenRouter model initialized: {}", model);
         } catch (Exception e) {
             log.error("Failed to initialize OpenRouter model", e);
@@ -87,19 +75,16 @@ public class OpenRouterModel implements BaseLLM {
 
     @Override
     public String generate(String prompt) {
-        if (chatModel == null) {
+        if (client == null) {
             initializeClient();
         }
 
         try {
-            Prompt chatPrompt = new Prompt(prompt);
-            ChatResponse response = chatModel.call(chatPrompt);
-            
-            if (response != null && response.getResult() != null) {
-                return response.getResult().getOutput().getContent();
-            }
-            
-            return "";
+            ChatCompletionRequest request = OpenAiCompatibleClient.buildChatRequest(
+                    model, prompt, 0.7f, 2000, null, null, null);
+
+            String response = client.chatCompletion(request);
+            return response != null ? response : "";
         } catch (Exception e) {
             log.error("OpenRouter generation failed", e);
             throw new RuntimeException("Generation failed: " + e.getMessage(), e);
@@ -123,7 +108,6 @@ public class OpenRouterModel implements BaseLLM {
 
     @Override
     public String chat(List<Message> messages) {
-        // 简化实现：转换为单个prompt
         StringBuilder sb = new StringBuilder();
         for (Message msg : messages) {
             String role = msg.getAgent() != null ? msg.getAgent() : "user";

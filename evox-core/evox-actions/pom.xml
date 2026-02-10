@@ -23,12 +23,6 @@
             <artifactId>evox-core</artifactId>
         </dependency>
 
-        <!-- EvoX Models -->
-        <dependency>
-            <groupId>io.leavesfly.evox</groupId>
-            <artifactId>evox-models</artifactId>
-        </dependency>
-
         <!-- Spring Boot Starter -->
         <dependency>
             <groupId>org.springframework.boot</groupId>

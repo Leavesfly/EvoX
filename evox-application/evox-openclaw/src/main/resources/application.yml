@@ -1,0 +1,44 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: evox-assistant
+
+evox:
+  assistant:
+    name: EvoX Assistant
+    default-agent: default
+
+    gateway:
+      enabled: true
+      api-keys: []
+      rate-limit-per-minute: 60
+      allow-anonymous-channel-access: true
+      session-timeout-hours: 24
+      max-audit-events: 10000
+
+    webhook:
+      enabled: true
+      path: /api/webhook
+
+    telegram:
+      enabled: false
+      # bot-token: YOUR_BOT_TOKEN
+      # bot-username: YOUR_BOT_USERNAME
+
+    dingtalk:
+      enabled: false
+      # app-key: YOUR_APP_KEY
+      # app-secret: YOUR_APP_SECRET
+      # robot-code: YOUR_ROBOT_CODE
+
+    scheduler:
+      enabled: true
+      check-interval-ms: 1000
+
+logging:
+  level:
+    io.leavesfly.evox: INFO
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n"

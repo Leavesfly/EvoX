@@ -1,6 +1,7 @@
 package io.leavesfly.evox.claudecode.config;
 
 import io.leavesfly.evox.models.config.LLMConfig;
+import io.leavesfly.evox.models.config.LLMConfigs;
 import lombok.Data;
 
 import java.util.*;
@@ -54,13 +55,34 @@ public class ClaudeCodeConfig {
     /** 是否启用流式输出 */
     private boolean streamingEnabled = true;
 
+    /** 上下文窗口大小（token 数），超过此阈值自动触发 compact */
+    private int contextWindow = 128000;
+
+    /** LLM 最大输出 token 数（覆盖 LLMConfig 默认值） */
+    private Integer maxTokens;
+
+    /** LLM 温度参数（覆盖 LLMConfig 默认值） */
+    private Float temperature;
+
+    /** LLM Top-P 采样参数（覆盖 LLMConfig 默认值） */
+    private Float topP;
+
+    /** 子代理最大递归深度（防止无限嵌套） */
+    private int maxSubAgentDepth = 3;
+
+    /** 是否启用终端 Markdown 渲染 */
+    private boolean markdownRendering = true;
+
+    /** 是否启用终端颜色输出 */
+    private boolean colorEnabled = true;
+
     /**
      * 创建默认配置（使用 OpenAI）
      */
     public static ClaudeCodeConfig createDefault(String workingDirectory) {
         ClaudeCodeConfig config = new ClaudeCodeConfig();
         config.setWorkingDirectory(workingDirectory);
-        config.setLlmConfig(LLMConfig.ofOpenAI(
+        config.setLlmConfig(LLMConfigs.openAI(
                 System.getenv("OPENAI_API_KEY"),
                 "gpt-4o"
         ));
@@ -73,7 +95,7 @@ public class ClaudeCodeConfig {
     public static ClaudeCodeConfig createWithAliyun(String workingDirectory, String apiKey) {
         ClaudeCodeConfig config = new ClaudeCodeConfig();
         config.setWorkingDirectory(workingDirectory);
-        config.setLlmConfig(LLMConfig.ofAliyun(apiKey, "qwen-max"));
+        config.setLlmConfig(LLMConfigs.aliyun(apiKey, "qwen-max"));
         return config;
     }
 
@@ -83,7 +105,7 @@ public class ClaudeCodeConfig {
     public static ClaudeCodeConfig createWithOllama(String workingDirectory, String model) {
         ClaudeCodeConfig config = new ClaudeCodeConfig();
         config.setWorkingDirectory(workingDirectory);
-        config.setLlmConfig(LLMConfig.ofOllama(model));
+        config.setLlmConfig(LLMConfigs.ollama(model));
         config.setRequireApproval(false);
         return config;
     }
@@ -99,5 +121,27 @@ public class ClaudeCodeConfig {
             return false;
         }
         return approvalRequiredTools.contains(toolName);
+    }
+
+    /**
+     * 将应用层配置覆盖到 LLMConfig 中。
+     * 仅当 ClaudeCodeConfig 中显式设置了值时才覆盖，否则保留 LLMConfig 的默认值。
+     */
+    public void applyToLLMConfig() {
+        if (llmConfig == null) {
+            return;
+        }
+        if (maxTokens != null) {
+            llmConfig.setMaxTokens(maxTokens);
+        }
+        if (temperature != null) {
+            llmConfig.setTemperature(temperature);
+        }
+        if (topP != null) {
+            llmConfig.setTopP(topP);
+        }
+        if (streamingEnabled) {
+            llmConfig.setStream(true);
+        }
     }
 }

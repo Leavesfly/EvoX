@@ -12,6 +12,7 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
 
 @Slf4j
@@ -19,7 +20,7 @@ import java.util.function.Consumer;
 public class SessionManager {
     private final Map<String, CoworkSession> sessions;
     private final Map<String, CoworkAgent> sessionAgents;
-    private volatile String activeSessionId;
+    private final AtomicReference<String> activeSessionId = new AtomicReference<>();
     private final CoworkConfig config;
     private final CoworkPermissionManager permissionManager;
     private Consumer<SessionEvent> eventCallback;
@@ -58,7 +59,7 @@ public class SessionManager {
         sessions.put(session.getSessionId(), session);
         sessionAgents.put(session.getSessionId(), agent);
 
-        activeSessionId = session.getSessionId();
+        activeSessionId.set(session.getSessionId());
 
         emitEvent(new SessionEvent(
             session.getSessionId(),
@@ -80,11 +81,16 @@ public class SessionManager {
             .toList();
     }
 
+    public String getActiveSessionId() {
+        return activeSessionId.get();
+    }
+
     public CoworkSession getActiveSession() {
-        if (activeSessionId == null) {
+        String currentId = activeSessionId.get();
+        if (currentId == null) {
             return null;
         }
-        return sessions.get(activeSessionId);
+        return sessions.get(currentId);
     }
 
     public String prompt(String sessionId, String message) {
@@ -169,9 +175,7 @@ public class SessionManager {
 
         sessionAgents.remove(sessionId);
 
-        if (sessionId.equals(activeSessionId)) {
-            activeSessionId = null;
-        }
+        activeSessionId.compareAndSet(sessionId, null);
 
         emitEvent(new SessionEvent(
             sessionId,
@@ -187,7 +191,7 @@ public class SessionManager {
             throw new IllegalArgumentException("Session not found: " + sessionId);
         }
 
-        activeSessionId = sessionId;
+        activeSessionId.set(sessionId);
 
         emitEvent(new SessionEvent(
             sessionId,

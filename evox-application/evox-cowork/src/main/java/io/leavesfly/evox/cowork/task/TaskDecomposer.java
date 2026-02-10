@@ -1,7 +1,7 @@
 package io.leavesfly.evox.cowork.task;
 
 import io.leavesfly.evox.core.message.Message;
-import io.leavesfly.evox.models.base.BaseLLM;
+import io.leavesfly.evox.models.base.LLMProvider;
 import lombok.extern.slf4j.Slf4j;
 
 import java.util.ArrayList;
@@ -11,9 +11,9 @@ import java.util.regex.Pattern;
 
 @Slf4j
 public class TaskDecomposer {
-    private final BaseLLM llm;
+    private final LLMProvider llm;
 
-    public TaskDecomposer(BaseLLM llm) {
+    public TaskDecomposer(LLMProvider llm) {
         this.llm = llm;
     }
 

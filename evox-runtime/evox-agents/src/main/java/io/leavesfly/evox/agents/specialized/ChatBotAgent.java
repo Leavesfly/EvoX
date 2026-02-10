@@ -7,7 +7,7 @@ import io.leavesfly.evox.actions.base.SimpleActionOutput;
 import io.leavesfly.evox.agents.base.Agent;
 import io.leavesfly.evox.core.message.Message;
 import io.leavesfly.evox.core.message.MessageType;
-import io.leavesfly.evox.models.base.BaseLLM;
+import io.leavesfly.evox.core.llm.ILLM;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.extern.slf4j.Slf4j;
@@ -50,14 +50,14 @@ import java.util.stream.Collectors;
 @Slf4j
 public class ChatBotAgent extends Agent {
     
-    private final BaseLLM llm;
+    private final ILLM llm;
     
     /**
      * 构造函数
      * 
      * @param llm LLM 实例，如果为 null 则使用模拟模式
      */
-    public ChatBotAgent(BaseLLM llm) {
+    public ChatBotAgent(ILLM llm) {
         this.llm = llm;
         // 添加聊天动作
         addAction(new ChatAction(llm));
@@ -109,9 +109,9 @@ public class ChatBotAgent extends Agent {
     @Data
     @EqualsAndHashCode(callSuper = false)
     static class ChatAction extends Action {
-        private final BaseLLM llm;
+        private final ILLM llm;
         
-        public ChatAction(BaseLLM llm) {
+        public ChatAction(ILLM llm) {
             super();
             setName("chat");
             setDescription("处理聊天对话");

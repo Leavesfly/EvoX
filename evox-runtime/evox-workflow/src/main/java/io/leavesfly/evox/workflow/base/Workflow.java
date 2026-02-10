@@ -4,7 +4,7 @@ import io.leavesfly.evox.core.agent.IAgentManager;
 import io.leavesfly.evox.core.message.Message;
 import io.leavesfly.evox.core.message.MessageType;
 import io.leavesfly.evox.core.module.BaseModule;
-import io.leavesfly.evox.models.base.BaseLLM;
+import io.leavesfly.evox.core.llm.ILLM;
 import io.leavesfly.evox.workflow.execution.WorkflowContext;
 import io.leavesfly.evox.workflow.execution.WorkflowExecutor;
 import io.leavesfly.evox.workflow.graph.WorkflowGraph;
@@ -46,7 +46,7 @@ public class Workflow extends BaseModule {
     /**
      * LLM 模型（可选）
      */
-    private BaseLLM llm;
+    private ILLM llm;
 
     /**
      * 智能体管理器（可选）

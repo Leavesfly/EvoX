@@ -8,6 +8,8 @@ import java.util.stream.Collectors;
 
 @Data
 public class WorkflowTemplate {
+    private static final Pattern VARIABLE_PATTERN = Pattern.compile("\\{\\{(\\w+)\\}\\}");
+
     private String templateId;
     private String name;
     private String description;
@@ -46,8 +48,7 @@ public class WorkflowTemplate {
         
         // Replace placeholders with actual values
         // 替换占位符为实际值
-        Pattern pattern = Pattern.compile("\\{\\{(\\w+)\\}\\}");
-        Matcher matcher = pattern.matcher(rendered);
+        Matcher matcher = VARIABLE_PATTERN.matcher(rendered);
         StringBuilder result = new StringBuilder();
         
         while (matcher.find()) {
@@ -79,8 +80,7 @@ public class WorkflowTemplate {
     // 提取模板中所有变量名
     public List<String> getVariableNames() {
         List<String> variableNames = new ArrayList<>();
-        Pattern pattern = Pattern.compile("\\{\\{(\\w+)\\}\\}");
-        Matcher matcher = pattern.matcher(promptTemplate);
+        Matcher matcher = VARIABLE_PATTERN.matcher(promptTemplate);
         
         while (matcher.find()) {
             variableNames.add(matcher.group(1));

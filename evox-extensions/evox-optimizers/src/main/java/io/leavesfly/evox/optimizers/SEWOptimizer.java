@@ -1,6 +1,6 @@
 package io.leavesfly.evox.optimizers;
 
-import io.leavesfly.evox.models.base.BaseLLM;
+import io.leavesfly.evox.models.base.LLMProvider;
 import io.leavesfly.evox.workflow.base.Workflow;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
@@ -51,12 +51,12 @@ public class SEWOptimizer extends Optimizer {
     /**
      * 用于变异操作的LLM
      */
-    private BaseLLM mutatorLLM;
+    private LLMProvider mutatorLLM;
 
     /**
      * 用于评估的LLM
      */
-    private BaseLLM evaluatorLLM;
+    private LLMProvider evaluatorLLM;
 
     /**
      * 工作流表示方案

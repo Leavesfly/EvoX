@@ -1,8 +1,9 @@
 package io.leavesfly.evox.optimizers.evaluators;
 
-import io.leavesfly.evox.evaluation.Evaluator;
+import io.leavesfly.evox.core.evaluation.EvaluationResult;
+import io.leavesfly.evox.core.evaluation.IEvaluator;
 import io.leavesfly.evox.optimizers.evaluators.metrics.EvaluationMetric;
-import io.leavesfly.evox.models.base.BaseLLM;
+import io.leavesfly.evox.models.base.LLMProvider;
 import lombok.extern.slf4j.Slf4j;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
@@ -11,19 +12,20 @@ import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
- * AFlow评估器
- * 专门用于AFlow工作流优化的评估器
- * 支持异步批量评估和成本跟踪
+ * AFlow 评估器
+ * 专门用于 AFlow 工作流优化的评估器。
+ * 实现核心层的 {@link IEvaluator} 接口，不再依赖 evox-evaluation 模块。
+ * 支持异步批量评估和成本跟踪。
  *
  * @author EvoX Team
  */
 @Slf4j
-public class AFlowEvaluator extends Evaluator {
+public class AFlowEvaluator implements IEvaluator {
 
     /**
      * 使用的LLM模型
      */
-    private final BaseLLM llm;
+    private final LLMProvider llm;
 
     /**
      * 评估指标列表
@@ -40,7 +42,7 @@ public class AFlowEvaluator extends Evaluator {
      *
      * @param llm LLM模型
      */
-    public AFlowEvaluator(BaseLLM llm) {
+    public AFlowEvaluator(LLMProvider llm) {
         this(llm, new ArrayList<>(), 20);
     }
 
@@ -51,7 +53,7 @@ public class AFlowEvaluator extends Evaluator {
      * @param metrics 评估指标
      * @param maxConcurrentTasks 最大并发任务数
      */
-    public AFlowEvaluator(BaseLLM llm, List<EvaluationMetric> metrics, int maxConcurrentTasks) {
+    public AFlowEvaluator(LLMProvider llm, List<EvaluationMetric> metrics, int maxConcurrentTasks) {
         this.llm = llm;
         this.metrics = metrics;
         this.maxConcurrentTasks = maxConcurrentTasks;
@@ -61,12 +63,10 @@ public class AFlowEvaluator extends Evaluator {
     public EvaluationResult evaluate(Object prediction, Object label) {
         Map<String, Double> resultMetrics = new HashMap<>();
 
-        // 如果没有指定指标，使用默认的准确率计算
         if (metrics.isEmpty()) {
             double accuracy = prediction.toString().trim().equalsIgnoreCase(label.toString().trim()) ? 1.0 : 0.0;
             resultMetrics.put("accuracy", accuracy);
         } else {
-            // 计算所有指标
             for (EvaluationMetric metric : metrics) {
                 try {
                     double value = metric.compute(prediction, label);
@@ -202,7 +202,7 @@ public class AFlowEvaluator extends Evaluator {
      *
      * @return LLM模型
      */
-    public BaseLLM getLlm() {
+    public LLMProvider getLlm() {
         return llm;
     }
 

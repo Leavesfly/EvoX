@@ -103,20 +103,6 @@ class EvoXExceptionTest {
     }
 
     @Test
-    @DisplayName("测试 LLMException")
-    void testLLMException() {
-        // Given
-        String message = "LLM 调用失败";
-        
-        // When
-        LLMException exception = new LLMException(message);
-        
-        // Then
-        assertEquals("LLM_ERROR", exception.getErrorCode());
-        assertEquals(message, exception.getMessage());
-    }
-
-    @Test
     @DisplayName("测试 ModuleException")
     void testModuleException() {
         // Given
@@ -127,20 +113,6 @@ class EvoXExceptionTest {
         
         // Then
         assertEquals("MODULE_ERROR", exception.getErrorCode());
-        assertEquals(message, exception.getMessage());
-    }
-
-    @Test
-    @DisplayName("测试 StorageException")
-    void testStorageException() {
-        // Given
-        String message = "存储错误";
-        
-        // When
-        StorageException exception = new StorageException(message);
-        
-        // Then
-        assertEquals("STORAGE_ERROR", exception.getErrorCode());
         assertEquals(message, exception.getMessage());
     }
 
@@ -163,14 +135,14 @@ class EvoXExceptionTest {
     void testExceptionChaining() {
         // Given
         RuntimeException originalException = new RuntimeException("原始错误");
-        LLMException llmException = new LLMException("LLM 调用失败", originalException);
+        EvoXException innerException = new EvoXException("LLM_ERROR", "LLM 调用失败", originalException);
         
         // When
         ExecutionException executionException = new ExecutionException(
-                "工作流执行失败", llmException);
+                "工作流执行失败", innerException);
         
         // Then
-        assertSame(llmException, executionException.getCause());
+        assertSame(innerException, executionException.getCause());
         assertSame(originalException, executionException.getCause().getCause());
     }
 
@@ -213,9 +185,7 @@ class EvoXExceptionTest {
         assertTrue(RuntimeException.class.isAssignableFrom(EvoXException.class));
         assertTrue(RuntimeException.class.isAssignableFrom(ConfigurationException.class));
         assertTrue(RuntimeException.class.isAssignableFrom(ExecutionException.class));
-        assertTrue(RuntimeException.class.isAssignableFrom(LLMException.class));
         assertTrue(RuntimeException.class.isAssignableFrom(ModuleException.class));
-        assertTrue(RuntimeException.class.isAssignableFrom(StorageException.class));
         assertTrue(RuntimeException.class.isAssignableFrom(ValidationException.class));
     }
 

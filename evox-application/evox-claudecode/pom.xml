@@ -42,7 +42,12 @@
 
         <dependency>
             <groupId>io.leavesfly.evox</groupId>
-            <artifactId>evox-capability</artifactId>
+            <artifactId>evox-memory</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>io.leavesfly.evox</groupId>
+            <artifactId>evox-tools</artifactId>
         </dependency>
 
         <dependency>
@@ -50,10 +55,9 @@
             <artifactId>evox-mcp</artifactId>
         </dependency>
 
-        <!-- Spring Boot -->
         <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter</artifactId>
+            <groupId>io.leavesfly.evox</groupId>
+            <artifactId>evox-mcp-runtime</artifactId>
         </dependency>
 
         <!-- JLine3 for terminal interaction -->
@@ -81,12 +85,7 @@
             <scope>provided</scope>
         </dependency>
 
-        <!-- Test -->
-        <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-test</artifactId>
-            <scope>test</scope>
-        </dependency>
+
     </dependencies>
 
     <build>

@@ -1,6 +1,6 @@
 package io.leavesfly.evox.workflow.operator;
 
-import io.leavesfly.evox.models.base.BaseLLM;
+import io.leavesfly.evox.core.llm.ILLM;
 import lombok.extern.slf4j.Slf4j;
 
 import java.util.Map;
@@ -14,7 +14,7 @@ import java.util.Map;
 @Slf4j
 public class CustomOperator extends Operator {
 
-    public CustomOperator(BaseLLM llm) {
+    public CustomOperator(ILLM llm) {
         this.setName("Custom");
         this.setDescription("Generates anything based on customized input and instruction");
         this.setOperatorInterface("custom(input: String, instruction: String) -> Map with key 'response'");

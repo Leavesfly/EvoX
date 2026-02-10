@@ -151,7 +151,9 @@ evox-cowork/
 | evox-models | BaseLLM、LLMFactory、LLMConfig |
 | evox-actions | 动作执行引擎 |
 | evox-agents | SkillRegistry、TeamFramework |
-| evox-capability | 工具集（File、Shell、Grep、HTTP、Search、Browser、Image、Document）、MemoryManager |
+| evox-tools | 工具集（File、Shell、Grep、HTTP、Search、Browser、Image、Document） |
+| evox-memory | 记忆管理（MemoryManager） |
+| evox-storage | 存储适配 |
 | evox-workflow | WorkflowGraph、WorkflowExecutor |
 | evox-rag | RAG 检索增强 |
 | evox-mcp | MCP 协议支持 |

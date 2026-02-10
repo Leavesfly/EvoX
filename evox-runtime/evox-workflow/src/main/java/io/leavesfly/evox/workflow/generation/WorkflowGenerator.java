@@ -1,7 +1,7 @@
 package io.leavesfly.evox.workflow.generation;
 
-import io.leavesfly.evox.agents.base.Agent;
-import io.leavesfly.evox.models.base.BaseLLM;
+import io.leavesfly.evox.core.agent.IAgent;
+import io.leavesfly.evox.core.llm.ILLM;
 import io.leavesfly.evox.workflow.base.Workflow;
 import io.leavesfly.evox.workflow.builder.WorkflowBuilder;
 import lombok.AllArgsConstructor;
@@ -28,19 +28,19 @@ public class WorkflowGenerator {
     /**
      * LLM用于生成工作流
      */
-    private BaseLLM llm;
+    private ILLM llm;
 
     /**
      * 可用的Agent列表
      */
-    private List<Agent> availableAgents;
+    private List<IAgent> availableAgents;
 
     /**
      * 生成提示词模板
      */
     private String generationPromptTemplate;
 
-    public WorkflowGenerator(BaseLLM llm) {
+    public WorkflowGenerator(ILLM llm) {
         this.llm = llm;
         this.availableAgents = new ArrayList<>();
         this.generationPromptTemplate = """
@@ -118,11 +118,11 @@ public class WorkflowGenerator {
     private String buildGenerationPrompt(String taskDescription) {
         StringBuilder agentsInfo = new StringBuilder();
         for (int i = 0; i < availableAgents.size(); i++) {
-            Agent agent = availableAgents.get(i);
+            IAgent agent = availableAgents.get(i);
             agentsInfo.append(String.format("%d. %s: %s\n",
                     i + 1,
-                    agent.getClass().getSimpleName(),
-                    "Agent描述"));
+                    agent.getName(),
+                    agent.getDescription() != null ? agent.getDescription() : "Agent"));
         }
 
         return generationPromptTemplate
@@ -164,7 +164,7 @@ public class WorkflowGenerator {
 
         // 添加步骤
         for (WorkflowStep step : definition.getSteps()) {
-            Agent agent = findAgentByType(step.getAgent());
+            IAgent agent = findAgentByType(step.getAgent());
             if (agent != null) {
                 builder.step(step.getName(), agent);
             }
@@ -183,9 +183,9 @@ public class WorkflowGenerator {
     /**
      * 根据类型查找Agent
      */
-    private Agent findAgentByType(String agentType) {
+    private IAgent findAgentByType(String agentType) {
         return availableAgents.stream()
-                .filter(agent -> agent.getClass().getSimpleName().equals(agentType))
+                .filter(agent -> agent.getName().equals(agentType))
                 .findFirst()
                 .orElse(availableAgents.isEmpty() ? null : availableAgents.get(0));
     }

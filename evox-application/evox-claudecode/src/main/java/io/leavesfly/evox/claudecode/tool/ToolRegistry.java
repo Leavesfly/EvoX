@@ -167,6 +167,15 @@ public class ToolRegistry {
     }
 
     /**
+     * 使缓存的工具定义失效（当工具列表变化时调用）
+     */
+    public void invalidateToolDefinitionCache() {
+        log.debug("Tool definition cache invalidated due to tool list change");
+        // CodingAgent holds the cache; this is a signal for it to rebuild
+        // The actual cache is in CodingAgent.cachedToolDefinitions
+    }
+
+    /**
      * 获取 SubAgentTool 实例（用于注入 executor）
      */
     public SubAgentTool getSubAgentTool() {

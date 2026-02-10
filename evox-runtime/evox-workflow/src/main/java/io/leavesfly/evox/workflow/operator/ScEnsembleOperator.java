@@ -1,6 +1,6 @@
 package io.leavesfly.evox.workflow.operator;
 
-import io.leavesfly.evox.models.base.BaseLLM;
+import io.leavesfly.evox.core.llm.ILLM;
 import lombok.extern.slf4j.Slf4j;
 
 import java.util.HashMap;
@@ -32,11 +32,11 @@ public class ScEnsembleOperator extends Operator {
             <solution_letter>The letter of the best solution (A, B, C, etc.)</solution_letter>
             """;
 
-    public ScEnsembleOperator(BaseLLM llm) {
+    public ScEnsembleOperator(ILLM llm) {
         this(llm, DEFAULT_PROMPT);
     }
 
-    public ScEnsembleOperator(BaseLLM llm, String prompt) {
+    public ScEnsembleOperator(ILLM llm, String prompt) {
         this.setName("ScEnsemble");
         this.setDescription("Uses self-consistency to select the most consistent solution");
         this.setOperatorInterface("sc_ensemble(solutions: List<String>, problem: String) -> Map with key 'response'");

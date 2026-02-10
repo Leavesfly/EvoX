@@ -1,8 +1,10 @@
 package io.leavesfly.evox.claudecode;
 
+import io.leavesfly.evox.claudecode.agent.CodingAgent;
 import io.leavesfly.evox.claudecode.cli.ClaudeCodeRepl;
 import io.leavesfly.evox.claudecode.config.ClaudeCodeConfig;
-import io.leavesfly.evox.models.config.LLMConfig;
+import io.leavesfly.evox.claudecode.permission.PermissionManager;
+import io.leavesfly.evox.models.config.LLMConfigs;
 import lombok.extern.slf4j.Slf4j;
 
 /**
@@ -33,8 +35,14 @@ public class ClaudeCodeApplication {
             return;
         }
 
-        // start interactive REPL
-        ClaudeCodeRepl repl = new ClaudeCodeRepl(config);
+        // check for session resume mode (--resume flag)
+        String resumeSessionId = getArgValue(args, "--resume", null);
+        ClaudeCodeRepl repl;
+        if (resumeSessionId != null) {
+            repl = new ClaudeCodeRepl(config, resumeSessionId);
+        } else {
+            repl = new ClaudeCodeRepl(config);
+        }
         repl.start();
     }
 
@@ -57,7 +65,7 @@ public class ClaudeCodeApplication {
                     return null;
                 }
                 String openaiModel = model != null ? model : "gpt-4o";
-                config.setLlmConfig(LLMConfig.ofOpenAI(openaiKey, openaiModel));
+                config.setLlmConfig(LLMConfigs.openAI(openaiKey, openaiModel));
             }
             case "aliyun", "dashscope", "qwen" -> {
                 String aliyunKey = apiKey != null ? apiKey : System.getenv("DASHSCOPE_API_KEY");
@@ -66,11 +74,11 @@ public class ClaudeCodeApplication {
                     return null;
                 }
                 String aliyunModel = model != null ? model : "qwen-max";
-                config.setLlmConfig(LLMConfig.ofAliyun(aliyunKey, aliyunModel));
+                config.setLlmConfig(LLMConfigs.aliyun(aliyunKey, aliyunModel));
             }
             case "ollama" -> {
                 String ollamaModel = model != null ? model : "llama3";
-                config.setLlmConfig(LLMConfig.ofOllama(ollamaModel));
+                config.setLlmConfig(LLMConfigs.ollama(ollamaModel));
                 config.setRequireApproval(false);
             }
             case "siliconflow" -> {
@@ -80,7 +88,7 @@ public class ClaudeCodeApplication {
                     return null;
                 }
                 String sfModel = model != null ? model : "deepseek-ai/DeepSeek-V3";
-                config.setLlmConfig(LLMConfig.ofSiliconFlow(sfKey, sfModel));
+                config.setLlmConfig(LLMConfigs.siliconFlow(sfKey, sfModel));
             }
             default -> {
                 System.err.println("Unknown provider: " + provider);
@@ -90,8 +98,7 @@ public class ClaudeCodeApplication {
         }
 
         // parse additional flags
-        String noApproval = getArgValue(args, "--no-approval", null);
-        if (noApproval != null || hasFlag(args, "--no-approval")) {
+        if (hasFlag(args, "--no-approval")) {
             config.setRequireApproval(false);
         }
 
@@ -104,6 +111,53 @@ public class ClaudeCodeApplication {
             }
         }
 
+        String maxTokens = getArgValue(args, "--max-tokens", null);
+        if (maxTokens != null) {
+            try {
+                config.setMaxTokens(Integer.parseInt(maxTokens));
+            } catch (NumberFormatException e) {
+                System.err.println("Warning: Invalid --max-tokens value, using default.");
+            }
+        }
+
+        String temperature = getArgValue(args, "--temperature", null);
+        if (temperature != null) {
+            try {
+                config.setTemperature(Float.parseFloat(temperature));
+            } catch (NumberFormatException e) {
+                System.err.println("Warning: Invalid --temperature value, using default.");
+            }
+        }
+
+        String topP = getArgValue(args, "--top-p", null);
+        if (topP != null) {
+            try {
+                config.setTopP(Float.parseFloat(topP));
+            } catch (NumberFormatException e) {
+                System.err.println("Warning: Invalid --top-p value, using default.");
+            }
+        }
+
+        String contextWindow = getArgValue(args, "--context-window", null);
+        if (contextWindow != null) {
+            try {
+                config.setContextWindow(Integer.parseInt(contextWindow));
+            } catch (NumberFormatException e) {
+                System.err.println("Warning: Invalid --context-window value, using default.");
+            }
+        }
+
+        if (hasFlag(args, "--no-color")) {
+            config.setColorEnabled(false);
+        }
+
+        if (hasFlag(args, "--no-markdown")) {
+            config.setMarkdownRendering(false);
+        }
+
+        // apply config overrides to LLMConfig
+        config.applyToLLMConfig();
+
         return config;
     }
 
@@ -112,15 +166,13 @@ public class ClaudeCodeApplication {
     }
 
     private static void executeSinglePrompt(ClaudeCodeConfig config, String prompt) {
-        io.leavesfly.evox.claudecode.permission.PermissionManager permissionManager =
-                new io.leavesfly.evox.claudecode.permission.PermissionManager(config, (toolName, params) -> {
+        PermissionManager permissionManager = new PermissionManager(config, (toolName, params) -> {
                     // in single-prompt mode, auto-approve all tools
                     return true;
                 });
 
-        io.leavesfly.evox.claudecode.agent.CodingAgent agent =
-                new io.leavesfly.evox.claudecode.agent.CodingAgent(config, permissionManager);
-        agent.setStreamCallback(System.out::print);
+        CodingAgent agent = new CodingAgent(config, permissionManager);
+        agent.setStreamCallback(text -> System.out.print(text));
 
         String response = agent.chat(prompt);
         if (response != null && !response.isBlank()) {

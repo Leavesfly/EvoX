@@ -1,6 +1,6 @@
 package io.leavesfly.evox.optimizers;
 
-import io.leavesfly.evox.models.base.BaseLLM;
+import io.leavesfly.evox.models.base.LLMProvider;
 import io.leavesfly.evox.workflow.base.Workflow;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
@@ -28,12 +28,12 @@ public class TextGradOptimizer extends Optimizer {
     /**
      * 用于优化的LLM(生成梯度)
      */
-    private BaseLLM optimizerLLM;
+    private LLMProvider optimizerLLM;
 
     /**
      * 用于执行的LLM(运行工作流)
      */
-    private BaseLLM executorLLM;
+    private LLMProvider executorLLM;
 
     /**
      * 优化模式: "all", "system_prompt", "instruction"

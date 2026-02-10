@@ -1,5 +1,6 @@
 package io.leavesfly.evox.claudecode.agent;
 
+import io.leavesfly.evox.agents.base.Agent;
 import io.leavesfly.evox.claudecode.config.ClaudeCodeConfig;
 import io.leavesfly.evox.claudecode.context.ProjectContext;
 import io.leavesfly.evox.claudecode.permission.PermissionManager;
@@ -8,23 +9,45 @@ import io.leavesfly.evox.core.message.Message;
 import io.leavesfly.evox.core.message.MessageType;
 import io.leavesfly.evox.memory.manager.MemoryManager;
 import io.leavesfly.evox.memory.shortterm.ShortTermMemory;
-import io.leavesfly.evox.models.base.BaseLLM;
+import io.leavesfly.evox.models.base.LLMProvider;
+import io.leavesfly.evox.models.client.ChatCompletionResult;
+import io.leavesfly.evox.models.client.ToolCall;
+import io.leavesfly.evox.models.client.ToolDefinition;
 import io.leavesfly.evox.models.factory.LLMFactory;
-import io.leavesfly.evox.tools.base.BaseTool;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.util.function.Consumer;
-import java.util.regex.*;
+import java.util.stream.Collectors;
 
 /**
  * 编码智能体
- * 实现 Function Calling 循环：用户输入 → LLM 思考 → 工具调用 → 结果反馈 → LLM 继续
- * 这是 ClaudeCode 的核心引擎
+ * 继承 EvoX 框架的 {@link Agent} 基类，实现 {@link io.leavesfly.evox.core.agent.IAgent} 接口，
+ * 使用原生 JSON Function Calling 进行流式工具调用循环。
+ *
+ * <p>核心循环：用户输入 → LLM 思考 → 工具调用 → 结果反馈 → LLM 继续</p>
+ *
+ * <p>通过继承 Agent 基类，CodingAgent 可以：</p>
+ * <ul>
+ *   <li>被 {@link io.leavesfly.evox.agents.manager.AgentManager} 注册和管理</li>
+ *   <li>被 Workflow 编排</li>
+ *   <li>通过 {@code AgentTool.wrap(codingAgent)} 作为工具嵌入其他 Agent</li>
+ *   <li>使用 {@code call()} / {@code callAsync()} 等标准调用方式</li>
+ * </ul>
  */
 @Slf4j
-public class CodingAgent {
+public class CodingAgent extends Agent {
+
+    private static final String AGENT_NAME = "CodingAgent";
+    private static final String AGENT_DESCRIPTION =
+            "An agentic coding assistant that uses native JSON Function Calling "
+                    + "with streaming tool execution, permission management, and sub-agent delegation.";
 
     @Getter
     private final ClaudeCodeConfig config;
@@ -37,30 +60,113 @@ public class CodingAgent {
     @Getter
     private final ProjectContext projectContext;
 
-    private final BaseLLM llm;
+    /** 强类型 LLM 引用（LLMProvider 扩展了 ILLM + ILLMToolUse） */
+    private final LLMProvider llmProvider;
+    private final StreamCollector streamCollector;
+    private final ToolExecutor toolExecutor;
+    private final HistoryCompactor historyCompactor;
+
     private Consumer<String> streamCallback;
 
-    // tool call parsing patterns
-    private static final Pattern TOOL_CALL_PATTERN = Pattern.compile(
-            "<tool_call>\\s*<name>(.*?)</name>\\s*<parameters>(.*?)</parameters>\\s*</tool_call>",
-            Pattern.DOTALL
-    );
-    private static final Pattern PARAM_PATTERN = Pattern.compile(
-            "<(\\w+)>(.*?)</\\1>",
-            Pattern.DOTALL
-    );
+    private long totalPromptTokens = 0;
+    private long totalCompletionTokens = 0;
+
+    private List<ToolDefinition> cachedToolDefinitions;
+
+    /** 当前代理的递归深度（0 = 顶层代理） */
+    private final int currentDepth;
 
     public CodingAgent(ClaudeCodeConfig config, PermissionManager permissionManager) {
+        this(config, permissionManager, 0);
+    }
+
+    /**
+     * 内部构造函数，支持指定递归深度（用于子代理创建）
+     *
+     * @param depth 当前递归深度（0 = 顶层代理）
+     */
+    CodingAgent(ClaudeCodeConfig config, PermissionManager permissionManager, int depth) {
+        super(); // Agent() → BaseModule()
         this.config = config;
         this.permissionManager = permissionManager;
+        this.currentDepth = depth;
         this.toolRegistry = new ToolRegistry(config.getWorkingDirectory());
         this.memoryManager = new MemoryManager(new ShortTermMemory(config.getMaxHistoryMessages()));
         this.projectContext = new ProjectContext(config.getWorkingDirectory());
-        this.llm = LLMFactory.create(config.getLlmConfig());
+        this.llmProvider = LLMFactory.create(config.getLlmConfig());
+
+        // set Agent base class fields
+        setName(AGENT_NAME);
+        setDescription(AGENT_DESCRIPTION);
+        setLlm(llmProvider); // inject into base class (ILLM type)
+        setHuman(false);
+
+        // initialize delegated components (streamCallback is set later via setStreamCallback)
+        this.streamCollector = new StreamCollector(llmProvider, this::emitStream);
+        this.toolExecutor = new ToolExecutor(toolRegistry, permissionManager, this::emitStream);
+        this.historyCompactor = new HistoryCompactor(memoryManager, llmProvider,
+                config.getContextWindow(), this::emitStream);
 
         initializeProjectContext();
         initializeSubAgentExecutor();
     }
+
+    // ==================== IAgent / Agent contract ====================
+
+    @Override
+    protected String getPrimaryActionName() {
+        return "chat";
+    }
+
+    /**
+     * 实现 {@link Agent#execute(String, List)} — IAgent 标准入口。
+     * 将 EvoX 框架的 Message 列表转换为用户输入，委托给 {@link #chat(String)}。
+     */
+    @Override
+    public Message execute(String actionName, List<Message> messages) {
+        String userInput = extractUserInput(messages);
+        if (userInput == null || userInput.isBlank()) {
+            return Message.builder()
+                    .messageType(MessageType.ERROR)
+                    .content("No input provided")
+                    .build();
+        }
+
+        try {
+            String response = chat(userInput);
+            return Message.builder()
+                    .messageType(MessageType.RESPONSE)
+                    .content(response)
+                    .build();
+        } catch (Exception e) {
+            log.error("CodingAgent execution failed", e);
+            return Message.builder()
+                    .messageType(MessageType.ERROR)
+                    .content("Execution failed: " + e.getMessage())
+                    .build();
+        }
+    }
+
+    /**
+     * 从 EvoX Message 列表中提取最后一条用户输入文本
+     */
+    private String extractUserInput(List<Message> messages) {
+        if (messages == null || messages.isEmpty()) {
+            return null;
+        }
+        for (int i = messages.size() - 1; i >= 0; i--) {
+            Message msg = messages.get(i);
+            if (msg.getMessageType() == MessageType.INPUT) {
+                Object content = msg.getContent();
+                return content != null ? content.toString() : null;
+            }
+        }
+        // fallback: use last message regardless of type
+        Object content = messages.get(messages.size() - 1).getContent();
+        return content != null ? content.toString() : null;
+    }
+
+    // ==================== Chat & Tool Calling ====================
 
     /**
      * 设置流式输出回调
@@ -70,98 +176,46 @@ public class CodingAgent {
     }
 
     /**
-     * 处理用户输入，执行 Function Calling 循环
+     * 处理用户输入，使用原生 Function Calling 进行工具调用循环
      *
      * @param userInput 用户输入
      * @return Agent 最终回复
      */
     public String chat(String userInput) {
-        // add user message to memory
         Message userMessage = Message.inputMessage(userInput);
         userMessage.setAgent("user");
         memoryManager.addMessage(userMessage);
 
-        // build conversation messages for LLM
-        List<Message> conversationMessages = buildConversationMessages();
+        // auto-compact if estimated token usage exceeds context window threshold
+        autoCompactIfNeeded();
 
-        // function calling loop
-        int iteration = 0;
-        while (iteration < config.getMaxIterations()) {
-            iteration++;
+        return chatWithNativeFunctionCalling();
+    }
 
-            String llmResponse = llm.chat(conversationMessages);
+    /**
+     * 检查是否需要自动压缩对话历史（委托给 HistoryCompactor）
+     */
+    private void autoCompactIfNeeded() {
+        historyCompactor.autoCompactIfNeeded(buildConversationMessages());
+    }
 
-            if (llmResponse == null || llmResponse.isBlank()) {
-                return "I encountered an issue generating a response. Please try again.";
-            }
+    /**
+     * 获取 Token 使用统计
+     */
+    public Map<String, Long> getTokenUsage() {
+        Map<String, Long> usage = new LinkedHashMap<>();
+        usage.put("prompt_tokens", totalPromptTokens);
+        usage.put("completion_tokens", totalCompletionTokens);
+        usage.put("total_tokens", totalPromptTokens + totalCompletionTokens);
+        return usage;
+    }
 
-            // check if LLM wants to call tools
-            List<ToolCallRequest> toolCalls = parseToolCalls(llmResponse);
-
-            if (toolCalls.isEmpty()) {
-                // no tool calls - this is the final response
-                String finalResponse = cleanResponse(llmResponse);
-                emitStream(finalResponse);
-
-                Message assistantMessage = Message.outputMessage(finalResponse);
-                assistantMessage.setAgent("claudecode");
-                memoryManager.addMessage(assistantMessage);
-
-                return finalResponse;
-            }
-
-            // execute tool calls and collect results
-            StringBuilder toolResultsText = new StringBuilder();
-            String textBeforeTools = extractTextBeforeTools(llmResponse);
-            if (!textBeforeTools.isBlank()) {
-                emitStream(textBeforeTools + "\n");
-            }
-
-            // add assistant message with tool calls to conversation
-            Message assistantToolMessage = Message.responseMessage(llmResponse, "claudecode", "tool_call");
-            conversationMessages.add(assistantToolMessage);
-
-            for (ToolCallRequest toolCall : toolCalls) {
-                emitStream("\n🔧 " + toolCall.toolName + "(" + summarizeParams(toolCall.parameters) + ")\n");
-
-                // check permission
-                if (!permissionManager.checkPermission(toolCall.toolName, toolCall.parameters)) {
-                    String deniedResult = "Tool call denied by user: " + toolCall.toolName;
-                    toolResultsText.append("<tool_result>\n<name>").append(toolCall.toolName)
-                            .append("</name>\n<result>").append(deniedResult)
-                            .append("</result>\n</tool_result>\n");
-                    emitStream("  ❌ " + deniedResult + "\n");
-                    continue;
-                }
-
-                // execute tool
-                BaseTool.ToolResult result = toolRegistry.executeTool(toolCall.toolName, toolCall.parameters);
-
-                String resultText;
-                if (result.isSuccess()) {
-                    resultText = formatToolResult(result.getData());
-                    emitStream("  ✅ Success\n");
-                } else {
-                    resultText = "Error: " + result.getError();
-                    emitStream("  ❌ " + resultText + "\n");
-                }
-
-                toolResultsText.append("<tool_result>\n<name>").append(toolCall.toolName)
-                        .append("</name>\n<result>").append(resultText)
-                        .append("</result>\n</tool_result>\n");
-            }
-
-            // add tool results as a new message and continue the loop
-            Message toolResultMessage = Message.inputMessage(toolResultsText.toString());
-            toolResultMessage.setAgent("system");
-            toolResultMessage.setAction("tool_result");
-            conversationMessages.add(toolResultMessage);
-        }
-
-        String maxIterationResponse = "Reached maximum iteration limit (" + config.getMaxIterations()
-                + "). Please provide more specific instructions.";
-        emitStream(maxIterationResponse);
-        return maxIterationResponse;
+    /**
+     * 重置 Token 使用统计
+     */
+    public void resetTokenUsage() {
+        totalPromptTokens = 0;
+        totalCompletionTokens = 0;
     }
 
     /**
@@ -169,224 +223,220 @@ public class CodingAgent {
      */
     public void clearHistory() {
         memoryManager.clearShortTerm();
+        resetTokenUsage();
     }
 
     /**
-     * 压缩对话历史（保留关键信息）
+     * 压缩对话历史（委托给 HistoryCompactor）
      */
     public void compactHistory() {
-        List<Message> allMessages = memoryManager.getAllMessages();
-        if (allMessages.size() <= 10) {
-            return;
+        historyCompactor.compact();
+    }
+
+    // ==================== Native Function Calling ====================
+
+    /**
+     * 使用 LLM 原生 JSON Function Calling 进行流式工具调用循环。
+     * 文本 token 实时输出到终端，ToolCall 增量在后台拼接，
+     * 流结束后统一执行工具调用并将结果反馈给 LLM 进入下一轮迭代。
+     */
+    private String chatWithNativeFunctionCalling() {
+        List<Message> conversationMessages = buildConversationMessages();
+        List<ToolDefinition> toolDefinitions = getToolDefinitions();
+
+        int iteration = 0;
+        while (iteration < config.getMaxIterations()) {
+            iteration++;
+
+            ChatCompletionResult result = streamCollector.collectWithRetry(conversationMessages, toolDefinitions);
+
+            if (result == null) {
+                return emitAndStore("I encountered an issue generating a response after multiple attempts. Please try again.");
+            }
+
+            trackTokenUsage(result);
+
+            // LLM returned text only — final response
+            if (result.isTextResponse()) {
+                Message assistantMessage = Message.outputMessage(result.getContent());
+                assistantMessage.setAgent("claudecode");
+                memoryManager.addMessage(assistantMessage);
+                return result.getContent();
+            }
+
+            // LLM wants to call tools
+            if (result.hasToolCalls()) {
+                Message assistantMessage = Message.responseMessage(
+                        result.getContent() != null ? result.getContent() : "", "claudecode", "tool_call");
+                assistantMessage.putMetadata("tool_calls", result.getToolCalls());
+                conversationMessages.add(assistantMessage);
+
+                List<ToolCall> toolCalls = result.getToolCalls();
+
+                if (toolCalls.size() == 1) {
+                    ToolCall toolCall = toolCalls.get(0);
+                    String toolName = toolCall.getFunction().getName();
+                    Map<String, Object> parameters = toolExecutor.parseToolArguments(toolCall.getFunction().getArguments());
+
+                    emitStream("\n🔧 " + toolName + "(" + toolExecutor.summarizeParams(parameters) + ")\n");
+                    String toolResultContent = toolExecutor.executeWithPermission(toolName, parameters);
+
+                    Message toolResultMessage = Message.responseMessage(toolResultContent, "claudecode", "tool_result");
+                    toolResultMessage.putMetadata("tool_call_id", toolCall.getId());
+                    conversationMessages.add(toolResultMessage);
+                } else {
+                    // multiple tool calls — prepare and delegate to ToolExecutor for parallel execution
+                    List<String> toolNames = new ArrayList<>();
+                    List<Map<String, Object>> parametersList = new ArrayList<>();
+                    for (ToolCall toolCall : toolCalls) {
+                        toolNames.add(toolCall.getFunction().getName());
+                        parametersList.add(toolExecutor.parseToolArguments(toolCall.getFunction().getArguments()));
+                    }
+
+                    List<String> results = toolExecutor.executeInParallel(toolNames, parametersList);
+
+                    for (int i = 0; i < toolCalls.size(); i++) {
+                        Message toolResultMessage = Message.responseMessage(
+                                results.get(i), "claudecode", "tool_result");
+                        toolResultMessage.putMetadata("tool_call_id", toolCalls.get(i).getId());
+                        conversationMessages.add(toolResultMessage);
+                    }
+                }
+
+                continue;
+            }
+
+            // unexpected: no content and no tool calls
+            return emitAndStore("I received an unexpected response. Please try again.");
         }
 
-        // keep system message, first 2 and last 8 messages
-        List<Message> compacted = new ArrayList<>();
-        if (allMessages.size() > 10) {
-            compacted.addAll(allMessages.subList(0, 2));
+        return emitAndStore("Reached maximum iteration limit (" + config.getMaxIterations()
+                + "). Please provide more specific instructions.");
+    }
 
-            // add a summary marker
-            Message summaryMarker = Message.systemMessage(
-                    "[Previous conversation history has been compacted. " + (allMessages.size() - 10)
-                            + " messages were summarized.]"
-            );
-            compacted.add(summaryMarker);
-
-            compacted.addAll(allMessages.subList(allMessages.size() - 8, allMessages.size()));
-        } else {
-            compacted.addAll(allMessages);
+    /**
+     * 追踪 Token 使用量
+     */
+    private void trackTokenUsage(ChatCompletionResult result) {
+        if (result != null && result.getUsage() != null) {
+            totalPromptTokens += result.getUsage().getPromptTokens();
+            totalCompletionTokens += result.getUsage().getCompletionTokens();
         }
+    }
 
-        memoryManager.clearShortTerm();
-        memoryManager.addMessages(compacted);
+    /**
+     * 获取工具定义列表（带缓存）
+     */
+    private List<ToolDefinition> getToolDefinitions() {
+        if (cachedToolDefinitions == null) {
+            cachedToolDefinitions = toolRegistry.getToolSchemas().stream()
+                    .map(ToolDefinition::fromToolSchema)
+                    .filter(Objects::nonNull)
+                    .collect(Collectors.toList());
+            log.debug("Built {} tool definitions for function calling", cachedToolDefinitions.size());
+        }
+        return cachedToolDefinitions;
+    }
+
+    /**
+     * 使缓存的工具定义失效（当工具列表变化时调用，如 MCP 工具动态注册）
+     */
+    public void invalidateToolDefinitionCache() {
+        cachedToolDefinitions = null;
+        log.debug("Tool definition cache invalidated");
+    }
+
+    /**
+     * 输出流式文本并存储到记忆
+     */
+    private String emitAndStore(String response) {
+        emitStream(response);
+        Message assistantMessage = Message.outputMessage(response);
+        assistantMessage.setAgent("claudecode");
+        memoryManager.addMessage(assistantMessage);
+        return response;
     }
 
     private void initializeProjectContext() {
+        projectContext.scanProject();
         projectContext.loadProjectRules(config.getProjectRulesFileName());
     }
 
     /**
-     * 初始化子代理执行器
-     * 将 SubAgentTool 的 executor 绑定为创建独立 CodingAgent 子实例
+     * 初始化子代理执行器（带递归深度限制）
      */
     private void initializeSubAgentExecutor() {
         var subAgentTool = toolRegistry.getSubAgentTool();
         if (subAgentTool != null) {
+            int nextDepth = currentDepth + 1;
+            int maxDepth = config.getMaxSubAgentDepth();
+
             subAgentTool.setExecutor((taskDescription, taskPrompt) -> {
-                log.info("Sub-agent executing: {}", taskDescription);
+                if (nextDepth > maxDepth) {
+                    String errorMessage = "Sub-agent delegation rejected: maximum recursion depth ("
+                            + maxDepth + ") exceeded at depth " + currentDepth
+                            + ". Please handle this task directly.";
+                    log.warn(errorMessage);
+                    return errorMessage;
+                }
 
-                // create a child CodingAgent with shared config but independent history
-                PermissionManager childPermissionManager = new PermissionManager(config, (toolName, params) -> {
-                    // sub-agents inherit the parent's permission approvals
-                    return permissionManager.checkPermission(toolName, params);
-                });
+                log.info("Sub-agent executing at depth {}/{}: {}", nextDepth, maxDepth, taskDescription);
 
-                CodingAgent childAgent = new CodingAgent(config, childPermissionManager);
+                PermissionManager childPermissionManager = new PermissionManager(config, (toolName, params) ->
+                        permissionManager.checkPermission(toolName, params));
+
+                CodingAgent childAgent = new CodingAgent(config, childPermissionManager, nextDepth);
                 return childAgent.chat(taskPrompt);
             });
-            log.info("Sub-agent executor initialized");
+            log.info("Sub-agent executor initialized (current depth: {}, max depth: {})", currentDepth, maxDepth);
         }
     }
 
     private List<Message> buildConversationMessages() {
         List<Message> messages = new ArrayList<>();
-
-        // system prompt
-        String systemPrompt = buildSystemPrompt();
-        messages.add(Message.systemMessage(systemPrompt));
-
-        // conversation history
+        messages.add(Message.systemMessage(buildSystemPrompt()));
         messages.addAll(memoryManager.getAllMessages());
-
         return messages;
     }
 
     private String buildSystemPrompt() {
         StringBuilder prompt = new StringBuilder();
 
-        // base system prompt
         if (config.getSystemPrompt() != null && !config.getSystemPrompt().isBlank()) {
-            prompt.append(config.getSystemPrompt()).append("\n\n");
+            prompt.append(config.getSystemPrompt());
         } else {
-            prompt.append(getDefaultSystemPrompt()).append("\n\n");
+            prompt.append(getDefaultSystemPrompt());
         }
 
-        // project context
-        prompt.append(projectContext.toContextSummary()).append("\n\n");
-
-        // tool descriptions
-        prompt.append(toolRegistry.generateToolDescriptions()).append("\n\n");
-
-        // tool calling format
-        prompt.append(getToolCallingInstructions());
+        String contextSummary = projectContext.toContextSummary();
+        if (!contextSummary.isBlank()) {
+            prompt.append("\n\n").append(contextSummary);
+        }
 
         return prompt.toString();
     }
 
     private String getDefaultSystemPrompt() {
-        return """
-                You are an expert software engineer working as a coding assistant.
-                You have access to tools that let you read, search, and edit files, run shell commands, and manage git.
-                You can also delegate complex tasks to sub-agents and use specialized skills.
-                
-                Key principles:
-                1. Always read files before editing them to understand the current content.
-                2. Use grep/glob to search the codebase before making assumptions.
-                3. Make precise, minimal edits using the file_edit tool.
-                4. Run tests after making changes when appropriate.
-                5. Explain your reasoning and what you're doing.
-                6. If you're unsure, ask the user for clarification.
-                7. For complex multi-step tasks, use the sub_agent tool to delegate independent subtasks.
-                8. For specialized tasks like code review, writing tests, or refactoring, use the skill tool.
-                
-                When you need to use a tool, wrap it in the tool call format specified below.
-                When you have completed the task or want to respond to the user, just write your response directly without tool calls.""";
+        return loadResourceFile("default-system-prompt.txt");
     }
 
-    private String getToolCallingInstructions() {
-        return """
-                ## Tool Calling Format
-                
-                When you need to use a tool, use this XML format:
-                
-                <tool_call>
-                <name>tool_name</name>
-                <parameters>
-                <param_name>param_value</param_name>
-                </parameters>
-                </tool_call>
-                
-                You can make multiple tool calls in a single response. After each tool call, you will receive the results.
-                Continue calling tools until you have enough information to provide a complete answer.
-                When you are done, provide your final response without any tool calls.""";
-    }
-
-    private List<ToolCallRequest> parseToolCalls(String response) {
-        List<ToolCallRequest> toolCalls = new ArrayList<>();
-        Matcher matcher = TOOL_CALL_PATTERN.matcher(response);
-
-        while (matcher.find()) {
-            String toolName = matcher.group(1).trim();
-            String parametersXml = matcher.group(2).trim();
-
-            Map<String, Object> parameters = new LinkedHashMap<>();
-            Matcher paramMatcher = PARAM_PATTERN.matcher(parametersXml);
-            while (paramMatcher.find()) {
-                String paramName = paramMatcher.group(1);
-                String paramValue = paramMatcher.group(2).trim();
-
-                // try to parse as boolean or number
-                if ("true".equalsIgnoreCase(paramValue) || "false".equalsIgnoreCase(paramValue)) {
-                    parameters.put(paramName, Boolean.parseBoolean(paramValue));
-                } else {
-                    try {
-                        parameters.put(paramName, Integer.parseInt(paramValue));
-                    } catch (NumberFormatException e) {
-                        parameters.put(paramName, paramValue);
-                    }
-                }
+    /**
+     * 从 classpath 资源文件加载文本内容
+     */
+    private String loadResourceFile(String resourceName) {
+        try (InputStream inputStream = getClass().getClassLoader().getResourceAsStream(resourceName)) {
+            if (inputStream == null) {
+                log.warn("Resource file not found: {}, using fallback prompt", resourceName);
+                return "You are an expert software engineer working as a coding assistant.";
             }
-
-            toolCalls.add(new ToolCallRequest(toolName, parameters));
-        }
-
-        return toolCalls;
-    }
-
-    private String extractTextBeforeTools(String response) {
-        int firstToolCallIndex = response.indexOf("<tool_call>");
-        if (firstToolCallIndex > 0) {
-            return response.substring(0, firstToolCallIndex).trim();
-        }
-        return "";
-    }
-
-    private String cleanResponse(String response) {
-        // remove any stray tool_call or tool_result tags
-        return response
-                .replaceAll("<tool_call>.*?</tool_call>", "")
-                .replaceAll("<tool_result>.*?</tool_result>", "")
-                .trim();
-    }
-
-    private String formatToolResult(Object data) {
-        if (data == null) {
-            return "(no data)";
-        }
-        if (data instanceof Map) {
-            @SuppressWarnings("unchecked")
-            Map<String, Object> map = (Map<String, Object>) data;
-            StringBuilder formatted = new StringBuilder();
-            map.forEach((key, value) -> {
-                String valueStr = value != null ? value.toString() : "null";
-                // truncate very long values
-                if (valueStr.length() > 5000) {
-                    valueStr = valueStr.substring(0, 5000) + "\n... (truncated, " + valueStr.length() + " chars total)";
-                }
-                formatted.append(key).append(": ").append(valueStr).append("\n");
-            });
-            return formatted.toString().stripTrailing();
-        }
-        String result = data.toString();
-        if (result.length() > 5000) {
-            result = result.substring(0, 5000) + "\n... (truncated, " + result.length() + " chars total)";
-        }
-        return result;
-    }
-
-    private String summarizeParams(Map<String, Object> parameters) {
-        if (parameters.isEmpty()) {
-            return "";
-        }
-        List<String> parts = new ArrayList<>();
-        parameters.forEach((key, value) -> {
-            String valueStr = value != null ? value.toString() : "null";
-            if (valueStr.length() > 60) {
-                valueStr = valueStr.substring(0, 60) + "...";
+            try (BufferedReader reader = new BufferedReader(
+                    new InputStreamReader(inputStream, StandardCharsets.UTF_8))) {
+                return reader.lines().collect(Collectors.joining("\n"));
             }
-            parts.add(key + "=" + valueStr);
-        });
-        return String.join(", ", parts);
+        } catch (IOException e) {
+            log.error("Failed to load resource file: {}", resourceName, e);
+            return "You are an expert software engineer working as a coding assistant.";
+        }
     }
 
     private void emitStream(String text) {
@@ -395,9 +445,4 @@ public class CodingAgent {
         }
     }
 
-    /**
-     * 工具调用请求
-     */
-    private record ToolCallRequest(String toolName, Map<String, Object> parameters) {
-    }
 }

@@ -1,6 +1,6 @@
 package io.leavesfly.evox.workflow.generation;
 
-import io.leavesfly.evox.agents.base.Agent;
+import io.leavesfly.evox.core.agent.IAgent;
 import io.leavesfly.evox.workflow.base.Workflow;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -109,7 +109,7 @@ public class WorkflowTemplateManager {
      * @param agents Agent列表
      * @return 生成的工作流
      */
-    public Workflow createFromTemplate(String templateId, List<Agent> agents) {
+    public Workflow createFromTemplate(String templateId, List<IAgent> agents) {
         WorkflowTemplate template = templates.get(templateId);
         if (template == null) {
             throw new IllegalArgumentException("模板不存在: " + templateId);

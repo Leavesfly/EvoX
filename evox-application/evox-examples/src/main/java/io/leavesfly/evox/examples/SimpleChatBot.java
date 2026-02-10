@@ -8,7 +8,7 @@ import io.leavesfly.evox.agents.base.Agent;
 import io.leavesfly.evox.core.message.Message;
 import io.leavesfly.evox.core.message.MessageType;
 import io.leavesfly.evox.memory.shortterm.ShortTermMemory;
-import io.leavesfly.evox.models.base.BaseLLM;
+import io.leavesfly.evox.models.base.LLMProvider;
 import io.leavesfly.evox.models.config.OpenAILLMConfig;
 import io.leavesfly.evox.models.openai.OpenAILLM;
 import lombok.Data;
@@ -112,7 +112,7 @@ public class SimpleChatBot {
                 .build();
         
         // 创建 OpenAI LLM 实例
-        BaseLLM llm = new OpenAILLM(config);
+        LLMProvider llm = new OpenAILLM(config);
         
         // 创建聊天机器人 Agent
         ChatBotAgent agent = new ChatBotAgent(llm);
@@ -163,9 +163,9 @@ public class SimpleChatBot {
     @EqualsAndHashCode(callSuper = true)
     @Slf4j
     static class ChatBotAgent extends Agent {
-        private final BaseLLM llm;
+        private final LLMProvider llm;
         
-        public ChatBotAgent(BaseLLM llm) {
+        public ChatBotAgent(LLMProvider llm) {
             this.llm = llm;
             // 添加聊天动作
             addAction(new ChatAction(llm));
@@ -215,9 +215,9 @@ public class SimpleChatBot {
      */
     @Slf4j
     static class ChatAction extends Action {
-        private final BaseLLM llm;
+        private final LLMProvider llm;
         
-        public ChatAction(BaseLLM llm) {
+        public ChatAction(LLMProvider llm) {
             this.llm = llm;
             setName("chat");
             setDescription("处理用户聊天消息");

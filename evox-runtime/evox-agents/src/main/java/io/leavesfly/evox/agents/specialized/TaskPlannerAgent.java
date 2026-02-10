@@ -3,8 +3,8 @@ package io.leavesfly.evox.agents.specialized;
 import io.leavesfly.evox.agents.base.Agent;
 import io.leavesfly.evox.core.message.Message;
 import io.leavesfly.evox.core.message.MessageType;
-import io.leavesfly.evox.models.base.BaseLLM;
-import io.leavesfly.evox.models.config.LLMConfig;
+import io.leavesfly.evox.core.llm.ILLM;
+import io.leavesfly.evox.core.llm.LLMConfig;
 import lombok.Builder;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
@@ -55,7 +55,7 @@ public class TaskPlannerAgent extends Agent {
             String description,
             String systemPrompt,
             LLMConfig llmConfig,
-            BaseLLM llm,
+            ILLM llm,
             Integer maxSubTasks,
             Boolean includeDependencies
     ) {
@@ -86,7 +86,7 @@ public class TaskPlannerAgent extends Agent {
             String planningPrompt = buildPlanningPrompt(goal);
 
             // 调用LLM生成计划
-            BaseLLM llmInstance = getLlm();
+            ILLM llmInstance = getLlm();
             if (llmInstance == null) {
                 throw new IllegalStateException("LLM not initialized for TaskPlannerAgent");
             }

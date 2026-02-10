@@ -1,7 +1,7 @@
 package io.leavesfly.evox.actions.base;
 
+import io.leavesfly.evox.core.llm.ILLM;
 import io.leavesfly.evox.core.module.BaseModule;
-import io.leavesfly.evox.models.base.BaseLLM;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
@@ -35,7 +35,7 @@ public abstract class Action extends BaseModule {
     /**
      * 语言模型实例
      */
-    private transient BaseLLM llm;
+    private transient ILLM llm;
 
     /**
      * 同步执行动作

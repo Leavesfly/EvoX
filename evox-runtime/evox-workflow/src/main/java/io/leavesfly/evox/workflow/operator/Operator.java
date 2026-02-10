@@ -1,7 +1,7 @@
 package io.leavesfly.evox.workflow.operator;
 
 import io.leavesfly.evox.core.module.BaseModule;
-import io.leavesfly.evox.models.base.BaseLLM;
+import io.leavesfly.evox.core.llm.ILLM;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
@@ -44,7 +44,7 @@ public abstract class Operator extends BaseModule {
     /**
      * 使用的 LLM（可选）
      */
-    private BaseLLM llm;
+    private ILLM llm;
 
     @Override
     public void initModule() {

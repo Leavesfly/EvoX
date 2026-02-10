@@ -1,5 +1,6 @@
 package io.leavesfly.evox.evaluation.task;
 
+import io.leavesfly.evox.core.evaluation.EvaluationResult;
 import io.leavesfly.evox.evaluation.Evaluator;
 import lombok.Data;
 import lombok.EqualsAndHashCode;

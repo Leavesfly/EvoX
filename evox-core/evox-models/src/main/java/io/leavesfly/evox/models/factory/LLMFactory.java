@@ -1,7 +1,7 @@
 package io.leavesfly.evox.models.factory;
 
 import io.leavesfly.evox.models.aliyun.AliyunLLM;
-import io.leavesfly.evox.models.base.BaseLLM;
+import io.leavesfly.evox.models.base.LLMProvider;
 import io.leavesfly.evox.models.config.*;
 import io.leavesfly.evox.models.litellm.LiteLLM;
 import io.leavesfly.evox.models.ollama.OllamaLLM;
@@ -15,7 +15,7 @@ import java.util.function.Function;
 
 /**
  * LLM 工厂
- * 根据 LLMConfig 自动创建对应的 BaseLLM 实例
+ * 根据 LLMConfig 自动创建对应的 LLMProvider 实例
  *
  * <p>核心作用：消除手动 new XxxLLM(config) 的样板代码，
  * 让用户只需关注配置，不需要知道具体的 LLM 实现类</p>
@@ -23,13 +23,13 @@ import java.util.function.Function;
  * <p>使用方式：</p>
  * <pre>{@code
  * // 方式1：从配置自动创建
- * LLMConfig config = LLMConfig.ofOpenAI("sk-xxx", "gpt-4o");
- * BaseLLM llm = LLMFactory.create(config);
+ * LLMConfig config = LLMConfigs.openAI("sk-xxx", "gpt-4o");
+ * LLMProvider llm = LLMFactory.create(config);
  *
  * // 方式2：快捷方法
- * BaseLLM llm = LLMFactory.openai("sk-xxx");
- * BaseLLM llm = LLMFactory.aliyun("sk-xxx", "qwen-max");
- * BaseLLM llm = LLMFactory.ollama("llama3");
+ * LLMProvider llm = LLMFactory.openai("sk-xxx");
+ * LLMProvider llm = LLMFactory.aliyun("sk-xxx", "qwen-max");
+ * LLMProvider llm = LLMFactory.ollama("llama3");
  * }</pre>
  *
  * @author EvoX Team
@@ -40,7 +40,7 @@ public class LLMFactory {
     /**
      * 已注册的 provider -> 创建函数映射
      */
-    private static final Map<String, Function<LLMConfig, BaseLLM>> REGISTRY = new ConcurrentHashMap<>();
+    private static final Map<String, Function<LLMConfig, LLMProvider>> REGISTRY = new ConcurrentHashMap<>();
 
     static {
         // 注册内置 provider
@@ -60,13 +60,13 @@ public class LLMFactory {
     // ===================================================================
 
     /**
-     * 根据 LLMConfig 自动创建对应的 BaseLLM 实例
+     * 根据 LLMConfig 自动创建对应的 LLMProvider 实例
      *
      * @param config LLM 配置
-     * @return BaseLLM 实例
+     * @return LLMProvider 实例
      * @throws IllegalArgumentException 如果配置为null或provider未注册
      */
-    public static BaseLLM create(LLMConfig config) {
+    public static LLMProvider create(LLMConfig config) {
         if (config == null) {
             throw new IllegalArgumentException("LLMConfig cannot be null");
         }
@@ -77,7 +77,7 @@ public class LLMFactory {
             provider = inferProvider(config);
         }
 
-        Function<LLMConfig, BaseLLM> creator = REGISTRY.get(provider.toLowerCase());
+        Function<LLMConfig, LLMProvider> creator = REGISTRY.get(provider.toLowerCase());
         if (creator == null) {
             throw new IllegalArgumentException(
                     "Unknown LLM provider: '" + provider + "'. " +
@@ -96,7 +96,7 @@ public class LLMFactory {
      * @param provider provider 标识（如 "deepseek", "anthropic"）
      * @param creator  创建函数
      */
-    public static void register(String provider, Function<LLMConfig, BaseLLM> creator) {
+    public static void register(String provider, Function<LLMConfig, LLMProvider> creator) {
         REGISTRY.put(provider.toLowerCase(), creator);
         log.debug("Registered LLM provider: {}", provider);
     }
@@ -115,21 +115,21 @@ public class LLMFactory {
     /**
      * 创建 OpenAI LLM（使用环境变量 OPENAI_API_KEY）
      */
-    public static BaseLLM openai() {
+    public static LLMProvider openai() {
         return openai(getEnvOrThrow("OPENAI_API_KEY"), "gpt-4o-mini");
     }
 
     /**
      * 创建 OpenAI LLM
      */
-    public static BaseLLM openai(String apiKey) {
+    public static LLMProvider openai(String apiKey) {
         return openai(apiKey, "gpt-4o-mini");
     }
 
     /**
      * 创建 OpenAI LLM
      */
-    public static BaseLLM openai(String apiKey, String model) {
+    public static LLMProvider openai(String apiKey, String model) {
         OpenAILLMConfig config = OpenAILLMConfig.builder()
                 .apiKey(apiKey)
                 .model(model)
@@ -144,21 +144,21 @@ public class LLMFactory {
     /**
      * 创建阿里云 LLM（使用环境变量 DASHSCOPE_API_KEY）
      */
-    public static BaseLLM aliyun() {
+    public static LLMProvider aliyun() {
         return aliyun(getEnvOrThrow("DASHSCOPE_API_KEY"), "qwen-turbo");
     }
 
     /**
      * 创建阿里云 LLM
      */
-    public static BaseLLM aliyun(String apiKey) {
+    public static LLMProvider aliyun(String apiKey) {
         return aliyun(apiKey, "qwen-turbo");
     }
 
     /**
      * 创建阿里云 LLM
      */
-    public static BaseLLM aliyun(String apiKey, String model) {
+    public static LLMProvider aliyun(String apiKey, String model) {
         AliyunLLMConfig config = AliyunLLMConfig.builder()
                 .aliyunApiKey(apiKey)
                 .model(model)
@@ -173,14 +173,14 @@ public class LLMFactory {
     /**
      * 创建 Ollama LLM（本地默认地址 localhost:11434）
      */
-    public static BaseLLM ollama(String model) {
+    public static LLMProvider ollama(String model) {
         return ollama(model, OllamaLLMConfig.DEFAULT_BASE_URL);
     }
 
     /**
      * 创建 Ollama LLM
      */
-    public static BaseLLM ollama(String model, String baseUrl) {
+    public static LLMProvider ollama(String model, String baseUrl) {
         OllamaLLMConfig config = OllamaLLMConfig.builder()
                 .model(model)
                 .baseUrl(baseUrl)
@@ -195,21 +195,21 @@ public class LLMFactory {
     /**
      * 创建 SiliconFlow LLM（使用环境变量 SILICONFLOW_API_KEY）
      */
-    public static BaseLLM siliconflow() {
+    public static LLMProvider siliconflow() {
         return siliconflow(getEnvOrThrow("SILICONFLOW_API_KEY"), "Qwen/Qwen2.5-7B-Instruct");
     }
 
     /**
      * 创建 SiliconFlow LLM
      */
-    public static BaseLLM siliconflow(String apiKey) {
+    public static LLMProvider siliconflow(String apiKey) {
         return siliconflow(apiKey, "Qwen/Qwen2.5-7B-Instruct");
     }
 
     /**
      * 创建 SiliconFlow LLM
      */
-    public static BaseLLM siliconflow(String apiKey, String model) {
+    public static LLMProvider siliconflow(String apiKey, String model) {
         SiliconFlowConfig config = SiliconFlowConfig.builder()
                 .siliconflowKey(apiKey)
                 .model(model)
@@ -224,14 +224,14 @@ public class LLMFactory {
     /**
      * 创建 LiteLLM（本地代理）
      */
-    public static BaseLLM litellm(String model) {
+    public static LLMProvider litellm(String model) {
         return litellm(model, "http://localhost:4000");
     }
 
     /**
      * 创建 LiteLLM
      */
-    public static BaseLLM litellm(String model, String baseUrl) {
+    public static LLMProvider litellm(String model, String baseUrl) {
         LiteLLMConfig config = LiteLLMConfig.builder()
                 .model(model)
                 .litellmBaseUrl(baseUrl)

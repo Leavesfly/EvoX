@@ -1,6 +1,6 @@
 package io.leavesfly.evox.optimizers;
 
-import io.leavesfly.evox.models.base.BaseLLM;
+import io.leavesfly.evox.models.base.LLMProvider;
 import io.leavesfly.evox.models.openai.OpenAILLM;
 import io.leavesfly.evox.models.config.OpenAILLMConfig;
 import io.leavesfly.evox.workflow.base.Workflow;
@@ -21,7 +21,7 @@ import static org.junit.jupiter.api.Assertions.*;
 class OptimizerTest {
 
     private Workflow testWorkflow;
-    private BaseLLM testLLM;
+    private LLMProvider testLLM;
     private Object testDataset;
 
     @BeforeEach

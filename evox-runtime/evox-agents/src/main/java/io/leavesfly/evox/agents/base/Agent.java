@@ -2,12 +2,11 @@ package io.leavesfly.evox.agents.base;
 
 import io.leavesfly.evox.actions.base.Action;
 import io.leavesfly.evox.core.agent.IAgent;
+import io.leavesfly.evox.core.llm.ILLM;
+import io.leavesfly.evox.core.llm.LLMConfig;
 import io.leavesfly.evox.core.message.Message;
 import io.leavesfly.evox.core.message.MessageType;
 import io.leavesfly.evox.core.module.BaseModule;
-import io.leavesfly.evox.models.base.BaseLLM;
-import io.leavesfly.evox.models.config.LLMConfig;
-import io.leavesfly.evox.models.factory.LLMFactory;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.experimental.SuperBuilder;
@@ -52,7 +51,7 @@ public abstract class Agent extends BaseModule implements IAgent {
     /**
      * LLM实例
      */
-    private transient BaseLLM llm;
+    private transient ILLM llm;
 
     /**
      * 系统提示词
@@ -83,24 +82,15 @@ public abstract class Agent extends BaseModule implements IAgent {
     }
 
     /**
-     * 获取 LLM 实例（支持懒初始化）
+     * 获取 LLM 实例
      *
-     * <p>如果 llm 未直接设置但 llmConfig 已配置，
-     * 会自动通过 LLMFactory 创建 LLM 实例。
-     * 这意味着用户只需设置 llmConfig，无需手动创建 LLM 对象。</p>
+     * <p>LLM 实例应通过构造函数、Builder 或 setter 注入。
+     * 如需从 LLMConfig 自动创建，请使用 AgentBuilder 的 withConfig() 方法，
+     * 或在应用层通过 LLMFactory 创建后注入。</p>
      *
-     * @return LLM 实例，如果既没有设置 llm 也没有设置 llmConfig 则返回 null
+     * @return LLM 实例，未设置时返回 null
      */
-    public BaseLLM getLlm() {
-        if (llm == null && llmConfig != null) {
-            try {
-                llm = LLMFactory.create(llmConfig);
-                log.debug("Auto-created LLM from config: provider={}, model={}",
-                        llmConfig.getProvider(), llmConfig.getModel());
-            } catch (Exception e) {
-                log.error("Failed to auto-create LLM from config: {}", e.getMessage(), e);
-            }
-        }
+    public ILLM getLlm() {
         return llm;
     }
 

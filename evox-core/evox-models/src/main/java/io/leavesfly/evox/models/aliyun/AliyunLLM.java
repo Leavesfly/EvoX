@@ -8,7 +8,7 @@ import com.alibaba.dashscope.common.Role;
 import com.alibaba.dashscope.exception.ApiException;
 import com.alibaba.dashscope.exception.InputRequiredException;
 import com.alibaba.dashscope.exception.NoApiKeyException;
-import io.leavesfly.evox.models.base.BaseLLM;
+import io.leavesfly.evox.models.base.LLMProvider;
 import io.leavesfly.evox.models.config.AliyunLLMConfig;
 import io.leavesfly.evox.models.config.LLMConfig;
 import lombok.extern.slf4j.Slf4j;
@@ -26,7 +26,7 @@ import java.util.stream.Collectors;
  * @author EvoX Team
  */
 @Slf4j
-public class AliyunLLM implements BaseLLM {
+public class AliyunLLM implements LLMProvider {
 
     private final AliyunLLMConfig config;
     private final Generation generation;

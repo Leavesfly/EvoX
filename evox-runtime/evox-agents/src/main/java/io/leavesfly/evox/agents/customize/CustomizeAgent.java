@@ -7,8 +7,8 @@ import io.leavesfly.evox.actions.base.SimpleActionOutput;
 import io.leavesfly.evox.agents.base.Agent;
 import io.leavesfly.evox.core.message.Message;
 import io.leavesfly.evox.core.message.MessageType;
-import io.leavesfly.evox.models.base.BaseLLM;
-import io.leavesfly.evox.models.config.LLMConfig;
+import io.leavesfly.evox.core.llm.ILLM;
+import io.leavesfly.evox.core.llm.LLMConfig;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.extern.slf4j.Slf4j;
@@ -189,7 +189,7 @@ public class CustomizeAgent extends Agent {
         private String description;
         private String promptTemplate;
         private LLMConfig llmConfig;
-        private BaseLLM llm;
+        private ILLM llm;
         private ParseMode parseMode = ParseMode.JSON;
         private List<InputSpec> inputs = new ArrayList<>();
         private List<OutputSpec> outputs = new ArrayList<>();
@@ -214,7 +214,7 @@ public class CustomizeAgent extends Agent {
             return this;
         }
 
-        public CustomizeAgentBuilder llm(BaseLLM llm) {
+        public CustomizeAgentBuilder llm(ILLM llm) {
             this.llm = llm;
             return this;
         }

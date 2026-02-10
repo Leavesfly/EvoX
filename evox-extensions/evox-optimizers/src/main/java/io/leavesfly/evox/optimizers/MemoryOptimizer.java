@@ -1,7 +1,7 @@
 package io.leavesfly.evox.optimizers;
 
 import io.leavesfly.evox.memory.shortterm.ShortTermMemory;
-import io.leavesfly.evox.models.base.BaseLLM;
+import io.leavesfly.evox.models.base.LLMProvider;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.experimental.SuperBuilder;
@@ -30,7 +30,7 @@ public class MemoryOptimizer extends Optimizer {
     /**
      * LLM用于分析记忆重要性
      */
-    private BaseLLM llm;
+    private LLMProvider llm;
 
     /**
      * 记忆压缩比例 (0-1)

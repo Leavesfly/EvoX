@@ -1,14 +1,12 @@
 package io.leavesfly.evox.models.siliconflow;
 
 import io.leavesfly.evox.core.message.Message;
-import io.leavesfly.evox.models.base.BaseLLM;
+import io.leavesfly.evox.models.base.LLMProvider;
+import io.leavesfly.evox.models.client.ChatCompletionRequest;
+import io.leavesfly.evox.models.client.OpenAiCompatibleClient;
 import io.leavesfly.evox.models.config.LLMConfig;
 import io.leavesfly.evox.models.config.SiliconFlowConfig;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.ai.chat.client.ChatClient;
-import org.springframework.ai.openai.OpenAiChatModel;
-import org.springframework.ai.openai.OpenAiChatOptions;
-import org.springframework.ai.openai.api.OpenAiApi;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
@@ -16,16 +14,15 @@ import java.util.List;
 
 /**
  * 硅基流动LLM实现
- * 使用OpenAI兼容接口调用硅基流动服务
+ * 通过 OpenAI 兼容 HTTP 客户端调用硅基流动服务
  *
  * @author EvoX Team
  */
 @Slf4j
-public class SiliconFlowLLM implements BaseLLM {
+public class SiliconFlowLLM implements LLMProvider {
 
     private final SiliconFlowConfig config;
-    private final OpenAiChatModel chatModel;
-    private final ChatClient chatClient;
+    private final OpenAiCompatibleClient client;
 
     /**
      * 构造函数
@@ -39,31 +36,9 @@ public class SiliconFlowLLM implements BaseLLM {
 
         this.config = config;
 
-        // 创建OpenAI兼容API客户端
         String baseUrl = config.getBaseUrl();
         String apiKey = config.getEffectiveApiKey();
-
-        OpenAiApi openAiApi = new OpenAiApi(baseUrl, apiKey);
-
-        // 创建聊天选项
-        OpenAiChatOptions.Builder optionsBuilder = OpenAiChatOptions.builder()
-                .withModel(config.getModel());
-
-        if (config.getTemperature() != null) {
-            optionsBuilder.withTemperature(config.getTemperature());
-        }
-        if (config.getMaxTokens() != null) {
-            optionsBuilder.withMaxTokens(config.getMaxTokens());
-        }
-        if (config.getTopP() != null) {
-            optionsBuilder.withTopP(config.getTopP());
-        }
-
-        OpenAiChatOptions options = optionsBuilder.build();
-
-        // 创建聊天模型
-        this.chatModel = new OpenAiChatModel(openAiApi, options);
-        this.chatClient = ChatClient.create(chatModel);
+        this.client = new OpenAiCompatibleClient(baseUrl, apiKey, config.getTimeout());
 
         log.info("Initialized SiliconFlow LLM with model: {}", config.getModel());
     }
@@ -73,12 +48,17 @@ public class SiliconFlowLLM implements BaseLLM {
         try {
             log.debug("Generating response for prompt: {}", prompt.substring(0, Math.min(50, prompt.length())));
 
-            String response = chatClient.prompt()
-                    .user(prompt)
-                    .call()
-                    .content();
+            ChatCompletionRequest request = OpenAiCompatibleClient.buildChatRequest(
+                    config.getModel(), prompt,
+                    config.getTemperature(),
+                    config.getMaxTokens(),
+                    config.getTopP(),
+                    config.getFrequencyPenalty(),
+                    config.getPresencePenalty());
 
-            if (config.getOutputResponse()) {
+            String response = client.chatCompletion(request);
+
+            if (Boolean.TRUE.equals(config.getOutputResponse())) {
                 log.info("SiliconFlow Response: {}", response);
             }
 
@@ -97,17 +77,22 @@ public class SiliconFlowLLM implements BaseLLM {
     @Override
     public Flux<String> generateStream(String prompt) {
         try {
-            return chatClient.prompt()
-                    .user(prompt)
-                    .stream()
-                    .content()
+            ChatCompletionRequest request = OpenAiCompatibleClient.buildChatRequest(
+                    config.getModel(), prompt,
+                    config.getTemperature(),
+                    config.getMaxTokens(),
+                    config.getTopP(),
+                    config.getFrequencyPenalty(),
+                    config.getPresencePenalty());
+
+            return client.chatCompletionStream(request)
                     .doOnNext(chunk -> {
-                        if (config.getOutputResponse()) {
+                        if (Boolean.TRUE.equals(config.getOutputResponse())) {
                             System.out.print(chunk);
                         }
                     })
                     .doOnComplete(() -> {
-                        if (config.getOutputResponse()) {
+                        if (Boolean.TRUE.equals(config.getOutputResponse())) {
                             System.out.println();
                         }
                     });
@@ -119,7 +104,6 @@ public class SiliconFlowLLM implements BaseLLM {
 
     @Override
     public String chat(List<Message> messages) {
-        // 简化实现：将消息列表转换为单个prompt
         StringBuilder promptBuilder = new StringBuilder();
         for (Message msg : messages) {
             if (msg.getContent() != null) {

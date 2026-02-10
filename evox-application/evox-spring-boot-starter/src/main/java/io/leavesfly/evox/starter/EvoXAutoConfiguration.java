@@ -1,7 +1,7 @@
 package io.leavesfly.evox.starter;
 
 import io.leavesfly.evox.memory.shortterm.ShortTermMemory;
-import io.leavesfly.evox.models.base.BaseLLM;
+import io.leavesfly.evox.models.base.LLMProvider;
 import io.leavesfly.evox.models.config.OpenAILLMConfig;
 import io.leavesfly.evox.models.openai.OpenAILLM;
 import io.leavesfly.evox.tools.api.ToolRegistry;
@@ -30,7 +30,7 @@ import org.springframework.context.annotation.Configuration;
  * @SpringBootApplication
  * public class MyApp {
  *     @Autowired
- *     private BaseLLM llm;  // 自动注入
+ *     private LLMProvider llm;  // 自动注入
  *     
  *     @Autowired
  *     private ShortTermMemory memory;  // 自动注入
@@ -42,7 +42,7 @@ import org.springframework.context.annotation.Configuration;
  */
 @Slf4j
 @Configuration
-@ConditionalOnClass(BaseLLM.class)
+@ConditionalOnClass(LLMProvider.class)
 @EnableConfigurationProperties(EvoXProperties.class)
 @ConditionalOnProperty(prefix = "evox", name = "enabled", havingValue = "true", matchIfMissing = true)
 public class EvoXAutoConfiguration {
@@ -55,14 +55,14 @@ public class EvoXAutoConfiguration {
     }
     
     /**
-     * 自动配置 BaseLLM
+     * 自动配置 LLMProvider
      * 
      * <p>根据配置自动创建 LLM 实例</p>
      */
     @Bean
     @ConditionalOnMissingBean
     @ConditionalOnProperty(prefix = "evox.llm", name = "provider", havingValue = "openai", matchIfMissing = true)
-    public BaseLLM openAILLM() {
+    public LLMProvider openAILLM() {
         log.info("Auto-configuring OpenAI LLM with model: {}", properties.getLlm().getModel());
         
         String apiKey = properties.getLlm().getApiKey();

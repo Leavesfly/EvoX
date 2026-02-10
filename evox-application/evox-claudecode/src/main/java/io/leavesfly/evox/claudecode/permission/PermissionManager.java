@@ -87,11 +87,39 @@ public class PermissionManager {
     private boolean isBlockedOperation(String toolName, Map<String, Object> parameters) {
         if ("shell".equals(toolName)) {
             String command = (String) parameters.getOrDefault("command", "");
-            String normalizedCommand = command.trim().toLowerCase();
+            String normalizedCommand = command.trim();
             for (String blocked : config.getBlockedCommands()) {
-                if (normalizedCommand.contains(blocked.toLowerCase())) {
+                if (matchesBlockedPattern(normalizedCommand, blocked)) {
                     return true;
                 }
+            }
+        }
+        return false;
+    }
+
+    /**
+     * 检查命令是否匹配黑名单模式。
+     * 支持两种匹配方式：
+     * - 完整命令串匹配（如 "rm -rf /"）：检查命令是否包含该完整子串
+     * - 管道/链式命令中的首词匹配（如 "mkfs"）：检查命令中是否有以该词开头的子命令
+     */
+    private boolean matchesBlockedPattern(String command, String blockedPattern) {
+        String lowerCommand = command.toLowerCase();
+        String lowerPattern = blockedPattern.toLowerCase().trim();
+
+        // exact substring match for multi-word patterns (e.g. "rm -rf /", "dd if=/dev/zero")
+        if (lowerPattern.contains(" ")) {
+            return lowerCommand.contains(lowerPattern);
+        }
+
+        // single-word pattern: match as command start (handles pipes, semicolons, &&, ||)
+        // split by common shell separators and check if any segment starts with the pattern
+        String[] segments = lowerCommand.split("[;|&]+");
+        for (String segment : segments) {
+            String trimmedSegment = segment.trim();
+            if (trimmedSegment.equals(lowerPattern)
+                    || trimmedSegment.startsWith(lowerPattern + " ")) {
+                return true;
             }
         }
         return false;

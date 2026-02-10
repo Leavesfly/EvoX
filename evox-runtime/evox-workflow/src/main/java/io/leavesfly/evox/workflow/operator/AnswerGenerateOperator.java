@@ -1,6 +1,6 @@
 package io.leavesfly.evox.workflow.operator;
 
-import io.leavesfly.evox.models.base.BaseLLM;
+import io.leavesfly.evox.core.llm.ILLM;
 import lombok.extern.slf4j.Slf4j;
 
 import java.util.HashMap;
@@ -28,11 +28,11 @@ public class AnswerGenerateOperator extends Operator {
             <answer>Your final answer</answer>
             """;
 
-    public AnswerGenerateOperator(BaseLLM llm) {
+    public AnswerGenerateOperator(ILLM llm) {
         this(llm, DEFAULT_PROMPT);
     }
 
-    public AnswerGenerateOperator(BaseLLM llm, String prompt) {
+    public AnswerGenerateOperator(ILLM llm, String prompt) {
         this.setName("AnswerGenerate");
         this.setDescription("Generate step by step thinking and final answer");
         this.setOperatorInterface("answer_generate(input: String) -> Map with keys 'thought' and 'answer'");

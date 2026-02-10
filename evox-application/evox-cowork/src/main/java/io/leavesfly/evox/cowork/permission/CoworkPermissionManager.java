@@ -62,16 +62,30 @@ public class CoworkPermissionManager {
             return true;
         }
 
-        String normalizedPath = Path.of(filePath).normalize().toString();
+        try {
+            // Resolve to real path to prevent symlink attacks
+            Path resolvedPath = Path.of(filePath).toAbsolutePath().normalize();
 
-        for (String allowedDir : config.getAllowedDirectories()) {
-            if (normalizedPath.startsWith(allowedDir)) {
+            // Check for symlink traversal
+            if (java.nio.file.Files.exists(resolvedPath) && java.nio.file.Files.isSymbolicLink(resolvedPath)) {
+                resolvedPath = java.nio.file.Files.readSymbolicLink(resolvedPath).toAbsolutePath().normalize();
+            }
+
+            String normalizedPath = resolvedPath.toString();
+
+            for (String allowedDir : config.getAllowedDirectories()) {
+                String normalizedAllowed = Path.of(allowedDir).toAbsolutePath().normalize().toString();
+                if (normalizedPath.startsWith(normalizedAllowed)) {
+                    return true;
+                }
+            }
+
+            String normalizedWorkingDir = Path.of(config.getWorkingDirectory()).toAbsolutePath().normalize().toString();
+            if (normalizedPath.startsWith(normalizedWorkingDir)) {
                 return true;
             }
-        }
-
-        if (normalizedPath.startsWith(config.getWorkingDirectory())) {
-            return true;
+        } catch (Exception e) {
+            log.warn("Failed to validate file access for path: {}", filePath, e);
         }
 
         return false;

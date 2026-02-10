@@ -1,0 +1,1417 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EvoX - AI Assistant Console</title>
+    <style>
+        :root {
+            --primary-color: #667eea;
+            --primary-dark: #5a67d8;
+            --secondary-color: #764ba2;
+            --sidebar-bg: #1a1a2e;
+            --sidebar-text: #e2e8f0;
+            --main-bg: #f0f2f5;
+            --card-bg: #ffffff;
+            --text-primary: #2d3748;
+            --text-secondary: #718096;
+            --success-color: #48bb78;
+            --error-color: #f56565;
+            --warning-color: #ed8936;
+            --info-color: #4299e1;
+            --border-color: #e2e8f0;
+            --shadow-sm: 0 1px 3px rgba(0,0,0,0.12);
+            --shadow-md: 0 4px 6px rgba(0,0,0,0.1);
+            --shadow-lg: 0 10px 15px rgba(0,0,0,0.1);
+            --transition: all 0.3s ease;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background-color: var(--main-bg);
+            color: var(--text-primary);
+            overflow-x: hidden;
+        }
+
+        .app-container {
+            display: flex;
+            min-height: 100vh;
+        }
+
+        /* Sidebar Styles */
+        .sidebar {
+            width: 240px;
+            background-color: var(--sidebar-bg);
+            color: var(--sidebar-text);
+            position: fixed;
+            height: 100vh;
+            overflow-y: auto;
+            z-index: 100;
+        }
+
+        .logo {
+            padding: 24px;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .logo h1 {
+            font-size: 28px;
+            font-weight: 700;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .logo p {
+            font-size: 12px;
+            color: rgba(255,255,255,0.6);
+            margin-top: 4px;
+        }
+
+        .nav-menu {
+            padding: 16px 0;
+        }
+
+        .nav-item {
+            padding: 12px 24px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            transition: var(--transition);
+            border-left: 3px solid transparent;
+        }
+
+        .nav-item:hover {
+            background-color: rgba(255,255,255,0.05);
+        }
+
+        .nav-item.active {
+            background-color: rgba(102, 126, 234, 0.1);
+            border-left-color: var(--primary-color);
+        }
+
+        .nav-item span {
+            font-size: 18px;
+        }
+
+        .nav-item .nav-text {
+            font-size: 14px;
+        }
+
+        /* Main Content */
+        .main-content {
+            flex: 1;
+            margin-left: 240px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .header {
+            background-color: var(--card-bg);
+            padding: 16px 32px;
+            box-shadow: var(--shadow-sm);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .header h2 {
+            font-size: 24px;
+            font-weight: 600;
+        }
+
+        .page-content {
+            padding: 32px;
+            min-height: calc(100vh - 64px);
+        }
+
+        /* Page Styles */
+        .page {
+            display: none;
+        }
+
+        .page.active {
+            display: block;
+            animation: fadeIn 0.3s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Dashboard Cards */
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 24px;
+            margin-bottom: 32px;
+        }
+
+        .stat-card {
+            padding: 24px;
+            border-radius: 12px;
+            color: white;
+            box-shadow: var(--shadow-md);
+            transition: var(--transition);
+        }
+
+        .stat-card:hover {
+            transform: translateY(-4px);
+            box-shadow: var(--shadow-lg);
+        }
+
+        .stat-card.blue {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+
+        .stat-card.green {
+            background: linear-gradient(135deg, #48bb78 0%, #38a169 100%);
+        }
+
+        .stat-card.purple {
+            background: linear-gradient(135deg, #9f7aea 0%, #805ad5 100%);
+        }
+
+        .stat-card.orange {
+            background: linear-gradient(135deg, #ed8936 0%, #dd6b20 100%);
+        }
+
+        .stat-card.cyan {
+            background: linear-gradient(135deg, #4299e1 0%, #3182ce 100%);
+        }
+
+        .stat-card.red {
+            background: linear-gradient(135deg, #f56565 0%, #e53e3e 100%);
+        }
+
+        .stat-card .icon {
+            font-size: 36px;
+            margin-bottom: 12px;
+        }
+
+        .stat-card .value {
+            font-size: 36px;
+            font-weight: 700;
+            margin-bottom: 4px;
+        }
+
+        .stat-card .label {
+            font-size: 14px;
+            opacity: 0.9;
+        }
+
+        .system-status {
+            background: var(--card-bg);
+            padding: 24px;
+            border-radius: 12px;
+            box-shadow: var(--shadow-sm);
+        }
+
+        .system-status h3 {
+            margin-bottom: 16px;
+            font-size: 18px;
+        }
+
+        .status-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 12px 0;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .status-item:last-child {
+            border-bottom: none;
+        }
+
+        .status-label {
+            color: var(--text-secondary);
+        }
+
+        .status-value {
+            font-weight: 600;
+        }
+
+        /* Tables */
+        .table-container {
+            background: var(--card-bg);
+            border-radius: 12px;
+            box-shadow: var(--shadow-sm);
+            overflow: hidden;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th, td {
+            padding: 16px;
+            text-align: left;
+        }
+
+        th {
+            background-color: #f7fafc;
+            font-weight: 600;
+            color: var(--text-secondary);
+            font-size: 14px;
+            text-transform: uppercase;
+        }
+
+        tbody tr {
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        tbody tr:nth-child(even) {
+            background-color: #f7fafc;
+        }
+
+        tbody tr:hover {
+            background-color: #edf2f7;
+        }
+
+        /* Status Badges */
+        .badge {
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+            display: inline-block;
+        }
+
+        .badge.running {
+            background-color: #c6f6d5;
+            color: #22543d;
+        }
+
+        .badge.stopped {
+            background-color: #e2e8f0;
+            color: #4a5568;
+        }
+
+        .badge.error {
+            background-color: #fed7d7;
+            color: #822727;
+        }
+
+        /* Buttons */
+        .btn {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            transition: var(--transition);
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .btn-primary {
+            background-color: var(--primary-color);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background-color: var(--primary-dark);
+        }
+
+        .btn-success {
+            background-color: var(--success-color);
+            color: white;
+        }
+
+        .btn-success:hover {
+            background-color: #38a169;
+        }
+
+        .btn-danger {
+            background-color: var(--error-color);
+            color: white;
+        }
+
+        .btn-danger:hover {
+            background-color: #e53e3e;
+        }
+
+        .btn-sm {
+            padding: 6px 12px;
+            font-size: 13px;
+        }
+
+        /* Skill Cards */
+        .skills-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 24px;
+        }
+
+        .skill-card {
+            background: var(--card-bg);
+            border-radius: 12px;
+            padding: 24px;
+            box-shadow: var(--shadow-sm);
+            transition: var(--transition);
+        }
+
+        .skill-card:hover {
+            box-shadow: var(--shadow-md);
+            transform: translateY(-2px);
+        }
+
+        .skill-card h3 {
+            margin-bottom: 8px;
+            color: var(--primary-color);
+        }
+
+        .skill-card p {
+            color: var(--text-secondary);
+            margin-bottom: 16px;
+            line-height: 1.6;
+        }
+
+        .skill-tools {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-bottom: 16px;
+        }
+
+        .tool-tag {
+            background-color: #edf2f7;
+            color: var(--text-secondary);
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 12px;
+        }
+
+        .skill-actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        /* Filter Tabs */
+        .filter-tabs {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 24px;
+            flex-wrap: wrap;
+        }
+
+        .filter-tab {
+            padding: 8px 16px;
+            border: 1px solid var(--border-color);
+            background: var(--card-bg);
+            border-radius: 20px;
+            cursor: pointer;
+            transition: var(--transition);
+            font-size: 14px;
+        }
+
+        .filter-tab:hover {
+            border-color: var(--primary-color);
+            color: var(--primary-color);
+        }
+
+        .filter-tab.active {
+            background-color: var(--primary-color);
+            color: white;
+            border-color: var(--primary-color);
+        }
+
+        /* Sessions Page */
+        .sessions-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 24px;
+        }
+
+        .input-group {
+            display: flex;
+            gap: 8px;
+        }
+
+        input[type="text"], input[type="number"] {
+            padding: 10px 16px;
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            font-size: 14px;
+            transition: var(--transition);
+        }
+
+        input[type="text"]:focus, input[type="number"]:focus {
+            outline: none;
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        /* Audit Page */
+        .audit-controls {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 24px;
+        }
+
+        .count-selector {
+            display: flex;
+            gap: 8px;
+        }
+
+        .count-btn {
+            padding: 8px 16px;
+            border: 1px solid var(--border-color);
+            background: var(--card-bg);
+            border-radius: 6px;
+            cursor: pointer;
+            transition: var(--transition);
+        }
+
+        .count-btn:hover {
+            border-color: var(--primary-color);
+        }
+
+        .count-btn.active {
+            background-color: var(--primary-color);
+            color: white;
+            border-color: var(--primary-color);
+        }
+
+        .success-icon {
+            color: var(--success-color);
+            font-size: 18px;
+        }
+
+        .error-icon {
+            color: var(--error-color);
+            font-size: 18px;
+        }
+
+        /* Chat Page */
+        .chat-container {
+            background: var(--card-bg);
+            border-radius: 12px;
+            box-shadow: var(--shadow-sm);
+            height: calc(100vh - 200px);
+            display: flex;
+            flex-direction: column;
+        }
+
+        .chat-header {
+            padding: 16px 24px;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            gap: 16px;
+            align-items: center;
+        }
+
+        .chat-header input {
+            flex: 1;
+            max-width: 200px;
+        }
+
+        .chat-messages {
+            flex: 1;
+            overflow-y: auto;
+            padding: 24px;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .message {
+            display: flex;
+            gap: 12px;
+            max-width: 70%;
+        }
+
+        .message.user {
+            align-self: flex-end;
+            flex-direction: row-reverse;
+        }
+
+        .message-bubble {
+            padding: 12px 16px;
+            border-radius: 12px;
+            line-height: 1.6;
+        }
+
+        .message.user .message-bubble {
+            background-color: var(--primary-color);
+            color: white;
+            border-bottom-right-radius: 4px;
+        }
+
+        .message.assistant .message-bubble {
+            background-color: #f7fafc;
+            border-bottom-left-radius: 4px;
+        }
+
+        .chat-input {
+            padding: 16px 24px;
+            border-top: 1px solid var(--border-color);
+            display: flex;
+            gap: 12px;
+        }
+
+        .chat-input input {
+            flex: 1;
+        }
+
+        /* Loading */
+        .loading {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 40px;
+        }
+
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 4px solid var(--border-color);
+            border-top-color: var(--primary-color);
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* Modal */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(0,0,0,0.5);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+
+        .modal-overlay.active {
+            display: flex;
+        }
+
+        .modal {
+            background: var(--card-bg);
+            border-radius: 12px;
+            padding: 32px;
+            max-width: 500px;
+            width: 90%;
+            box-shadow: var(--shadow-lg);
+        }
+
+        .modal h3 {
+            margin-bottom: 16px;
+        }
+
+        .modal textarea {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            font-size: 14px;
+            min-height: 120px;
+            margin-bottom: 16px;
+            font-family: inherit;
+        }
+
+        .modal textarea:focus {
+            outline: none;
+            border-color: var(--primary-color);
+        }
+
+        .modal-actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 12px;
+        }
+
+        /* Toast */
+        .toast-container {
+            position: fixed;
+            top: 24px;
+            right: 24px;
+            z-index: 1001;
+        }
+
+        .toast {
+            padding: 16px 24px;
+            border-radius: 8px;
+            color: white;
+            margin-bottom: 12px;
+            box-shadow: var(--shadow-lg);
+            animation: slideIn 0.3s ease;
+        }
+
+        .toast.success {
+            background-color: var(--success-color);
+        }
+
+        .toast.error {
+            background-color: var(--error-color);
+        }
+
+        .toast.info {
+            background-color: var(--info-color);
+        }
+
+        @keyframes slideIn {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .sidebar {
+                width: 64px;
+            }
+
+            .logo h1, .logo p, .nav-item .nav-text {
+                display: none;
+            }
+
+            .main-content {
+                margin-left: 64px;
+            }
+
+            .nav-item {
+                justify-content: center;
+                padding: 16px;
+            }
+
+            .dashboard-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="app-container">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="logo">
+                <h1>EvoX</h1>
+                <p>AI Assistant Console</p>
+            </div>
+            <nav class="nav-menu">
+                <div class="nav-item active" data-page="dashboard">
+                    <span>📊</span>
+                    <span class="nav-text">Dashboard</span>
+                </div>
+                <div class="nav-item" data-page="agents">
+                    <span>🤖</span>
+                    <span class="nav-text">Agents</span>
+                </div>
+                <div class="nav-item" data-page="channels">
+                    <span>📡</span>
+                    <span class="nav-text">Channels</span>
+                </div>
+                <div class="nav-item" data-page="skills">
+                    <span>⚡</span>
+                    <span class="nav-text">Skills</span>
+                </div>
+                <div class="nav-item" data-page="tools">
+                    <span>🔧</span>
+                    <span class="nav-text">Tools</span>
+                </div>
+                <div class="nav-item" data-page="sessions">
+                    <span>💬</span>
+                    <span class="nav-text">Sessions</span>
+                </div>
+                <div class="nav-item" data-page="audit">
+                    <span>📋</span>
+                    <span class="nav-text">Audit</span>
+                </div>
+                <div class="nav-item" data-page="chat">
+                    <span>💭</span>
+                    <span class="nav-text">Chat</span>
+                </div>
+            </nav>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <header class="header">
+                <h2 id="page-title">Dashboard</h2>
+            </header>
+
+            <div class="page-content">
+                <!-- Dashboard Page -->
+                <div id="page-dashboard" class="page active">
+                    <div class="dashboard-grid">
+                        <div class="stat-card blue">
+                            <div class="icon">🤖</div>
+                            <div class="value" id="stat-agents">0</div>
+                            <div class="label">Agents</div>
+                        </div>
+                        <div class="stat-card green">
+                            <div class="icon">📡</div>
+                            <div class="value" id="stat-channels">0</div>
+                            <div class="label">Channels</div>
+                        </div>
+                        <div class="stat-card purple">
+                            <div class="icon">⚡</div>
+                            <div class="value" id="stat-skills">0</div>
+                            <div class="label">Skills</div>
+                        </div>
+                        <div class="stat-card orange">
+                            <div class="icon">🔧</div>
+                            <div class="value" id="stat-tools">0</div>
+                            <div class="label">Tools</div>
+                        </div>
+                        <div class="stat-card cyan">
+                            <div class="icon">💬</div>
+                            <div class="value" id="stat-sessions">0</div>
+                            <div class="label">Sessions</div>
+                        </div>
+                        <div class="stat-card red">
+                            <div class="icon">📋</div>
+                            <div class="value" id="stat-audit">0</div>
+                            <div class="label">Audit Events</div>
+                        </div>
+                    </div>
+                    <div class="system-status">
+                        <h3>System Status</h3>
+                        <div id="system-status-content">
+                            <div class="status-item">
+                                <span class="status-label">Health</span>
+                                <span class="status-value" id="health-status">Checking...</span>
+                            </div>
+                            <div class="status-item">
+                                <span class="status-label">Uptime</span>
+                                <span class="status-value" id="uptime-status">--</span>
+                            </div>
+                            <div class="status-item">
+                                <span class="status-label">Last Updated</span>
+                                <span class="status-value" id="last-updated">--</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Agents Page -->
+                <div id="page-agents" class="page">
+                    <div class="table-container">
+                        <table id="agents-table">
+                            <thead>
+                                <tr>
+                                    <th>Name</th>
+                                    <th>Description</th>
+                                </tr>
+                            </thead>
+                            <tbody id="agents-tbody"></tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Channels Page -->
+                <div id="page-channels" class="page">
+                    <div class="table-container">
+                        <table id="channels-table">
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Name</th>
+                                    <th>Status</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="channels-tbody"></tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Skills Page -->
+                <div id="page-skills" class="page">
+                    <div class="skills-grid" id="skills-grid"></div>
+                </div>
+
+                <!-- Tools Page -->
+                <div id="page-tools" class="page">
+                    <div class="filter-tabs" id="tool-categories"></div>
+                    <div class="table-container">
+                        <table id="tools-table">
+                            <thead>
+                                <tr>
+                                    <th>Name</th>
+                                    <th>Description</th>
+                                    <th>Category</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tools-tbody"></tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Sessions Page -->
+                <div id="page-sessions" class="page">
+                    <div class="sessions-header">
+                        <div>
+                            <h3>Active Sessions</h3>
+                            <p style="color: var(--text-secondary); margin-top: 4px;">Manage user sessions</p>
+                        </div>
+                        <div class="input-group">
+                            <input type="text" id="session-user-id" placeholder="User ID">
+                            <button class="btn btn-danger btn-sm" onclick="removeSession()">Remove</button>
+                        </div>
+                    </div>
+                    <div class="stat-card blue" style="max-width: 300px;">
+                        <div class="icon">💬</div>
+                        <div class="value" id="active-sessions-count">0</div>
+                        <div class="label">Active Sessions</div>
+                    </div>
+                </div>
+
+                <!-- Audit Page -->
+                <div id="page-audit" class="page">
+                    <div class="audit-controls">
+                        <h3>Audit Logs</h3>
+                        <div class="count-selector">
+                            <button class="count-btn" data-count="10">10</button>
+                            <button class="count-btn" data-count="25">25</button>
+                            <button class="count-btn active" data-count="50">50</button>
+                            <button class="count-btn" data-count="100">100</button>
+                        </div>
+                    </div>
+                    <div class="table-container">
+                        <table id="audit-table">
+                            <thead>
+                                <tr>
+                                    <th>Time</th>
+                                    <th>User</th>
+                                    <th>Channel</th>
+                                    <th>Action</th>
+                                    <th>Success</th>
+                                    <th>Duration</th>
+                                </tr>
+                            </thead>
+                            <tbody id="audit-tbody"></tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Chat Page -->
+                <div id="page-chat" class="page">
+                    <div class="chat-container">
+                        <div class="chat-header">
+                            <input type="text" id="chat-user-id" value="web-user" placeholder="User ID">
+                            <input type="text" id="chat-channel-id" value="web" placeholder="Channel ID">
+                        </div>
+                        <div class="chat-messages" id="chat-messages">
+                            <div class="message assistant">
+                                <div class="message-bubble">Hello! I'm EvoX AI Assistant. How can I help you today?</div>
+                            </div>
+                        </div>
+                        <div class="chat-input">
+                            <input type="text" id="chat-input" placeholder="Type your message..." onkeypress="if(event.key === 'Enter') sendMessage()">
+                            <button class="btn btn-primary" onclick="sendMessage()">Send</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Modal -->
+    <div class="modal-overlay" id="modal-overlay">
+        <div class="modal">
+            <h3 id="modal-title">Execute Skill</h3>
+            <textarea id="modal-input" placeholder="Enter your input..."></textarea>
+            <div class="modal-actions">
+                <button class="btn" onclick="closeModal()">Cancel</button>
+                <button class="btn btn-primary" onclick="confirmModal()">Execute</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Container -->
+    <div class="toast-container" id="toast-container"></div>
+
+    <script>
+        // API Base URL
+        const API_BASE = '/api';
+
+        // State
+        let currentPage = 'dashboard';
+        let modalCallback = null;
+        let auditCount = 50;
+        let currentToolCategory = 'All';
+        let toolsData = [];
+        let toolCategories = ['All'];
+
+        // Navigation
+        document.querySelectorAll('.nav-item').forEach(item => {
+            item.addEventListener('click', () => {
+                const page = item.dataset.page;
+                navigateTo(page);
+            });
+        });
+
+        function navigateTo(page) {
+            currentPage = page;
+            
+            // Update nav
+            document.querySelectorAll('.nav-item').forEach(item => {
+                item.classList.toggle('active', item.dataset.page === page);
+            });
+
+            // Update page title
+            document.getElementById('page-title').textContent = page.charAt(0).toUpperCase() + page.slice(1);
+
+            // Show page
+            document.querySelectorAll('.page').forEach(p => {
+                p.classList.toggle('active', p.id === `page-${page}`);
+            });
+
+            // Load page data
+            loadPageData(page);
+        }
+
+        // Load page data
+        async function loadPageData(page) {
+            switch(page) {
+                case 'dashboard':
+                    await loadDashboard();
+                    break;
+                case 'agents':
+                    await loadAgents();
+                    break;
+                case 'channels':
+                    await loadChannels();
+                    break;
+                case 'skills':
+                    await loadSkills();
+                    break;
+                case 'tools':
+                    await loadTools();
+                    break;
+                case 'sessions':
+                    await loadSessions();
+                    break;
+                case 'audit':
+                    await loadAudit();
+                    break;
+            }
+        }
+
+        // API Helper
+        async function fetchAPI(endpoint, options = {}) {
+            try {
+                const response = await fetch(`${API_BASE}${endpoint}`, {
+                    ...options,
+                    headers: {
+                        'Content-Type': 'application/json',
+                        ...options.headers
+                    }
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
+                return await response.json();
+            } catch (error) {
+                console.error(`API Error (${endpoint}):`, error);
+                throw error;
+            }
+        }
+
+        // Show loading
+        function showLoading(containerId) {
+            const container = document.getElementById(containerId);
+            if (container) {
+                container.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
+            }
+        }
+
+        // Show toast
+        function showToast(message, type = 'info') {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            toast.className = `toast ${type}`;
+            toast.textContent = message;
+            container.appendChild(toast);
+
+            setTimeout(() => {
+                toast.remove();
+            }, 3000);
+        }
+
+        // Dashboard
+        async function loadDashboard() {
+            try {
+                const data = await fetchAPI('/admin/dashboard');
+                
+                document.getElementById('stat-agents').textContent = data.agents || 0;
+                document.getElementById('stat-channels').textContent = data.channels || 0;
+                document.getElementById('stat-skills').textContent = data.skills || 0;
+                document.getElementById('stat-tools').textContent = data.tools || 0;
+                document.getElementById('stat-sessions').textContent = data.sessions || 0;
+                document.getElementById('stat-audit').textContent = data.auditEvents || 0;
+                document.getElementById('health-status').textContent = data.healthy ? 'Healthy ✓' : 'Unhealthy';
+                document.getElementById('health-status').style.color = data.healthy ? 'var(--success-color)' : 'var(--error-color)';
+                document.getElementById('uptime-status').textContent = data.uptime || '--';
+                document.getElementById('last-updated').textContent = new Date().toLocaleString();
+            } catch (error) {
+                showToast('Failed to load dashboard data', 'error');
+            }
+        }
+
+        // Auto refresh dashboard
+        setInterval(() => {
+            if (currentPage === 'dashboard') {
+                loadDashboard();
+            }
+        }, 30000);
+
+        // Agents
+        async function loadAgents() {
+            showLoading('agents-tbody');
+            try {
+                const agents = await fetchAPI('/admin/agents');
+                const tbody = document.getElementById('agents-tbody');
+                
+                if (agents && agents.length > 0) {
+                    tbody.innerHTML = agents.map(agent => `
+                        <tr>
+                            <td><strong>${agent.name || 'N/A'}</strong></td>
+                            <td>${agent.description || 'No description'}</td>
+                        </tr>
+                    `).join('');
+                } else {
+                    tbody.innerHTML = '<tr><td colspan="2" style="text-align: center; color: var(--text-secondary);">No agents found</td></tr>';
+                }
+            } catch (error) {
+                document.getElementById('agents-tbody').innerHTML = '<tr><td colspan="2" style="text-align: center; color: var(--error-color);">Failed to load agents</td></tr>';
+                showToast('Failed to load agents', 'error');
+            }
+        }
+
+        // Channels
+        async function loadChannels() {
+            showLoading('channels-tbody');
+            try {
+                const channels = await fetchAPI('/admin/channels');
+                const tbody = document.getElementById('channels-tbody');
+                
+                if (channels && channels.length > 0) {
+                    tbody.innerHTML = channels.map(channel => `
+                        <tr>
+                            <td><code>${channel.id || 'N/A'}</code></td>
+                            <td><strong>${channel.name || 'N/A'}</strong></td>
+                            <td><span class="badge ${getStatusClass(channel.status)}">${channel.status || 'UNKNOWN'}</span></td>
+                            <td>
+                                <button class="btn btn-success btn-sm" onclick="startChannel('${channel.id}')" ${channel.status === 'RUNNING' ? 'disabled' : ''}>Start</button>
+                                <button class="btn btn-danger btn-sm" onclick="stopChannel('${channel.id}')" ${channel.status === 'STOPPED' ? 'disabled' : ''}>Stop</button>
+                            </td>
+                        </tr>
+                    `).join('');
+                } else {
+                    tbody.innerHTML = '<tr><td colspan="4" style="text-align: center; color: var(--text-secondary);">No channels found</td></tr>';
+                }
+            } catch (error) {
+                document.getElementById('channels-tbody').innerHTML = '<tr><td colspan="4" style="text-align: center; color: var(--error-color);">Failed to load channels</td></tr>';
+                showToast('Failed to load channels', 'error');
+            }
+        }
+
+        function getStatusClass(status) {
+            switch(status?.toUpperCase()) {
+                case 'RUNNING': return 'running';
+                case 'STOPPED': return 'stopped';
+                case 'ERROR': return 'error';
+                default: return 'stopped';
+            }
+        }
+
+        async function startChannel(channelId) {
+            try {
+                await fetchAPI(`/admin/channels/${channelId}/start`, { method: 'POST' });
+                showToast(`Channel ${channelId} started`, 'success');
+                await loadChannels();
+            } catch (error) {
+                showToast(`Failed to start channel ${channelId}`, 'error');
+            }
+        }
+
+        async function stopChannel(channelId) {
+            try {
+                await fetchAPI(`/admin/channels/${channelId}/stop`, { method: 'POST' });
+                showToast(`Channel ${channelId} stopped`, 'success');
+                await loadChannels();
+            } catch (error) {
+                showToast(`Failed to stop channel ${channelId}`, 'error');
+            }
+        }
+
+        // Skills
+        async function loadSkills() {
+            showLoading('skills-grid');
+            try {
+                const skills = await fetchAPI('/admin/skills');
+                const grid = document.getElementById('skills-grid');
+                
+                if (skills && skills.length > 0) {
+                    grid.innerHTML = skills.map(skill => `
+                        <div class="skill-card">
+                            <h3>${skill.name || 'Unnamed Skill'}</h3>
+                            <p>${skill.description || 'No description available'}</p>
+                            <div class="skill-tools">
+                                ${(skill.requiredTools || []).map(tool => `<span class="tool-tag">${tool}</span>`).join('')}
+                            </div>
+                            <div class="skill-actions">
+                                <button class="btn btn-primary btn-sm" onclick="executeSkill('${skill.name}')">Execute</button>
+                                <button class="btn btn-danger btn-sm" onclick="removeSkill('${skill.name}')">Remove</button>
+                            </div>
+                        </div>
+                    `).join('');
+                } else {
+                    grid.innerHTML = '<div style="grid-column: 1/-1; text-align: center; color: var(--text-secondary); padding: 40px;">No skills found</div>';
+                }
+            } catch (error) {
+                document.getElementById('skills-grid').innerHTML = '<div style="grid-column: 1/-1; text-align: center; color: var(--error-color); padding: 40px;">Failed to load skills</div>';
+                showToast('Failed to load skills', 'error');
+            }
+        }
+
+        function executeSkill(skillName) {
+            document.getElementById('modal-title').textContent = `Execute Skill: ${skillName}`;
+            document.getElementById('modal-input').value = '';
+            document.getElementById('modal-overlay').classList.add('active');
+            
+            modalCallback = async () => {
+                const input = document.getElementById('modal-input').value;
+                try {
+                    const result = await fetchAPI('/admin/skills/execute', {
+                        method: 'POST',
+                        body: JSON.stringify({
+                            skillName: skillName,
+                            input: input,
+                            parameters: {}
+                        })
+                    });
+                    showToast(`Skill executed successfully`, 'success');
+                    console.log('Skill result:', result);
+                } catch (error) {
+                    showToast('Failed to execute skill', 'error');
+                }
+            };
+        }
+
+        async function removeSkill(skillName) {
+            if (confirm(`Are you sure you want to remove skill "${skillName}"?`)) {
+                try {
+                    await fetchAPI(`/admin/skills/${skillName}`, { method: 'DELETE' });
+                    showToast(`Skill ${skillName} removed`, 'success');
+                    await loadSkills();
+                } catch (error) {
+                    showToast('Failed to remove skill', 'error');
+                }
+            }
+        }
+
+        // Tools
+        async function loadTools() {
+            showLoading('tools-tbody');
+            try {
+                // Load categories first
+                const categories = await fetchAPI('/admin/tools/categories');
+                toolCategories = ['All', ...(categories || [])];
+                renderToolCategories();
+                
+                // Load tools
+                toolsData = await fetchAPI('/admin/tools');
+                renderTools();
+            } catch (error) {
+                document.getElementById('tools-tbody').innerHTML = '<tr><td colspan="3" style="text-align: center; color: var(--error-color);">Failed to load tools</td></tr>';
+                showToast('Failed to load tools', 'error');
+            }
+        }
+
+        function renderToolCategories() {
+            const container = document.getElementById('tool-categories');
+            container.innerHTML = toolCategories.map(cat => `
+                <button class="filter-tab ${cat === currentToolCategory ? 'active' : ''}" onclick="filterTools('${cat}')">${cat}</button>
+            `).join('');
+        }
+
+        function filterTools(category) {
+            currentToolCategory = category;
+            renderToolCategories();
+            renderTools();
+        }
+
+        function renderTools() {
+            const filteredTools = currentToolCategory === 'All' 
+                ? toolsData 
+                : (toolsData || []).filter(t => t.category === currentToolCategory);
+            
+            const tbody = document.getElementById('tools-tbody');
+            
+            if (filteredTools && filteredTools.length > 0) {
+                tbody.innerHTML = filteredTools.map(tool => `
+                    <tr>
+                        <td><strong>${tool.name || 'N/A'}</strong></td>
+                        <td>${tool.description || 'No description'}</td>
+                        <td><span class="tool-tag">${tool.category || 'Uncategorized'}</span></td>
+                    </tr>
+                `).join('');
+            } else {
+                tbody.innerHTML = '<tr><td colspan="3" style="text-align: center; color: var(--text-secondary);">No tools found</td></tr>';
+            }
+        }
+
+        // Sessions
+        async function loadSessions() {
+            try {
+                const sessions = await fetchAPI('/admin/sessions');
+                const count = sessions?.activeCount || 0;
+                document.getElementById('active-sessions-count').textContent = count;
+            } catch (error) {
+                showToast('Failed to load sessions', 'error');
+            }
+        }
+
+        async function removeSession() {
+            const userId = document.getElementById('session-user-id').value.trim();
+            if (!userId) {
+                showToast('Please enter a user ID', 'error');
+                return;
+            }
+            
+            try {
+                await fetchAPI(`/admin/sessions/${userId}`, { method: 'DELETE' });
+                showToast(`Session for user ${userId} removed`, 'success');
+                document.getElementById('session-user-id').value = '';
+                await loadSessions();
+            } catch (error) {
+                showToast('Failed to remove session', 'error');
+            }
+        }
+
+        // Audit
+        async function loadAudit() {
+            showLoading('audit-tbody');
+            try {
+                const logs = await fetchAPI(`/admin/audit?count=${auditCount}`);
+                const tbody = document.getElementById('audit-tbody');
+                
+                if (logs && logs.length > 0) {
+                    tbody.innerHTML = logs.map(log => `
+                        <tr>
+                            <td>${new Date(log.timestamp || Date.now()).toLocaleString()}</td>
+                            <td>${log.userId || 'N/A'}</td>
+                            <td>${log.channelId || 'N/A'}</td>
+                            <td>${log.action || 'N/A'}</td>
+                            <td>${log.success ? '<span class="success-icon">✓</span>' : '<span class="error-icon">✗</span>'}</td>
+                            <td>${log.duration ? `${log.duration}ms` : '--'}</td>
+                        </tr>
+                    `).join('');
+                } else {
+                    tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; color: var(--text-secondary);">No audit logs found</td></tr>';
+                }
+            } catch (error) {
+                document.getElementById('audit-tbody').innerHTML = '<tr><td colspan="6" style="text-align: center; color: var(--error-color);">Failed to load audit logs</td></tr>';
+                showToast('Failed to load audit logs', 'error');
+            }
+        }
+
+        // Audit count selector
+        document.querySelectorAll('.count-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.count-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                auditCount = parseInt(btn.dataset.count);
+                loadAudit();
+            });
+        });
+
+        // Chat
+        async function sendMessage() {
+            const input = document.getElementById('chat-input');
+            const message = input.value.trim();
+            const userId = document.getElementById('chat-user-id').value.trim() || 'web-user';
+            const channelId = document.getElementById('chat-channel-id').value.trim() || 'web';
+            
+            if (!message) return;
+            
+            // Add user message
+            addMessage(message, 'user');
+            input.value = '';
+            
+            try {
+                const response = await fetchAPI('/chat', {
+                    method: 'POST',
+                    body: JSON.stringify({
+                        message: message,
+                        userId: userId,
+                        channelId: channelId
+                    })
+                });
+                
+                // Add assistant response
+                addMessage(response.response || response.message || 'No response', 'assistant');
+            } catch (error) {
+                addMessage('Sorry, something went wrong. Please try again.', 'assistant');
+                showToast('Failed to send message', 'error');
+            }
+        }
+
+        function addMessage(text, type) {
+            const container = document.getElementById('chat-messages');
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${type}`;
+            messageDiv.innerHTML = `<div class="message-bubble">${escapeHtml(text)}</div>`;
+            container.appendChild(messageDiv);
+            container.scrollTop = container.scrollHeight;
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // Modal functions
+        function closeModal() {
+            document.getElementById('modal-overlay').classList.remove('active');
+            modalCallback = null;
+        }
+
+        function confirmModal() {
+            if (modalCallback) {
+                modalCallback();
+            }
+            closeModal();
+        }
+
+        // Close modal on overlay click
+        document.getElementById('modal-overlay').addEventListener('click', (e) => {
+            if (e.target.id === 'modal-overlay') {
+                closeModal();
+            }
+        });
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            loadDashboard();
+        });
+    </script>
+</body>
+</html>

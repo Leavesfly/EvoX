@@ -56,36 +56,36 @@ public class LLMFactoryExample {
         // 这里仅展示 API 用法
 
         // --- OpenAI ---
-        // BaseLLM openai = LLMFactory.openai("sk-xxx");
-        // BaseLLM openai = LLMFactory.openai("sk-xxx", "gpt-4o");
-        // BaseLLM openai = LLMFactory.openai();  // 从环境变量 OPENAI_API_KEY 读取
+        // LLMProvider openai = LLMFactory.openai("sk-xxx");
+        // LLMProvider openai = LLMFactory.openai("sk-xxx", "gpt-4o");
+        // LLMProvider openai = LLMFactory.openai();  // 从环境变量 OPENAI_API_KEY 读取
         log.info("OpenAI:      LLMFactory.openai(apiKey)");
         log.info("             LLMFactory.openai(apiKey, \"gpt-4o\")");
         log.info("             LLMFactory.openai()  // 环境变量 OPENAI_API_KEY");
 
         // --- 阿里云通义千问 ---
-        // BaseLLM aliyun = LLMFactory.aliyun("sk-xxx");
-        // BaseLLM aliyun = LLMFactory.aliyun("sk-xxx", "qwen-max");
-        // BaseLLM aliyun = LLMFactory.aliyun();  // 从环境变量 DASHSCOPE_API_KEY 读取
+        // LLMProvider aliyun = LLMFactory.aliyun("sk-xxx");
+        // LLMProvider aliyun = LLMFactory.aliyun("sk-xxx", "qwen-max");
+        // LLMProvider aliyun = LLMFactory.aliyun();  // 从环境变量 DASHSCOPE_API_KEY 读取
         log.info("\n阿里云千问:   LLMFactory.aliyun(apiKey)");
         log.info("             LLMFactory.aliyun(apiKey, \"qwen-max\")");
         log.info("             LLMFactory.aliyun()  // 环境变量 DASHSCOPE_API_KEY");
 
         // --- Ollama 本地模型 ---
-        // BaseLLM ollama = LLMFactory.ollama("llama3");
-        // BaseLLM ollama = LLMFactory.ollama("codellama", "http://192.168.1.100:11434");
+        // LLMProvider ollama = LLMFactory.ollama("llama3");
+        // LLMProvider ollama = LLMFactory.ollama("codellama", "http://192.168.1.100:11434");
         log.info("\nOllama:      LLMFactory.ollama(\"llama3\")");
         log.info("             LLMFactory.ollama(\"codellama\", \"http://remote:11434\")");
 
         // --- SiliconFlow ---
-        // BaseLLM sf = LLMFactory.siliconflow("sk-xxx");
-        // BaseLLM sf = LLMFactory.siliconflow("sk-xxx", "Qwen/Qwen2.5-72B-Instruct");
+        // LLMProvider sf = LLMFactory.siliconflow("sk-xxx");
+        // LLMProvider sf = LLMFactory.siliconflow("sk-xxx", "Qwen/Qwen2.5-72B-Instruct");
         log.info("\nSiliconFlow: LLMFactory.siliconflow(apiKey)");
         log.info("             LLMFactory.siliconflow(apiKey, \"Qwen/Qwen2.5-72B-Instruct\")");
 
         // --- LiteLLM 多模型代理 ---
-        // BaseLLM lite = LLMFactory.litellm("gpt-4");
-        // BaseLLM lite = LLMFactory.litellm("claude-3-opus", "http://my-proxy:4000");
+        // LLMProvider lite = LLMFactory.litellm("gpt-4");
+        // LLMProvider lite = LLMFactory.litellm("claude-3-opus", "http://my-proxy:4000");
         log.info("\nLiteLLM:     LLMFactory.litellm(\"gpt-4\")");
         log.info("             LLMFactory.litellm(\"claude-3-opus\", \"http://proxy:4000\")");
     }
@@ -95,17 +95,17 @@ public class LLMFactoryExample {
     // ===================================================================
 
     /**
-     * 用 LLMConfig.ofXxx() 一行创建配置对象
+     * 用 LLMConfigs.xxx() 一行创建配置对象
      */
     private void configStaticFactory() {
-        log.info("\n=== 示例2: LLMConfig 静态工厂方法 ===\n");
+        log.info("\n=== 示例2: LLMConfigs 静态工厂方法 ===\n");
 
         // 统一入口，不需要记各种 Config 子类的名字
-        OpenAILLMConfig openaiConfig = LLMConfig.ofOpenAI("sk-xxx", "gpt-4o");
-        AliyunLLMConfig aliyunConfig = LLMConfig.ofAliyun("sk-xxx", "qwen-max");
-        OllamaLLMConfig ollamaConfig = LLMConfig.ofOllama("llama3");
-        SiliconFlowConfig sfConfig = LLMConfig.ofSiliconFlow("sk-xxx");
-        LiteLLMConfig litellmConfig = LLMConfig.ofLiteLLM("gpt-4");
+        OpenAILLMConfig openaiConfig = LLMConfigs.openAI("sk-xxx", "gpt-4o");
+        AliyunLLMConfig aliyunConfig = LLMConfigs.aliyun("sk-xxx", "qwen-max");
+        OllamaLLMConfig ollamaConfig = LLMConfigs.ollama("llama3");
+        SiliconFlowConfig sfConfig = LLMConfigs.siliconFlow("sk-xxx");
+        LiteLLMConfig litellmConfig = LLMConfigs.liteLLM("gpt-4");
 
         log.info("OpenAI config:      provider={}, model={}", openaiConfig.getProvider(), openaiConfig.getModel());
         log.info("Aliyun config:      provider={}, model={}", aliyunConfig.getProvider(), aliyunConfig.getModel());
@@ -116,8 +116,8 @@ public class LLMFactoryExample {
         // 对比旧写法：
         // OpenAILLMConfig old = OpenAILLMConfig.builder().apiKey("sk-xxx").model("gpt-4o").build();
         // 新写法：
-        // OpenAILLMConfig config = LLMConfig.ofOpenAI("sk-xxx", "gpt-4o");
-        log.info("\n只需记住 LLMConfig.ofXxx() 即可，无需记忆各子类名");
+        // OpenAILLMConfig config = LLMConfigs.openAI("sk-xxx", "gpt-4o");
+        log.info("\n只需记住 LLMConfigs.xxx() 即可，无需记忆各子类名");
     }
 
     // ===================================================================
@@ -132,11 +132,11 @@ public class LLMFactoryExample {
 
         // 创建不同 provider 的配置
         LLMConfig[] configs = {
-                LLMConfig.ofOpenAI("sk-xxx"),
-                LLMConfig.ofAliyun("sk-xxx"),
-                LLMConfig.ofOllama("llama3"),
-                LLMConfig.ofSiliconFlow("sk-xxx"),
-                LLMConfig.ofLiteLLM("gpt-4")
+                LLMConfigs.openAI("sk-xxx"),
+                LLMConfigs.aliyun("sk-xxx"),
+                LLMConfigs.ollama("llama3"),
+                LLMConfigs.siliconFlow("sk-xxx"),
+                LLMConfigs.liteLLM("gpt-4")
         };
 
         for (LLMConfig config : configs) {
@@ -171,7 +171,7 @@ public class LLMFactoryExample {
 
         // --- 改进后：只设 config，自动创建 llm ---
         log.info("\n改进后（一步）:");
-        log.info("  agent.setLlmConfig(LLMConfig.ofOpenAI(apiKey));");
+        log.info("  agent.setLlmConfig(LLMConfigs.openAI(apiKey));");
         log.info("  // 不需要 setLlm()！getLlm() 时自动创建");
 
         // 实际演示
@@ -181,7 +181,7 @@ public class LLMFactoryExample {
         agent.setPromptTemplate("请回答: {question}");
 
         // 只设配置，不设 LLM 实例
-        agent.setLlmConfig(LLMConfig.ofOllama("llama3"));
+        agent.setLlmConfig(LLMConfigs.ollama("llama3"));
 
         log.info("\n实际演示:");
         log.info("  已设置 llmConfig: provider={}, model={}",
@@ -232,9 +232,9 @@ public class LLMFactoryExample {
         log.info("  AgentBuilder.chatBot().withLiteLLM(model, proxyUrl).build()");
         log.info("");
         log.info("  // 通用：传入任意 LLMConfig");
-        log.info("  AgentBuilder.chatBot().withConfig(LLMConfig.ofAliyun(key)).build()");
+        log.info("  AgentBuilder.chatBot().withConfig(LLMConfigs.aliyun(key)).build()");
         log.info("");
-        log.info("  // 通用：传入已有 BaseLLM 实例");
+        log.info("  // 通用：传入已有 LLMProvider 实例");
         log.info("  AgentBuilder.chatBot().withLLM(existingLlm).build()");
     }
 
@@ -255,7 +255,7 @@ public class LLMFactoryExample {
             // 将 DeepSeek 的 config 转为 OpenAI 兼容的调用
             // 实际场景：new DeepSeekLLM((DeepSeekConfig) config)
             log.info("  (模拟) 创建 DeepSeek LLM, model={}", config.getModel());
-            // 这里返回 null 仅作演示，实际应返回 BaseLLM 实例
+            // 这里返回 null 仅作演示，实际应返回 LLMProvider 实例
             return null;
         });
 
@@ -282,10 +282,10 @@ public class LLMFactoryExample {
         log.info("  改进前 (4行):");
         log.info("    OpenAILLMConfig config = OpenAILLMConfig.builder()");
         log.info("        .apiKey(key).model(\"gpt-4o\").temperature(0.7f).build();");
-        log.info("    BaseLLM llm = new OpenAILLM(config);");
+        log.info("    LLMProvider llm = new OpenAILLM(config);");
         log.info("");
         log.info("  改进后 (1行):");
-        log.info("    BaseLLM llm = LLMFactory.openai(key, \"gpt-4o\");");
+        log.info("    LLMProvider llm = LLMFactory.openai(key, \"gpt-4o\");");
 
         // ---------------------------------------------------------------
         log.info("\n场景B: 创建一个使用阿里云千问的 Agent");
@@ -299,7 +299,7 @@ public class LLMFactoryExample {
         log.info("    agent.initModule();");
         log.info("");
         log.info("  改进后 (2行):");
-        log.info("    agent.setLlmConfig(LLMConfig.ofAliyun(key, \"qwen-max\"));");
+        log.info("    agent.setLlmConfig(LLMConfigs.aliyun(key, \"qwen-max\"));");
         log.info("    agent.initModule();  // getLlm() 时自动创建");
 
         // ---------------------------------------------------------------
@@ -318,8 +318,8 @@ public class LLMFactoryExample {
         log.info("\n场景D: 切换 LLM provider（只需改一行）");
         log.info("-------");
         log.info("  // 从 OpenAI 切换到阿里云，只需改配置那一行");
-        log.info("  // LLMConfig config = LLMConfig.ofOpenAI(key);");
-        log.info("  LLMConfig config = LLMConfig.ofAliyun(key, \"qwen-max\");");
-        log.info("  BaseLLM llm = LLMFactory.create(config);  // 同一行代码，自动适配");
+        log.info("  // LLMConfig config = LLMConfigs.openAI(key);");
+        log.info("  LLMConfig config = LLMConfigs.aliyun(key, \"qwen-max\");");
+        log.info("  LLMProvider llm = LLMFactory.create(config);  // 同一行代码，自动适配");
     }
 }

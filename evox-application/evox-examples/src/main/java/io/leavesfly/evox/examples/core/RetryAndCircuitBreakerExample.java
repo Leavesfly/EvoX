@@ -1,8 +1,8 @@
 package io.leavesfly.evox.examples.core;
 
-import io.leavesfly.evox.core.circuitbreaker.CircuitBreaker;
-import io.leavesfly.evox.core.retry.RetryExecutor;
-import io.leavesfly.evox.core.retry.RetryPolicy;
+import io.leavesfly.evox.agents.resilience.CircuitBreaker;
+import io.leavesfly.evox.agents.resilience.RetryExecutor;
+import io.leavesfly.evox.agents.resilience.RetryPolicy;
 import lombok.extern.slf4j.Slf4j;
 
 import java.time.Duration;

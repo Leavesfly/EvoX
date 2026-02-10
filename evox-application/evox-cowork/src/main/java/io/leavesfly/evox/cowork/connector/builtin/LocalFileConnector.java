@@ -15,6 +15,8 @@ import java.util.stream.Collectors;
 @Slf4j
 public class LocalFileConnector extends BaseConnector {
     
+    private static final long MAX_WRITE_SIZE_BYTES = 10 * 1024 * 1024; // 10MB limit
+    
     public LocalFileConnector() {
         super("local-file", "Local File System", "Access and manage local files and directories", ConnectorType.CLOUD_STORAGE);
     }
@@ -105,22 +107,47 @@ public class LocalFileConnector extends BaseConnector {
     private Map<String, Object> writeFile(Map<String, Object> parameters) throws IOException {
         String filePath = (String) parameters.get("filePath");
         String content = (String) parameters.get("content");
-        
+
         if (filePath == null) {
             Map<String, Object> result = new HashMap<>();
             result.put("error", "filePath parameter is required");
             return result;
         }
-        
+
         if (content == null) {
             content = "";
         }
-        
-        Path path = Paths.get(filePath);
+
+        // File size limit check
+        if (content.length() > MAX_WRITE_SIZE_BYTES) {
+            Map<String, Object> result = new HashMap<>();
+            result.put("error", "Content exceeds maximum allowed size of 10MB");
+            return result;
+        }
+
+        Path path = Paths.get(filePath).toAbsolutePath().normalize();
+
+        // Prevent writing to sensitive system paths
+        String normalizedPath = path.toString();
+        if (normalizedPath.startsWith("/etc") || normalizedPath.startsWith("/usr")
+                || normalizedPath.startsWith("/bin") || normalizedPath.startsWith("/sbin")
+                || normalizedPath.startsWith("/boot") || normalizedPath.startsWith("/proc")
+                || normalizedPath.startsWith("/sys")) {
+            Map<String, Object> result = new HashMap<>();
+            result.put("error", "Writing to system directories is not allowed: " + normalizedPath);
+            return result;
+        }
+
+        // Ensure parent directory exists
+        Path parentDir = path.getParent();
+        if (parentDir != null && !Files.exists(parentDir)) {
+            Files.createDirectories(parentDir);
+        }
+
         Files.writeString(path, content);
-        
+
         Map<String, Object> result = new HashMap<>();
-        result.put("filePath", filePath);
+        result.put("filePath", normalizedPath);
         result.put("success", true);
         result.put("message", "File written successfully");
         return result;

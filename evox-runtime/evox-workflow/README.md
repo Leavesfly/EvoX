@@ -4,7 +4,7 @@
 
 **层级**: 业务层 (Business Layer)  
 **职责**: 提供DAG工作流编排引擎,支持复杂业务流程自动化  
-**依赖**: evox-core, evox-models, evox-memory, evox-storage
+**依赖**: evox-core, evox-memory
 
 ## 🎯 核心功能
 

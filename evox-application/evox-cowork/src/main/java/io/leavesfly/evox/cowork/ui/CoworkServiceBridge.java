@@ -45,10 +45,10 @@ public class CoworkServiceBridge {
         this.permissionManager = new InteractivePermissionManager(config, eventBus);
         this.sessionManager = new SessionManager(config, permissionManager.getPermissionManager());
         this.templateManager = new TemplateManager(
-            System.getProperty("user.home") + "/.evox/cowork/templates"
+            java.nio.file.Paths.get(System.getProperty("user.home"), ".evox", "cowork", "templates").toString()
         );
         this.workspaceManager = new WorkspaceManager(
-            System.getProperty("user.home") + "/.evox/cowork"
+            java.nio.file.Paths.get(System.getProperty("user.home"), ".evox", "cowork").toString()
         );
         this.executor = Executors.newFixedThreadPool(4, runnable -> {
             Thread thread = new Thread(runnable, "cowork-worker");

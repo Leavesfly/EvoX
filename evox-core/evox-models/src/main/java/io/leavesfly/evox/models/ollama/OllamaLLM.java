@@ -1,14 +1,12 @@
 package io.leavesfly.evox.models.ollama;
 
 import io.leavesfly.evox.core.message.Message;
-import io.leavesfly.evox.models.base.BaseLLM;
+import io.leavesfly.evox.models.base.LLMProvider;
+import io.leavesfly.evox.models.client.ChatCompletionRequest;
+import io.leavesfly.evox.models.client.OpenAiCompatibleClient;
 import io.leavesfly.evox.models.config.LLMConfig;
 import io.leavesfly.evox.models.config.OllamaLLMConfig;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.ai.chat.client.ChatClient;
-import org.springframework.ai.ollama.OllamaChatModel;
-import org.springframework.ai.ollama.api.OllamaApi;
-import org.springframework.ai.ollama.api.OllamaOptions;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
@@ -16,40 +14,21 @@ import java.util.List;
 
 /**
  * Ollama LLM 实现
- * 使用 Spring AI 集成 Ollama 本地/远程服务
+ * 通过 OpenAI 兼容 HTTP 客户端调用 Ollama 服务
  *
  * @author EvoX Team
  */
 @Slf4j
-public class OllamaLLM implements BaseLLM {
+public class OllamaLLM implements LLMProvider {
 
     private final OllamaLLMConfig config;
-    private final OllamaChatModel chatModel;
-    private final ChatClient chatClient;
+    private final OpenAiCompatibleClient client;
 
     public OllamaLLM(OllamaLLMConfig config) {
         this.config = config;
 
         String baseUrl = config.getEffectiveBaseUrl();
-        OllamaApi ollamaApi = new OllamaApi(baseUrl);
-
-        String model = config.getModel() != null && !config.getModel().isEmpty()
-                ? config.getModel() : "llama2";
-        OllamaOptions options = new OllamaOptions()
-                .withModel(model)
-                .withTemperature(config.getTemperature() != null ? config.getTemperature() : 0.7f)
-                .withTopP(config.getTopP() != null ? config.getTopP() : 1.0f)
-                .withNumPredict(config.getMaxTokens() != null ? config.getMaxTokens() : 1000);
-
-        if (config.getFrequencyPenalty() != null && config.getFrequencyPenalty() != 0.0f) {
-            options.withFrequencyPenalty(config.getFrequencyPenalty());
-        }
-        if (config.getPresencePenalty() != null && config.getPresencePenalty() != 0.0f) {
-            options.withPresencePenalty(config.getPresencePenalty());
-        }
-
-        this.chatModel = new OllamaChatModel(ollamaApi, options);
-        this.chatClient = ChatClient.create(chatModel);
+        this.client = new OpenAiCompatibleClient(baseUrl, config.getApiKey(), config.getTimeout());
 
         log.info("Initialized Ollama LLM with model: {} at {}", config.getModel(), baseUrl);
     }
@@ -59,10 +38,18 @@ public class OllamaLLM implements BaseLLM {
         try {
             log.debug("Generating response for prompt: {}", prompt.substring(0, Math.min(50, prompt.length())));
 
-            String response = chatClient.prompt()
-                    .user(prompt)
-                    .call()
-                    .content();
+            String model = config.getModel() != null && !config.getModel().isEmpty()
+                    ? config.getModel() : "llama2";
+
+            ChatCompletionRequest request = OpenAiCompatibleClient.buildChatRequest(
+                    model, prompt,
+                    config.getTemperature() != null ? config.getTemperature() : 0.7f,
+                    config.getMaxTokens() != null ? config.getMaxTokens() : 1000,
+                    config.getTopP() != null ? config.getTopP() : 1.0f,
+                    config.getFrequencyPenalty(),
+                    config.getPresencePenalty());
+
+            String response = client.chatCompletion(request);
 
             if (Boolean.TRUE.equals(config.getOutputResponse())) {
                 log.info("Ollama Response: {}", response);
@@ -83,10 +70,18 @@ public class OllamaLLM implements BaseLLM {
     @Override
     public Flux<String> generateStream(String prompt) {
         try {
-            return chatClient.prompt()
-                    .user(prompt)
-                    .stream()
-                    .content()
+            String model = config.getModel() != null && !config.getModel().isEmpty()
+                    ? config.getModel() : "llama2";
+
+            ChatCompletionRequest request = OpenAiCompatibleClient.buildChatRequest(
+                    model, prompt,
+                    config.getTemperature() != null ? config.getTemperature() : 0.7f,
+                    config.getMaxTokens() != null ? config.getMaxTokens() : 1000,
+                    config.getTopP() != null ? config.getTopP() : 1.0f,
+                    config.getFrequencyPenalty(),
+                    config.getPresencePenalty());
+
+            return client.chatCompletionStream(request)
                     .doOnNext(chunk -> {
                         if (Boolean.TRUE.equals(config.getOutputResponse())) {
                             System.out.print(chunk != null ? chunk : "");

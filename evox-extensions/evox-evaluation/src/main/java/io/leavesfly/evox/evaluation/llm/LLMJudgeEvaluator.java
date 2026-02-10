@@ -1,7 +1,8 @@
 package io.leavesfly.evox.evaluation.llm;
 
+import io.leavesfly.evox.core.evaluation.EvaluationResult;
 import io.leavesfly.evox.evaluation.Evaluator;
-import io.leavesfly.evox.models.base.BaseLLM;
+import io.leavesfly.evox.models.base.LLMProvider;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.experimental.SuperBuilder;
@@ -23,7 +24,7 @@ public class LLMJudgeEvaluator extends Evaluator {
     /**
      * 评判用的LLM模型
      */
-    private BaseLLM judgeLLM;
+    private LLMProvider judgeLLM;
 
     /**
      * 评判提示词模板

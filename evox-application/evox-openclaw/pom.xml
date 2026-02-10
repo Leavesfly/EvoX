@@ -1,0 +1,98 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0
+         http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>io.leavesfly.evox</groupId>
+        <artifactId>evox</artifactId>
+        <version>1.0.0-SNAPSHOT</version>
+        <relativePath>../../pom.xml</relativePath>
+    </parent>
+
+    <artifactId>evox-openclaw</artifactId>
+    <name>EvoX Assistant</name>
+    <description>个人 AI 助手主应用 - 整合渠道接入、调度引擎、网关等能力</description>
+
+    <dependencies>
+        <!-- 核心层 -->
+        <dependency>
+            <groupId>io.leavesfly.evox</groupId>
+            <artifactId>evox-core</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>io.leavesfly.evox</groupId>
+            <artifactId>evox-models</artifactId>
+        </dependency>
+
+        <!-- 运行时层 -->
+        <dependency>
+            <groupId>io.leavesfly.evox</groupId>
+            <artifactId>evox-agents</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>io.leavesfly.evox</groupId>
+            <artifactId>evox-tools</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>io.leavesfly.evox</groupId>
+            <artifactId>evox-memory</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>io.leavesfly.evox</groupId>
+            <artifactId>evox-channels</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>io.leavesfly.evox</groupId>
+            <artifactId>evox-scheduler</artifactId>
+        </dependency>
+
+        <!-- 运行时层 - 网关 -->
+        <dependency>
+            <groupId>io.leavesfly.evox</groupId>
+            <artifactId>evox-gateway</artifactId>
+        </dependency>
+
+        <!-- Spring Boot -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-web</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-configuration-processor</artifactId>
+            <optional>true</optional>
+        </dependency>
+
+        <!-- OkHttp -->
+        <dependency>
+            <groupId>com.squareup.okhttp3</groupId>
+            <artifactId>okhttp</artifactId>
+        </dependency>
+
+        <!-- Lombok -->
+        <dependency>
+            <groupId>org.projectlombok</groupId>
+            <artifactId>lombok</artifactId>
+            <scope>provided</scope>
+        </dependency>
+
+        <!-- Test -->
+        <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter</artifactId>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-maven-plugin</artifactId>
+            </plugin>
+        </plugins>
+    </build>
+</project>

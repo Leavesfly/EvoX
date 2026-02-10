@@ -35,15 +35,15 @@ import java.util.Map;
 public class SidebarPanel extends VBox {
 
     private final CoworkServiceBridge serviceBridge;
-    private final ChatPanel chatPanel;
+    private final UIEventBus uiEventBus;
     private final ListView<CoworkSession> sessionListView;
     private final ObservableList<CoworkSession> sessionItems;
     private final VBox workspaceSection;
     private final VBox templateSection;
 
-    public SidebarPanel(CoworkServiceBridge serviceBridge, ChatPanel chatPanel) {
+    public SidebarPanel(CoworkServiceBridge serviceBridge, UIEventBus uiEventBus) {
         this.serviceBridge = serviceBridge;
-        this.chatPanel = chatPanel;
+        this.uiEventBus = uiEventBus;
         this.sessionItems = FXCollections.observableArrayList();
         this.sessionListView = new ListView<>(sessionItems);
 
@@ -123,7 +123,7 @@ public class SidebarPanel extends VBox {
         sessionListView.getSelectionModel().selectedItemProperty().addListener((observable, oldValue, newValue) -> {
             if (newValue != null) {
                 serviceBridge.switchSession(newValue.getSessionId());
-                chatPanel.loadSession(newValue);
+                uiEventBus.emit(UIEventBus.SESSION_SELECTED, newValue);
             }
         });
 
@@ -189,7 +189,7 @@ public class SidebarPanel extends VBox {
     private void openTemplateDialog() {
         Stage ownerStage = (Stage) getScene().getWindow();
         TemplateDialog dialog = new TemplateDialog(ownerStage, serviceBridge, (templateName, renderedContent) -> {
-            chatPanel.setInputText(renderedContent);
+            uiEventBus.emit(UIEventBus.INPUT_TEXT_SET, renderedContent);
         });
         dialog.showAndWait();
     }
@@ -331,7 +331,7 @@ public class SidebarPanel extends VBox {
         item.setOnMouseClicked(event -> {
             String rendered = serviceBridge.renderTemplate(template.getTemplateId(), Map.of());
             if (rendered != null) {
-                chatPanel.setInputText(rendered);
+                uiEventBus.emit(UIEventBus.INPUT_TEXT_SET, rendered);
             }
         });
 

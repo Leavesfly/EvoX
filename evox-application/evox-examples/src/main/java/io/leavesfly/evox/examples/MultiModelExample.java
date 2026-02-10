@@ -2,7 +2,7 @@ package io.leavesfly.evox.examples;
 
 import io.leavesfly.evox.core.message.Message;
 import io.leavesfly.evox.core.message.MessageType;
-import io.leavesfly.evox.models.base.BaseLLM;
+import io.leavesfly.evox.models.base.LLMProvider;
 import io.leavesfly.evox.models.aliyun.AliyunLLM;
 import io.leavesfly.evox.models.config.AliyunLLMConfig;
 import io.leavesfly.evox.models.config.LiteLLMConfig;
@@ -60,7 +60,7 @@ public class MultiModelExample {
         log.info("  启用搜索: {}", config.getEnableSearch());
         
         // 创建阿里云 LLM 实例
-        BaseLLM aliyunLLM = new AliyunLLM(config);
+        LLMProvider aliyunLLM = new AliyunLLM(config);
         log.info("✓ 阿里云通义千问模型已初始化");
         
         // 注意：实际调用需要有效的 API Key
@@ -115,7 +115,7 @@ public class MultiModelExample {
         log.info("  API版本: {}", azureConfig.getApiVersion());
         
         // 创建 LiteLLM 实例
-        BaseLLM liteLLM = new LiteLLM(openaiConfig);
+        LLMProvider liteLLM = new LiteLLM(openaiConfig);
         log.info("\n✓ LiteLLM 通用适配器已初始化");
         log.info("  提示：支持 OpenAI、Azure、本地模型等多种接口");
     }

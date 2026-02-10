@@ -25,6 +25,7 @@
         <dependency>
             <groupId>io.leavesfly.evox</groupId>
             <artifactId>evox-models</artifactId>
+            <optional>true</optional>
         </dependency>
         <dependency>
             <groupId>io.leavesfly.evox</groupId>
@@ -32,7 +33,13 @@
         </dependency>
         <dependency>
             <groupId>io.leavesfly.evox</groupId>
-            <artifactId>evox-capability</artifactId>
+            <artifactId>evox-memory</artifactId>
+            <optional>true</optional>
+        </dependency>
+        <dependency>
+            <groupId>io.leavesfly.evox</groupId>
+            <artifactId>evox-tools</artifactId>
+            <optional>true</optional>
         </dependency>
 
         <!-- Spring Boot -->

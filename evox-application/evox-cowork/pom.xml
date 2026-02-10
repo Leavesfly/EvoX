@@ -42,7 +42,12 @@
 
         <dependency>
             <groupId>io.leavesfly.evox</groupId>
-            <artifactId>evox-capability</artifactId>
+            <artifactId>evox-memory</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>io.leavesfly.evox</groupId>
+            <artifactId>evox-tools</artifactId>
         </dependency>
 
         <dependency>

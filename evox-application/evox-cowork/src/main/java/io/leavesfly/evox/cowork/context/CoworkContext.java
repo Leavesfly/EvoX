@@ -9,8 +9,10 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 @Slf4j
 @Data
@@ -18,8 +20,9 @@ public class CoworkContext {
     private String workingDirectory;
     private List<String> accessibleDirectories = new ArrayList<>();
     // 文件类型分布统计
-    private Map<String, Integer> fileTypeDistribution = new LinkedHashMap<>();
-    private List<String> recentFiles = new ArrayList<>();
+    private final Map<String, Integer> fileTypeDistribution = new ConcurrentHashMap<>();
+    private final LinkedHashSet<String> recentFilesSet = new LinkedHashSet<>();
+    private static final int MAX_RECENT_FILES = 50;
     private String workspaceRules;
 
     public CoworkContext(String workingDirectory) {
@@ -63,11 +66,17 @@ public class CoworkContext {
     }
 
     // 记录最近访问的文件
-    public void recordFileAccess(String filePath) {
-        recentFiles.remove(filePath);
-        recentFiles.add(0, filePath);
-        if (recentFiles.size() > 50) {
-            recentFiles.remove(recentFiles.size() - 1);
+    public synchronized void recordFileAccess(String filePath) {
+        recentFilesSet.remove(filePath);
+        recentFilesSet.add(filePath);
+        if (recentFilesSet.size() > MAX_RECENT_FILES) {
+            recentFilesSet.remove(recentFilesSet.iterator().next());
+        }
+    }
+
+    public List<String> getRecentFiles() {
+        synchronized (this) {
+            return new ArrayList<>(recentFilesSet);
         }
     }
 
@@ -78,9 +87,10 @@ public class CoworkContext {
         summary.append("Accessible Directories: ").append(accessibleDirectories).append("\n");
         summary.append("File Types: ").append(fileTypeDistribution).append("\n");
         
-        List<String> displayRecentFiles = recentFiles.size() > 10 
-                ? recentFiles.subList(0, 10) 
-                : recentFiles;
+        List<String> allRecent = getRecentFiles();
+        List<String> displayRecentFiles = allRecent.size() > 10
+                ? allRecent.subList(allRecent.size() - 10, allRecent.size())
+                : allRecent;
         summary.append("Recent Files: ").append(displayRecentFiles).append("\n");
         
         return summary.toString();

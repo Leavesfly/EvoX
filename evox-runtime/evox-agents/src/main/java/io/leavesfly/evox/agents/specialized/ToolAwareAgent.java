@@ -7,8 +7,8 @@ import io.leavesfly.evox.agents.base.Agent;
 import io.leavesfly.evox.core.agent.IAgent;
 import io.leavesfly.evox.core.message.Message;
 import io.leavesfly.evox.core.message.MessageType;
-import io.leavesfly.evox.models.base.BaseLLM;
-import io.leavesfly.evox.models.config.LLMConfig;
+import io.leavesfly.evox.core.llm.ILLM;
+import io.leavesfly.evox.core.llm.LLMConfig;
 import io.leavesfly.evox.tools.agent.AgentTool;
 import io.leavesfly.evox.tools.base.BaseTool;
 import lombok.Builder;
@@ -78,7 +78,7 @@ public class ToolAwareAgent extends Agent {
             String description,
             String systemPrompt,
             LLMConfig llmConfig,
-            BaseLLM llm,
+            ILLM llm,
             List<BaseTool> tools,
             Boolean autoExecuteTools,
             Integer maxToolCalls,
@@ -121,7 +121,7 @@ public class ToolAwareAgent extends Agent {
             }
 
             // 使用LLM进行工具选择和参数提取
-            BaseLLM llmInstance = getLlm();
+            ILLM llmInstance = getLlm();
             if (llmInstance == null) {
                 throw new IllegalStateException("LLM not initialized for ToolAwareAgent");
             }

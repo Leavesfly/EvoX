@@ -9,17 +9,32 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 @Slf4j
 public class CoworkEventBus {
     
     private final List<SseEmitter> emitters;
     private final List<CoworkEvent> eventHistory;
-    
+    private final ExecutorService broadcastExecutor;
+    private final int maxHistorySize;
+
     public CoworkEventBus() {
+        this(100);
+    }
+
+    public CoworkEventBus(int maxHistorySize) {
         this.emitters = new CopyOnWriteArrayList<>();
         this.eventHistory = Collections.synchronizedList(new ArrayList<>());
+        this.broadcastExecutor = Executors.newSingleThreadExecutor(r -> {
+            Thread thread = new Thread(r, "sse-broadcast");
+            thread.setDaemon(true);
+            return thread;
+        });
+        this.maxHistorySize = maxHistorySize;
     }
     
     public record CoworkEvent(
@@ -74,26 +89,30 @@ public class CoworkEventBus {
     public void emit(CoworkEvent event) {
         synchronized (eventHistory) {
             eventHistory.add(event);
-            if (eventHistory.size() > 100) {
+            if (eventHistory.size() > maxHistorySize) {
                 eventHistory.remove(0);
             }
         }
-        
-        List<SseEmitter> deadEmitters = new ArrayList<>();
-        
-        for (SseEmitter emitter : emitters) {
-            try {
-                emitter.send(SseEmitter.event()
-                    .id(event.eventId())
-                    .name(event.eventType())
-                    .data(event));
-            } catch (IOException e) {
-                log.error("Failed to send event to emitter", e);
-                deadEmitters.add(emitter);
+
+        broadcastExecutor.submit(() -> {
+            List<SseEmitter> deadEmitters = new ArrayList<>();
+
+            for (SseEmitter emitter : emitters) {
+                try {
+                    emitter.send(SseEmitter.event()
+                            .id(event.eventId())
+                            .name(event.eventType())
+                            .data(event));
+                } catch (IOException e) {
+                    log.debug("Failed to send event to emitter, removing", e);
+                    deadEmitters.add(emitter);
+                }
             }
-        }
-        
-        emitters.removeAll(deadEmitters);
+
+            if (!deadEmitters.isEmpty()) {
+                emitters.removeAll(deadEmitters);
+            }
+        });
     }
     
     public void emitStream(String sessionId, String content) {

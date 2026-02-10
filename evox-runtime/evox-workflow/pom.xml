@@ -23,21 +23,18 @@
         </dependency>
         <dependency>
             <groupId>io.leavesfly.evox</groupId>
-            <artifactId>evox-models</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>io.leavesfly.evox</groupId>
-            <artifactId>evox-agents</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>io.leavesfly.evox</groupId>
-            <artifactId>evox-capability</artifactId>
+            <artifactId>evox-memory</artifactId>
         </dependency>
 
         <!-- Test dependencies -->
         <dependency>
             <groupId>io.leavesfly.evox</groupId>
             <artifactId>evox-actions</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>io.leavesfly.evox</groupId>
+            <artifactId>evox-storage</artifactId>
             <scope>test</scope>
         </dependency>
 

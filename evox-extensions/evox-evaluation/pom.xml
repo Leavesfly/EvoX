@@ -26,11 +26,6 @@
             <groupId>io.leavesfly.evox</groupId>
             <artifactId>evox-models</artifactId>
         </dependency>
-        <dependency>
-            <groupId>io.leavesfly.evox</groupId>
-            <artifactId>evox-agents</artifactId>
-        </dependency>
-
         <!-- Spring Boot -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
