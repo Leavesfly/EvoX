@@ -1,4 +1,4 @@
-# EvoX：一个用于构建可演化、可优化的多Agent系统的代理框架
+# EvoX：一个用于构建可演化的多Agent系统的代理框架
 
 <div align="center">
 
