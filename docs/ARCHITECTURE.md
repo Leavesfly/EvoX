@@ -120,6 +120,8 @@ evox/
 | evox-actions | 动作抽象（Action、ActionInput、ActionOutput 基类，不含具体实现） | evox-core |
 | evox-mcp | MCP 协议定义（MCPProtocol、MCPResource、MCPTool、MCPPrompt） | evox-core |
 
+**注意**: evox-storage 已从核心层移至运行时层，详见运行时层说明。
+
 **设计原则**:
 - 最小依赖原则：evox-actions 仅依赖 evox-core，不依赖 evox-models
 - 纯抽象原则：核心层只包含接口和抽象类，具体实现在运行时层

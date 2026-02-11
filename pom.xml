@@ -51,8 +51,8 @@
         <module>evox-core/evox-models</module>
         <module>evox-core/evox-actions</module>
         <module>evox-core/evox-mcp</module>
-        <module>evox-core/evox-storage</module>
-        <!-- 运行时层 (Runtime Layer) - 工具、记忆、RAG、智能体、工作流 -->
+        <!-- 运行时层 (Runtime Layer) - 存储、工具、记忆、RAG、智能体、工作流 -->
+        <module>evox-runtime/evox-storage</module>
         <module>evox-runtime/evox-tools</module>
         <module>evox-runtime/evox-memory</module>
         <module>evox-runtime/evox-rag</module>

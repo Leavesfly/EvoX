@@ -14,7 +14,7 @@
 
     <artifactId>evox-storage</artifactId>
     <name>EvoX Storage</name>
-    <description>EvoX Storage Module - Storage adapters (in-memory, database, vector, graph). Part of core layer as infrastructure.</description>
+    <description>EvoX Storage Module - Storage adapters (in-memory, database, vector, graph). Part of runtime layer.</description>
 
     <dependencies>
         <dependency>
