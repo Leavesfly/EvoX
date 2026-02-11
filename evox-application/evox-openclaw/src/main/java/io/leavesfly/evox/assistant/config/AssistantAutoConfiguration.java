@@ -194,6 +194,7 @@ public class AssistantAutoConfiguration {
         registry.registerSkill(new GitHubSkill());
         registry.registerSkill(new CalendarSkill());
         registry.registerSkill(new StockTrackerSkill());
+        registry.registerSkill(new MoltbookSkill());
 
         log.info("Registered {} personal assistant skills", registry.getSkillCount());
         return registry;
