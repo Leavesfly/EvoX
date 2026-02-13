@@ -1,6 +1,8 @@
 package io.leavesfly.evox.assistant.config;
 
 import io.leavesfly.evox.assistant.AssistantBootstrap;
+import io.leavesfly.evox.assistant.evolution.SelfEvolutionService;
+import io.leavesfly.evox.assistant.evolution.SkillGenerator;
 import io.leavesfly.evox.agents.skill.SkillMarketplace;
 import io.leavesfly.evox.agents.skill.SkillRegistry;
 import io.leavesfly.evox.agents.skill.builtin.*;
@@ -25,6 +27,8 @@ import io.leavesfly.evox.gateway.routing.GatewayRouter;
 import io.leavesfly.evox.gateway.session.SessionManager;
 import io.leavesfly.evox.scheduler.core.TaskScheduler;
 import io.leavesfly.evox.scheduler.event.EventBus;
+import io.leavesfly.evox.scheduler.heartbeat.HeartbeatRunner;
+import io.leavesfly.evox.scheduler.heartbeat.SystemEventQueue;
 import io.leavesfly.evox.tools.api.ToolRegistry;
 import io.leavesfly.evox.tools.calendar.CalendarTool;
 import io.leavesfly.evox.tools.clipboard.ClipboardTool;
@@ -241,13 +245,149 @@ public class AssistantAutoConfiguration {
         return registry;
     }
 
+    // ========== Heartbeat (主动唤醒) ==========
+
+    @Bean
+    @ConditionalOnMissingBean
+    public SystemEventQueue systemEventQueue() {
+        return new SystemEventQueue();
+    }
+
+    @Bean
+    @ConditionalOnMissingBean
+    @ConditionalOnProperty(prefix = "evox.assistant.heartbeat", name = "enabled", havingValue = "true", matchIfMissing = true)
+    public HeartbeatRunner heartbeatRunner(IAgentManager agentManager,
+                                           SystemEventQueue systemEventQueue,
+                                           AssistantProperties properties) {
+        AssistantProperties.HeartbeatConfig heartbeatConfig = properties.getHeartbeat();
+
+        String defaultAgentName = properties.getDefaultAgent();
+        IAgent defaultAgent = agentManager.getAgent(defaultAgentName);
+        if (defaultAgent == null && agentManager.getAgentCount() > 0) {
+            defaultAgent = agentManager.getAllAgents().values().iterator().next();
+        }
+
+        if (defaultAgent == null) {
+            log.warn("No agent available for HeartbeatRunner. Heartbeat will not start.");
+            return null;
+        }
+
+        HeartbeatRunner.HeartbeatConfig config = HeartbeatRunner.HeartbeatConfig.builder()
+                .enabled(heartbeatConfig.isEnabled())
+                .intervalMs(heartbeatConfig.getIntervalMs())
+                .initialDelayMs(heartbeatConfig.getInitialDelayMs())
+                .build();
+
+        HeartbeatRunner runner = new HeartbeatRunner(defaultAgent, systemEventQueue, config);
+        log.info("HeartbeatRunner created: interval={}ms, initialDelay={}ms",
+                heartbeatConfig.getIntervalMs(), heartbeatConfig.getInitialDelayMs());
+        return runner;
+    }
+
+    // ========== Self Evolution (自进化) ==========
+
+    @Bean
+    @ConditionalOnMissingBean
+    @ConditionalOnProperty(prefix = "evox.assistant.self-evolution", name = "enabled", havingValue = "true")
+    public SelfEvolutionService selfEvolutionService(IAgentManager agentManager,
+                                                      AssistantProperties properties) {
+        AssistantProperties.SelfEvolutionConfig evolutionConfig = properties.getSelfEvolution();
+
+        String defaultAgentName = properties.getDefaultAgent();
+        IAgent defaultAgent = agentManager.getAgent(defaultAgentName);
+        if (defaultAgent == null && agentManager.getAgentCount() > 0) {
+            defaultAgent = agentManager.getAllAgents().values().iterator().next();
+        }
+
+        if (defaultAgent == null) {
+            log.warn("No agent available for SelfEvolutionService. Self-evolution will not start.");
+            return null;
+        }
+
+        SelfEvolutionService.SelfEvolutionConfig config = SelfEvolutionService.SelfEvolutionConfig.builder()
+                .enabled(evolutionConfig.isEnabled())
+                .optimizationIntervalMs(evolutionConfig.getOptimizationIntervalMs())
+                .minFeedbackForOptimization(evolutionConfig.getMinFeedbackForOptimization())
+                .improvementThreshold(evolutionConfig.getImprovementThreshold())
+                .build();
+
+        SelfEvolutionService service = new SelfEvolutionService(defaultAgent, config);
+        log.info("SelfEvolutionService created: interval={}ms, minFeedback={}",
+                evolutionConfig.getOptimizationIntervalMs(), evolutionConfig.getMinFeedbackForOptimization());
+        return service;
+    }
+
+    // ========== Skill Generator (技能自动生成) ==========
+
+    @Bean
+    @ConditionalOnMissingBean
+    @ConditionalOnProperty(prefix = "evox.assistant.skill-generator", name = "enabled", havingValue = "true", matchIfMissing = true)
+    public SkillGenerator skillGenerator(IAgentManager agentManager,
+                                          SkillRegistry skillRegistry,
+                                          SkillMarketplace skillMarketplace,
+                                          AssistantProperties properties) {
+        String defaultAgentName = properties.getDefaultAgent();
+        IAgent defaultAgent = agentManager.getAgent(defaultAgentName);
+        if (defaultAgent == null && agentManager.getAgentCount() > 0) {
+            defaultAgent = agentManager.getAllAgents().values().iterator().next();
+        }
+
+        if (defaultAgent == null) {
+            log.warn("No agent available for SkillGenerator. Skill generation will not be available.");
+            return null;
+        }
+
+        SkillGenerator generator = new SkillGenerator(defaultAgent, skillRegistry, skillMarketplace);
+        log.info("SkillGenerator created for agent: {}", defaultAgent.getName());
+        return generator;
+    }
+
+    // ========== CLI ==========
+
+    @Bean
+    @ConditionalOnProperty(prefix = "evox.assistant.cli", name = "enabled", havingValue = "true")
+    public io.leavesfly.evox.assistant.cli.CliRunner cliRunner(
+            GatewayRouter gatewayRouter,
+            SkillRegistry skillRegistry,
+            ToolRegistry toolRegistry,
+            ChannelRegistry channelRegistry,
+            TaskScheduler taskScheduler,
+            IAgentManager agentManager,
+            SystemEventQueue systemEventQueue,
+            AssistantProperties properties,
+            org.springframework.beans.factory.ObjectProvider<HeartbeatRunner> heartbeatRunnerProvider,
+            org.springframework.beans.factory.ObjectProvider<SelfEvolutionService> selfEvolutionServiceProvider,
+            org.springframework.beans.factory.ObjectProvider<io.leavesfly.evox.assistant.evolution.SkillGenerator> skillGeneratorProvider) {
+        return new io.leavesfly.evox.assistant.cli.CliRunner(
+                gatewayRouter,
+                skillRegistry,
+                toolRegistry,
+                channelRegistry,
+                taskScheduler,
+                agentManager,
+                systemEventQueue,
+                properties,
+                heartbeatRunnerProvider.getIfAvailable(),
+                selfEvolutionServiceProvider.getIfAvailable(),
+                skillGeneratorProvider.getIfAvailable());
+    }
+
     // ========== Bootstrap ==========
 
     @Bean
     public AssistantBootstrap assistantBootstrap(ChannelRegistry channelRegistry,
                                                  TaskScheduler taskScheduler,
                                                  IAgentManager agentManager,
-                                                 AssistantProperties properties) {
-        return new AssistantBootstrap(channelRegistry, taskScheduler, agentManager, properties);
+                                                 AssistantProperties properties,
+                                                 SystemEventQueue systemEventQueue,
+                                                 org.springframework.beans.factory.ObjectProvider<HeartbeatRunner> heartbeatRunnerProvider,
+                                                 org.springframework.beans.factory.ObjectProvider<SelfEvolutionService> selfEvolutionServiceProvider,
+                                                 org.springframework.beans.factory.ObjectProvider<SkillGenerator> skillGeneratorProvider) {
+        return new AssistantBootstrap(
+                channelRegistry, taskScheduler, agentManager, properties,
+                systemEventQueue,
+                heartbeatRunnerProvider.getIfAvailable(),
+                selfEvolutionServiceProvider.getIfAvailable(),
+                skillGeneratorProvider.getIfAvailable());
     }
 }

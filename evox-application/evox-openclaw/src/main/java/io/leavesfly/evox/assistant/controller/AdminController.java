@@ -2,6 +2,8 @@ package io.leavesfly.evox.assistant.controller;
 
 import io.leavesfly.evox.agents.skill.BaseSkill;
 import io.leavesfly.evox.agents.skill.SkillRegistry;
+import io.leavesfly.evox.assistant.evolution.SelfEvolutionService;
+import io.leavesfly.evox.assistant.evolution.SkillGenerator;
 import io.leavesfly.evox.channels.core.ChannelRegistry;
 import io.leavesfly.evox.channels.core.IChannel;
 import io.leavesfly.evox.core.agent.IAgent;
@@ -9,9 +11,10 @@ import io.leavesfly.evox.core.agent.IAgentManager;
 import io.leavesfly.evox.gateway.audit.AuditEvent;
 import io.leavesfly.evox.gateway.audit.AuditLogger;
 import io.leavesfly.evox.gateway.session.SessionManager;
+import io.leavesfly.evox.scheduler.heartbeat.HeartbeatRunner;
 import io.leavesfly.evox.tools.api.ToolRegistry;
 import io.leavesfly.evox.tools.base.BaseTool;
-import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.*;
@@ -19,7 +22,6 @@ import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/admin")
-@RequiredArgsConstructor
 public class AdminController {
 
     private final IAgentManager agentManager;
@@ -28,16 +30,59 @@ public class AdminController {
     private final ToolRegistry toolRegistry;
     private final SessionManager sessionManager;
     private final AuditLogger auditLogger;
+    private final HeartbeatRunner heartbeatRunner;
+    private final SelfEvolutionService selfEvolutionService;
+    private final SkillGenerator skillGenerator;
+
+    public AdminController(IAgentManager agentManager,
+                           ChannelRegistry channelRegistry,
+                           SkillRegistry skillRegistry,
+                           ToolRegistry toolRegistry,
+                           SessionManager sessionManager,
+                           AuditLogger auditLogger,
+                           ObjectProvider<HeartbeatRunner> heartbeatRunnerProvider,
+                           ObjectProvider<SelfEvolutionService> selfEvolutionServiceProvider,
+                           ObjectProvider<SkillGenerator> skillGeneratorProvider) {
+        this.agentManager = agentManager;
+        this.channelRegistry = channelRegistry;
+        this.skillRegistry = skillRegistry;
+        this.toolRegistry = toolRegistry;
+        this.sessionManager = sessionManager;
+        this.auditLogger = auditLogger;
+        this.heartbeatRunner = heartbeatRunnerProvider.getIfAvailable();
+        this.selfEvolutionService = selfEvolutionServiceProvider.getIfAvailable();
+        this.skillGenerator = skillGeneratorProvider.getIfAvailable();
+    }
 
     @GetMapping("/dashboard")
     public Map<String, Object> getDashboard() {
-        Map<String, Object> dashboard = new HashMap<>();
+        Map<String, Object> dashboard = new LinkedHashMap<>();
         dashboard.put("agentCount", agentManager.getAgentCount());
         dashboard.put("channelCount", channelRegistry.getChannelCount());
         dashboard.put("skillCount", skillRegistry.getSkillCount());
         dashboard.put("toolCount", toolRegistry.size());
         dashboard.put("activeSessionCount", sessionManager.getActiveSessionCount());
         dashboard.put("totalAuditEventCount", auditLogger.getTotalEventCount());
+
+        // Evolution capabilities status
+        Map<String, Object> evolution = new LinkedHashMap<>();
+        if (heartbeatRunner != null) {
+            Map<String, Object> heartbeat = new LinkedHashMap<>();
+            heartbeat.put("running", heartbeatRunner.isRunning());
+            heartbeat.put("totalHeartbeats", heartbeatRunner.getTotalHeartbeats());
+            heartbeat.put("pendingEvents", heartbeatRunner.getPendingEventCount());
+            evolution.put("heartbeat", heartbeat);
+        }
+        if (selfEvolutionService != null) {
+            evolution.put("selfEvolution", selfEvolutionService.getStatistics());
+        }
+        if (skillGenerator != null) {
+            Map<String, Object> generator = new LinkedHashMap<>();
+            generator.put("generatedSkillCount", skillGenerator.getGeneratedSkills().size());
+            evolution.put("skillGenerator", generator);
+        }
+        dashboard.put("evolution", evolution);
+
         return dashboard;
     }
 

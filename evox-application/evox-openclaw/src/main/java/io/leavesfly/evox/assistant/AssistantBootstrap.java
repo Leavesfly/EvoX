@@ -1,5 +1,7 @@
 package io.leavesfly.evox.assistant;
 
+import io.leavesfly.evox.assistant.evolution.SelfEvolutionService;
+import io.leavesfly.evox.assistant.evolution.SkillGenerator;
 import io.leavesfly.evox.channels.adapter.AgentChannelListener;
 import io.leavesfly.evox.channels.core.ChannelRegistry;
 import io.leavesfly.evox.channels.core.IChannel;
@@ -7,6 +9,8 @@ import io.leavesfly.evox.assistant.config.AssistantProperties;
 import io.leavesfly.evox.core.agent.IAgent;
 import io.leavesfly.evox.core.agent.IAgentManager;
 import io.leavesfly.evox.scheduler.core.TaskScheduler;
+import io.leavesfly.evox.scheduler.heartbeat.HeartbeatRunner;
+import io.leavesfly.evox.scheduler.heartbeat.SystemEventQueue;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.SmartLifecycle;
 
@@ -17,16 +21,28 @@ public class AssistantBootstrap implements SmartLifecycle {
     private final TaskScheduler taskScheduler;
     private final IAgentManager agentManager;
     private final AssistantProperties properties;
+    private final SystemEventQueue systemEventQueue;
+    private final HeartbeatRunner heartbeatRunner;
+    private final SelfEvolutionService selfEvolutionService;
+    private final SkillGenerator skillGenerator;
     private volatile boolean running = false;
 
     public AssistantBootstrap(ChannelRegistry channelRegistry,
                               TaskScheduler taskScheduler,
                               IAgentManager agentManager,
-                              AssistantProperties properties) {
+                              AssistantProperties properties,
+                              SystemEventQueue systemEventQueue,
+                              HeartbeatRunner heartbeatRunner,
+                              SelfEvolutionService selfEvolutionService,
+                              SkillGenerator skillGenerator) {
         this.channelRegistry = channelRegistry;
         this.taskScheduler = taskScheduler;
         this.agentManager = agentManager;
         this.properties = properties;
+        this.systemEventQueue = systemEventQueue;
+        this.heartbeatRunner = heartbeatRunner;
+        this.selfEvolutionService = selfEvolutionService;
+        this.skillGenerator = skillGenerator;
     }
 
     @Override
@@ -38,17 +54,28 @@ public class AssistantBootstrap implements SmartLifecycle {
         bindAgentToChannels();
         startChannels();
         startScheduler();
+        startHeartbeat();
+        startSelfEvolution();
 
         running = true;
         log.info("EvoX Assistant started successfully!");
         log.info("  Channels: {}", channelRegistry.getChannelCount());
         log.info("  Scheduled Tasks: {}", taskScheduler.getTaskCount());
         log.info("  Agents: {}", agentManager.getAgentCount());
+        log.info("  Heartbeat: {}", heartbeatRunner != null && heartbeatRunner.isRunning() ? "RUNNING" : "DISABLED");
+        log.info("  Self-Evolution: {}", selfEvolutionService != null ? "ENABLED" : "DISABLED");
+        log.info("  Skill Generator: {}", skillGenerator != null ? "READY" : "DISABLED");
     }
 
     @Override
     public void stop() {
         log.info("Stopping EvoX Assistant...");
+
+        if (heartbeatRunner != null) {
+            heartbeatRunner.shutdown();
+            log.info("HeartbeatRunner stopped");
+        }
+
         taskScheduler.shutdown();
         channelRegistry.stopAll();
         running = false;
@@ -95,6 +122,20 @@ public class AssistantBootstrap implements SmartLifecycle {
         if (properties.getScheduler().isEnabled()) {
             taskScheduler.start();
             log.info("Task scheduler started");
+        }
+    }
+
+    private void startHeartbeat() {
+        if (heartbeatRunner != null && properties.getHeartbeat().isEnabled()) {
+            heartbeatRunner.start();
+            log.info("HeartbeatRunner started: interval={}ms", properties.getHeartbeat().getIntervalMs());
+        }
+    }
+
+    private void startSelfEvolution() {
+        if (selfEvolutionService != null && properties.getSelfEvolution().isEnabled()) {
+            selfEvolutionService.registerOptimizationTask(taskScheduler);
+            log.info("SelfEvolutionService registered with TaskScheduler");
         }
     }
 }

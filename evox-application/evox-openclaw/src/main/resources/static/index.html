@@ -738,6 +738,10 @@
                     <span>📋</span>
                     <span class="nav-text">Audit</span>
                 </div>
+                <div class="nav-item" data-page="evolution">
+                    <span>🧬</span>
+                    <span class="nav-text">Evolution</span>
+                </div>
                 <div class="nav-item" data-page="chat">
                     <span>💭</span>
                     <span class="nav-text">Chat</span>
@@ -906,6 +910,142 @@
                     </div>
                 </div>
 
+                <!-- Evolution Page -->
+                <div id="page-evolution" class="page">
+                    <!-- Evolution Status Overview -->
+                    <div class="dashboard-grid" style="margin-bottom: 32px;">
+                        <div class="stat-card blue">
+                            <div class="icon">💓</div>
+                            <div class="value" id="evo-heartbeat-count">0</div>
+                            <div class="label">Heartbeats</div>
+                        </div>
+                        <div class="stat-card green">
+                            <div class="icon">📊</div>
+                            <div class="value" id="evo-events-processed">0</div>
+                            <div class="label">Events Processed</div>
+                        </div>
+                        <div class="stat-card purple">
+                            <div class="icon">🧠</div>
+                            <div class="value" id="evo-optimizations">0</div>
+                            <div class="label">Optimizations</div>
+                        </div>
+                        <div class="stat-card orange">
+                            <div class="icon">🛠️</div>
+                            <div class="value" id="evo-generated-skills">0</div>
+                            <div class="label">Generated Skills</div>
+                        </div>
+                    </div>
+
+                    <!-- Heartbeat Section -->
+                    <div class="system-status" style="margin-bottom: 24px;">
+                        <h3>💓 Heartbeat — 主动唤醒</h3>
+                        <p style="color: var(--text-secondary); margin: 8px 0 16px;">Agent 定期自动唤醒，处理积压的系统事件。支持定时心跳和立即唤醒两种模式。</p>
+                        <div id="heartbeat-details">
+                            <div class="status-item">
+                                <span class="status-label">Status</span>
+                                <span class="status-value" id="hb-status">--</span>
+                            </div>
+                            <div class="status-item">
+                                <span class="status-label">Total Heartbeats</span>
+                                <span class="status-value" id="hb-total">0</span>
+                            </div>
+                            <div class="status-item">
+                                <span class="status-label">Pending Events</span>
+                                <span class="status-value" id="hb-pending">0</span>
+                            </div>
+                            <div class="status-item">
+                                <span class="status-label">Last Heartbeat</span>
+                                <span class="status-value" id="hb-last-time">--</span>
+                            </div>
+                        </div>
+                        <div style="margin-top: 16px; display: flex; gap: 12px; flex-wrap: wrap;">
+                            <button class="btn btn-primary" onclick="triggerWake()">⚡ Trigger Wake Now</button>
+                            <button class="btn btn-success" onclick="showSendEventModal()">📨 Send System Event</button>
+                        </div>
+                    </div>
+
+                    <!-- Self-Evolution Section -->
+                    <div class="system-status" style="margin-bottom: 24px;">
+                        <h3>🧠 Self-Evolution — 自进化</h3>
+                        <p style="color: var(--text-secondary); margin: 8px 0 16px;">收集用户反馈，基于进化算法自动优化 Agent 的系统提示词。支持版本历史和回滚。</p>
+                        <div id="evolution-details">
+                            <div class="status-item">
+                                <span class="status-label">Status</span>
+                                <span class="status-value" id="evo-status">--</span>
+                            </div>
+                            <div class="status-item">
+                                <span class="status-label">Total Optimizations</span>
+                                <span class="status-value" id="evo-total-opt">0</span>
+                            </div>
+                            <div class="status-item">
+                                <span class="status-label">Improvements</span>
+                                <span class="status-value" id="evo-improvements">0</span>
+                            </div>
+                            <div class="status-item">
+                                <span class="status-label">Pending Feedback</span>
+                                <span class="status-value" id="evo-pending-fb">0</span>
+                            </div>
+                            <div class="status-item">
+                                <span class="status-label">Prompt Versions</span>
+                                <span class="status-value" id="evo-versions">0</span>
+                            </div>
+                            <div class="status-item">
+                                <span class="status-label">Current Prompt</span>
+                                <span class="status-value" id="evo-prompt-preview" style="max-width: 400px; word-break: break-all;">(default)</span>
+                            </div>
+                        </div>
+                        <div style="margin-top: 16px; display: flex; gap: 12px; flex-wrap: wrap;">
+                            <button class="btn btn-primary" onclick="showFeedbackModal()">📝 Submit Feedback</button>
+                            <button class="btn btn-success" onclick="triggerOptimization()">🚀 Trigger Optimization</button>
+                            <button class="btn" onclick="loadPromptHistory()" style="border: 1px solid var(--border-color);">📜 View Prompt History</button>
+                        </div>
+                        <div id="prompt-history-container" style="display: none; margin-top: 16px;">
+                            <h4 style="margin-bottom: 12px;">Prompt Version History</h4>
+                            <div class="table-container">
+                                <table>
+                                    <thead>
+                                        <tr>
+                                            <th>Version</th>
+                                            <th>Score</th>
+                                            <th>Created</th>
+                                            <th>Round</th>
+                                            <th>Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="prompt-history-tbody"></tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Skill Generator Section -->
+                    <div class="system-status">
+                        <h3>🛠️ Skill Generator — 技能自动生成</h3>
+                        <p style="color: var(--text-secondary); margin: 8px 0 16px;">描述你需要的能力，Agent 自主生成新 Skill 并动态安装。实现"自我改进"的核心闭环。</p>
+                        <div style="margin-bottom: 16px; display: flex; gap: 12px; align-items: flex-start;">
+                            <textarea id="skill-gen-input" placeholder="描述你需要的新技能，例如：一个能够将中文翻译成英文的技能..." style="flex: 1; padding: 12px; border: 1px solid var(--border-color); border-radius: 6px; font-size: 14px; min-height: 80px; font-family: inherit; resize: vertical;"></textarea>
+                            <button class="btn btn-primary" onclick="generateSkill()" style="white-space: nowrap; height: 44px;">🪄 Generate Skill</button>
+                        </div>
+                        <div id="generated-skills-list">
+                            <h4 style="margin-bottom: 12px;">Generated Skills</h4>
+                            <div class="table-container">
+                                <table>
+                                    <thead>
+                                        <tr>
+                                            <th>Name</th>
+                                            <th>Description</th>
+                                            <th>Original Request</th>
+                                            <th>Generated At</th>
+                                            <th>Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="generated-skills-tbody"></tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
                 <!-- Chat Page -->
                 <div id="page-chat" class="page">
                     <div class="chat-container">
@@ -1006,6 +1146,9 @@
                     break;
                 case 'audit':
                     await loadAudit();
+                    break;
+                case 'evolution':
+                    await loadEvolution();
                     break;
             }
         }
@@ -1407,6 +1550,234 @@
                 closeModal();
             }
         });
+
+        // ========== Evolution Page ==========
+
+        async function loadEvolution() {
+            try {
+                const status = await fetchAPI('/evolution/status');
+
+                // Heartbeat stats
+                const hb = status.heartbeat || {};
+                document.getElementById('evo-heartbeat-count').textContent = hb.totalHeartbeats || 0;
+                document.getElementById('evo-events-processed').textContent = hb.totalEventsProcessed || 0;
+                document.getElementById('hb-status').textContent = hb.enabled ? (hb.running ? 'Running ✓' : 'Stopped') : 'Disabled';
+                document.getElementById('hb-status').style.color = hb.running ? 'var(--success-color)' : 'var(--text-secondary)';
+                document.getElementById('hb-total').textContent = hb.totalHeartbeats || 0;
+                document.getElementById('hb-pending').textContent = hb.pendingEvents || 0;
+                document.getElementById('hb-last-time').textContent = hb.lastHeartbeatTime ? new Date(hb.lastHeartbeatTime).toLocaleString() : '--';
+
+                // Self-Evolution stats
+                const evo = status.selfEvolution || {};
+                document.getElementById('evo-optimizations').textContent = evo.totalOptimizations || 0;
+                document.getElementById('evo-status').textContent = evo.enabled ? 'Enabled ✓' : 'Disabled';
+                document.getElementById('evo-status').style.color = evo.enabled ? 'var(--success-color)' : 'var(--text-secondary)';
+                document.getElementById('evo-total-opt').textContent = evo.totalOptimizations || 0;
+                document.getElementById('evo-improvements').textContent = evo.totalImprovements || 0;
+                document.getElementById('evo-pending-fb').textContent = evo.pendingFeedback || 0;
+                document.getElementById('evo-versions').textContent = evo.promptVersions || 0;
+
+                // Skill Generator stats
+                const gen = status.skillGenerator || {};
+                document.getElementById('evo-generated-skills').textContent = gen.generatedSkillCount || 0;
+
+                // Load generated skills list
+                await loadGeneratedSkills();
+            } catch (error) {
+                showToast('Failed to load evolution status', 'error');
+            }
+        }
+
+        // Heartbeat: Trigger Wake
+        async function triggerWake() {
+            try {
+                const result = await fetchAPI('/evolution/heartbeat/wake', { method: 'POST' });
+                showToast(result.message || 'Wake triggered', result.success ? 'success' : 'error');
+                setTimeout(() => loadEvolution(), 1000);
+            } catch (error) {
+                showToast('Failed to trigger wake', 'error');
+            }
+        }
+
+        // Heartbeat: Send System Event
+        function showSendEventModal() {
+            document.getElementById('modal-title').textContent = 'Send System Event';
+            document.getElementById('modal-input').value = '';
+            document.getElementById('modal-input').placeholder = 'Enter event message, e.g.: User requested daily summary report';
+            document.getElementById('modal-overlay').classList.add('active');
+
+            modalCallback = async () => {
+                const message = document.getElementById('modal-input').value.trim();
+                if (!message) {
+                    showToast('Event message is required', 'error');
+                    return;
+                }
+                try {
+                    const result = await fetchAPI('/evolution/heartbeat/event', {
+                        method: 'POST',
+                        body: JSON.stringify({
+                            source: 'web-ui',
+                            message: message,
+                            wakeMode: 'NEXT_HEARTBEAT'
+                        })
+                    });
+                    showToast(result.message || 'Event sent', 'success');
+                    await loadEvolution();
+                } catch (error) {
+                    showToast('Failed to send event', 'error');
+                }
+            };
+        }
+
+        // Self-Evolution: Submit Feedback
+        function showFeedbackModal() {
+            document.getElementById('modal-title').textContent = 'Submit Feedback';
+            document.getElementById('modal-input').value = '';
+            document.getElementById('modal-input').placeholder = 'Enter your feedback comment about the AI assistant...';
+            document.getElementById('modal-overlay').classList.add('active');
+
+            modalCallback = async () => {
+                const comment = document.getElementById('modal-input').value.trim();
+                try {
+                    const result = await fetchAPI('/evolution/self-evolution/feedback', {
+                        method: 'POST',
+                        body: JSON.stringify({
+                            type: 'USER_RATING',
+                            score: 0.8,
+                            comment: comment || 'Good response',
+                            userInput: '',
+                            agentOutput: ''
+                        })
+                    });
+                    showToast(result.message || 'Feedback submitted', result.success ? 'success' : 'error');
+                    await loadEvolution();
+                } catch (error) {
+                    showToast('Failed to submit feedback', 'error');
+                }
+            };
+        }
+
+        // Self-Evolution: Trigger Optimization
+        async function triggerOptimization() {
+            try {
+                showToast('Running optimization...', 'info');
+                const result = await fetchAPI('/evolution/self-evolution/optimize', { method: 'POST' });
+                showToast(result.optimizationResult || 'Optimization completed', result.success ? 'success' : 'error');
+                await loadEvolution();
+            } catch (error) {
+                showToast('Failed to trigger optimization', 'error');
+            }
+        }
+
+        // Self-Evolution: Load Prompt History
+        async function loadPromptHistory() {
+            const container = document.getElementById('prompt-history-container');
+            container.style.display = container.style.display === 'none' ? 'block' : 'none';
+
+            if (container.style.display === 'none') return;
+
+            try {
+                const data = await fetchAPI('/evolution/self-evolution/history');
+                const tbody = document.getElementById('prompt-history-tbody');
+                const versions = data.versions || [];
+
+                if (versions.length > 0) {
+                    tbody.innerHTML = versions.map(v => `
+                        <tr>
+                            <td><strong>v${v.version}</strong></td>
+                            <td>${(v.feedbackScore || 0).toFixed(2)}</td>
+                            <td>${new Date(v.createdAt).toLocaleString()}</td>
+                            <td>#${v.optimizationRound}</td>
+                            <td>
+                                <button class="btn btn-primary btn-sm" onclick="rollbackPrompt(${v.version})">Rollback</button>
+                            </td>
+                        </tr>
+                    `).join('');
+                } else {
+                    tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: var(--text-secondary);">No prompt versions yet. Submit feedback and trigger optimization to start evolving.</td></tr>';
+                }
+            } catch (error) {
+                showToast('Failed to load prompt history', 'error');
+            }
+        }
+
+        // Self-Evolution: Rollback Prompt
+        async function rollbackPrompt(version) {
+            if (!confirm(`Rollback to prompt version ${version}?`)) return;
+            try {
+                const result = await fetchAPI(`/evolution/self-evolution/rollback/${version}`, { method: 'POST' });
+                showToast(result.message || 'Rolled back', result.success ? 'success' : 'error');
+                await loadEvolution();
+            } catch (error) {
+                showToast('Failed to rollback', 'error');
+            }
+        }
+
+        // Skill Generator: Generate Skill
+        async function generateSkill() {
+            const description = document.getElementById('skill-gen-input').value.trim();
+            if (!description) {
+                showToast('Please describe the skill you want to generate', 'error');
+                return;
+            }
+
+            try {
+                showToast('Generating skill... This may take a moment.', 'info');
+                const result = await fetchAPI('/evolution/skill-generator/generate', {
+                    method: 'POST',
+                    body: JSON.stringify({ description: description })
+                });
+
+                if (result.success) {
+                    showToast(`Skill "${result.skillName}" generated and installed!`, 'success');
+                    document.getElementById('skill-gen-input').value = '';
+                } else {
+                    showToast(result.message || 'Generation failed', 'error');
+                }
+                await loadEvolution();
+            } catch (error) {
+                showToast('Failed to generate skill', 'error');
+            }
+        }
+
+        // Skill Generator: Load Generated Skills
+        async function loadGeneratedSkills() {
+            try {
+                const data = await fetchAPI('/evolution/skill-generator');
+                const tbody = document.getElementById('generated-skills-tbody');
+                const skills = data.generatedSkills || [];
+
+                if (skills.length > 0) {
+                    tbody.innerHTML = skills.map(skill => `
+                        <tr>
+                            <td><strong>${skill.name}</strong></td>
+                            <td>${skill.description || '--'}</td>
+                            <td style="max-width: 200px; overflow: hidden; text-overflow: ellipsis;">${skill.originalRequest || '--'}</td>
+                            <td>${new Date(skill.generatedAt).toLocaleString()}</td>
+                            <td>
+                                <button class="btn btn-danger btn-sm" onclick="uninstallGeneratedSkill('${skill.name}')">Uninstall</button>
+                            </td>
+                        </tr>
+                    `).join('');
+                } else {
+                    tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: var(--text-secondary);">No skills generated yet. Describe a new skill above to get started.</td></tr>';
+                }
+            } catch (error) {
+                document.getElementById('generated-skills-tbody').innerHTML = '<tr><td colspan="5" style="text-align: center; color: var(--text-secondary);">Skill Generator not available</td></tr>';
+            }
+        }
+
+        // Skill Generator: Uninstall
+        async function uninstallGeneratedSkill(skillName) {
+            if (!confirm(`Uninstall generated skill "${skillName}"?`)) return;
+            try {
+                const result = await fetchAPI(`/evolution/skill-generator/${skillName}`, { method: 'DELETE' });
+                showToast(result.message || 'Uninstalled', result.success ? 'success' : 'error');
+                await loadEvolution();
+            } catch (error) {
+                showToast('Failed to uninstall skill', 'error');
+            }
+        }
 
         // Initialize
         document.addEventListener('DOMContentLoaded', () => {

@@ -37,6 +37,28 @@ evox:
       enabled: true
       check-interval-ms: 1000
 
+    # 心跳主动唤醒配置
+    heartbeat:
+      enabled: true
+      interval-ms: 300000          # 5 分钟
+      initial-delay-ms: 10000      # 启动延迟 10 秒
+
+    # 自进化配置
+    self-evolution:
+      enabled: false               # 默认关闭，需要足够反馈数据后开启
+      optimization-interval-ms: 3600000   # 1 小时
+      min-feedback-for-optimization: 10
+      improvement-threshold: 0.5
+
+    # 技能自动生成配置
+    skill-generator:
+      enabled: true
+
+    # CLI 交互模式配置
+    cli:
+      enabled: false                # 设为 true 启动时进入交互式 CLI
+      color-enabled: true           # 终端颜色输出
+
 logging:
   level:
     io.leavesfly.evox: INFO

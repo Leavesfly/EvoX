@@ -66,6 +66,18 @@
             <optional>true</optional>
         </dependency>
 
+        <!-- 扩展层 - 优化器（自进化能力） -->
+        <dependency>
+            <groupId>io.leavesfly.evox</groupId>
+            <artifactId>evox-optimizers</artifactId>
+        </dependency>
+
+        <!-- 运行时层 - 工作流（evox-optimizers 依赖） -->
+        <dependency>
+            <groupId>io.leavesfly.evox</groupId>
+            <artifactId>evox-workflow</artifactId>
+        </dependency>
+
         <!-- OkHttp -->
         <dependency>
             <groupId>com.squareup.okhttp3</groupId>

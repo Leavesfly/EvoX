@@ -20,6 +20,10 @@ public class AssistantProperties {
     private TelegramChannelConfig telegram = new TelegramChannelConfig();
     private DingTalkChannelConfig dingtalk = new DingTalkChannelConfig();
     private SchedulerConfig scheduler = new SchedulerConfig();
+    private HeartbeatConfig heartbeat = new HeartbeatConfig();
+    private SelfEvolutionConfig selfEvolution = new SelfEvolutionConfig();
+    private SkillGeneratorConfig skillGenerator = new SkillGeneratorConfig();
+    private CliConfig cli = new CliConfig();
 
     @Data
     public static class GatewayConfig {
@@ -59,5 +63,38 @@ public class AssistantProperties {
     public static class SchedulerConfig {
         private boolean enabled = true;
         private long checkIntervalMs = 1000;
+    }
+
+    @Data
+    public static class HeartbeatConfig {
+        private boolean enabled = true;
+        /** 心跳间隔（毫秒），默认 5 分钟 */
+        private long intervalMs = 300_000;
+        /** 启动延迟（毫秒），默认 10 秒 */
+        private long initialDelayMs = 10_000;
+    }
+
+    @Data
+    public static class SelfEvolutionConfig {
+        private boolean enabled = false;
+        /** 优化间隔（毫秒），默认 1 小时 */
+        private long optimizationIntervalMs = 3_600_000;
+        /** 触发优化所需的最少反馈数量 */
+        private int minFeedbackForOptimization = 10;
+        /** 改进阈值（反馈平均分高于此值才更新 Prompt） */
+        private double improvementThreshold = 0.5;
+    }
+
+    @Data
+    public static class SkillGeneratorConfig {
+        private boolean enabled = true;
+    }
+
+    @Data
+    public static class CliConfig {
+        /** 是否启用 CLI 交互模式 */
+        private boolean enabled = false;
+        /** 是否启用终端颜色输出 */
+        private boolean colorEnabled = true;
     }
 }
