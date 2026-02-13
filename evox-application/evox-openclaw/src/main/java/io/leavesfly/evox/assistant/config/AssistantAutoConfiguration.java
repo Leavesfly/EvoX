@@ -6,7 +6,7 @@ import io.leavesfly.evox.assistant.evolution.SkillGenerator;
 import io.leavesfly.evox.agents.skill.SkillMarketplace;
 import io.leavesfly.evox.agents.skill.SkillRegistry;
 import io.leavesfly.evox.agents.skill.builtin.*;
-import io.leavesfly.evox.channels.adapter.AgentChannelListener;
+
 import io.leavesfly.evox.channels.core.ChannelRegistry;
 import io.leavesfly.evox.channels.dingtalk.DingTalkChannel;
 import io.leavesfly.evox.channels.dingtalk.DingTalkConfig;
