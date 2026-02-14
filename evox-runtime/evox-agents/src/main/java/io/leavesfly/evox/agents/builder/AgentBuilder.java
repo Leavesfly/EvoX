@@ -4,7 +4,8 @@ import io.leavesfly.evox.actions.base.Action;
 import io.leavesfly.evox.agents.base.Agent;
 import io.leavesfly.evox.agents.specialized.ChatBotAgent;
 import io.leavesfly.evox.core.llm.ILLM;
-import io.leavesfly.evox.models.config.LLMConfig;
+
+import io.leavesfly.evox.core.llm.LLMConfig;
 import io.leavesfly.evox.models.config.OpenAILLMConfig;
 import io.leavesfly.evox.models.factory.LLMFactory;
 import io.leavesfly.evox.models.openai.OpenAILLM;

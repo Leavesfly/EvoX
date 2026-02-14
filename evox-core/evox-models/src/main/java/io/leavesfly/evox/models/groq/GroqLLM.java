@@ -2,6 +2,7 @@ package io.leavesfly.evox.models.groq;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import io.leavesfly.evox.core.llm.LLMConfig;
 import io.leavesfly.evox.core.message.Message;
 import io.leavesfly.evox.core.message.MessageType;
 import io.leavesfly.evox.models.base.LLMProvider;
@@ -11,10 +12,9 @@ import io.leavesfly.evox.models.client.ChatCompletionResult;
 import io.leavesfly.evox.models.client.OpenAiCompatibleClient;
 import io.leavesfly.evox.models.client.ToolCall;
 import io.leavesfly.evox.models.client.ToolDefinition;
-import io.leavesfly.evox.models.config.LLMConfig;
+
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.io.ByteArrayResource;
-import org.springframework.core.io.Resource;
 import org.springframework.http.*;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;

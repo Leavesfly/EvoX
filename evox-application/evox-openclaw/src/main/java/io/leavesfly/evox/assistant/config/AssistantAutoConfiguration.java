@@ -1,6 +1,7 @@
 package io.leavesfly.evox.assistant.config;
 
 import io.leavesfly.evox.assistant.AssistantBootstrap;
+import io.leavesfly.evox.assistant.cli.CliRunner;
 import io.leavesfly.evox.assistant.evolution.SelfEvolutionService;
 import io.leavesfly.evox.assistant.evolution.SkillGenerator;
 import io.leavesfly.evox.agents.skill.SkillMarketplace;
@@ -37,6 +38,7 @@ import io.leavesfly.evox.tools.system.NotificationTool;
 import io.leavesfly.evox.tools.system.ProcessManagerTool;
 import io.leavesfly.evox.tools.system.SystemInfoTool;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
@@ -111,7 +113,7 @@ public class AssistantAutoConfiguration {
     @Bean
     @ConditionalOnProperty(prefix = "evox.assistant.webhook", name = "enabled", havingValue = "true", matchIfMissing = true)
     public WebhookChannel webhookChannel(AssistantProperties properties,
-                                          ChannelRegistry registry) {
+                                         ChannelRegistry registry) {
         WebhookConfig config = WebhookConfig.builder()
                 .channelId("webhook")
                 .channelName("Webhook")
@@ -133,7 +135,7 @@ public class AssistantAutoConfiguration {
     @Bean
     @ConditionalOnProperty(prefix = "evox.assistant.telegram", name = "enabled", havingValue = "true")
     public TelegramChannel telegramChannel(AssistantProperties properties,
-                                            ChannelRegistry registry) {
+                                           ChannelRegistry registry) {
         TelegramConfig config = TelegramConfig.builder()
                 .channelId("telegram")
                 .channelName("Telegram")
@@ -150,7 +152,7 @@ public class AssistantAutoConfiguration {
     @Bean
     @ConditionalOnProperty(prefix = "evox.assistant.dingtalk", name = "enabled", havingValue = "true")
     public DingTalkChannel dingTalkChannel(AssistantProperties properties,
-                                            ChannelRegistry registry) {
+                                           ChannelRegistry registry) {
         DingTalkConfig config = DingTalkConfig.builder()
                 .channelId("dingtalk")
                 .channelName("DingTalk")
@@ -290,7 +292,7 @@ public class AssistantAutoConfiguration {
     @ConditionalOnMissingBean
     @ConditionalOnProperty(prefix = "evox.assistant.self-evolution", name = "enabled", havingValue = "true")
     public SelfEvolutionService selfEvolutionService(IAgentManager agentManager,
-                                                      AssistantProperties properties) {
+                                                     AssistantProperties properties) {
         AssistantProperties.SelfEvolutionConfig evolutionConfig = properties.getSelfEvolution();
 
         String defaultAgentName = properties.getDefaultAgent();
@@ -323,9 +325,9 @@ public class AssistantAutoConfiguration {
     @ConditionalOnMissingBean
     @ConditionalOnProperty(prefix = "evox.assistant.skill-generator", name = "enabled", havingValue = "true", matchIfMissing = true)
     public SkillGenerator skillGenerator(IAgentManager agentManager,
-                                          SkillRegistry skillRegistry,
-                                          SkillMarketplace skillMarketplace,
-                                          AssistantProperties properties) {
+                                         SkillRegistry skillRegistry,
+                                         SkillMarketplace skillMarketplace,
+                                         AssistantProperties properties) {
         String defaultAgentName = properties.getDefaultAgent();
         IAgent defaultAgent = agentManager.getAgent(defaultAgentName);
         if (defaultAgent == null && agentManager.getAgentCount() > 0) {
@@ -346,7 +348,7 @@ public class AssistantAutoConfiguration {
 
     @Bean
     @ConditionalOnProperty(prefix = "evox.assistant.cli", name = "enabled", havingValue = "true")
-    public io.leavesfly.evox.assistant.cli.CliRunner cliRunner(
+    public CliRunner cliRunner(
             GatewayRouter gatewayRouter,
             SkillRegistry skillRegistry,
             ToolRegistry toolRegistry,
@@ -355,10 +357,10 @@ public class AssistantAutoConfiguration {
             IAgentManager agentManager,
             SystemEventQueue systemEventQueue,
             AssistantProperties properties,
-            org.springframework.beans.factory.ObjectProvider<HeartbeatRunner> heartbeatRunnerProvider,
-            org.springframework.beans.factory.ObjectProvider<SelfEvolutionService> selfEvolutionServiceProvider,
-            org.springframework.beans.factory.ObjectProvider<io.leavesfly.evox.assistant.evolution.SkillGenerator> skillGeneratorProvider) {
-        return new io.leavesfly.evox.assistant.cli.CliRunner(
+            ObjectProvider<HeartbeatRunner> heartbeatRunnerProvider,
+            ObjectProvider<SelfEvolutionService> selfEvolutionServiceProvider,
+            ObjectProvider<io.leavesfly.evox.assistant.evolution.SkillGenerator> skillGeneratorProvider) {
+        return new CliRunner(
                 gatewayRouter,
                 skillRegistry,
                 toolRegistry,

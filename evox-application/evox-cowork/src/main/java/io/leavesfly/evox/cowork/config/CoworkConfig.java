@@ -1,6 +1,7 @@
 package io.leavesfly.evox.cowork.config;
 
-import io.leavesfly.evox.models.config.LLMConfig;
+
+import io.leavesfly.evox.core.llm.LLMConfig;
 import io.leavesfly.evox.models.config.LLMConfigs;
 import lombok.Data;
 

@@ -59,13 +59,15 @@
         <module>evox-runtime/evox-agents</module>
         <module>evox-runtime/evox-workflow</module>
         <module>evox-runtime/evox-mcp-runtime</module>
-        <module>evox-runtime/evox-channels</module>
-        <module>evox-runtime/evox-scheduler</module>
+
 
         <!-- 扩展层 (Extensions Layer) - 优化器、人机协同、评估 -->
         <module>evox-extensions/evox-optimizers</module>
         <module>evox-extensions/evox-hitl</module>
         <module>evox-extensions/evox-evaluation</module>
+        <module>evox-extensions/evox-channels</module>
+        <module>evox-extensions/evox-scheduler</module>
+        <module>evox-extensions/evox-gateway</module>
 
         <!-- 应用层 (Application Layer) - 示例和基准测试 -->
         <module>evox-application/evox-examples</module>
@@ -73,7 +75,7 @@
         <module>evox-application/evox-spring-boot-starter</module>
         <module>evox-application/evox-claudecode</module>
         <module>evox-application/evox-cowork</module>
-        <module>evox-runtime/evox-gateway</module>
+
         <module>evox-application/evox-openclaw</module>
     </modules>
 

@@ -1,6 +1,7 @@
 package io.leavesfly.evox.examples;
 
 import io.leavesfly.evox.agents.customize.CustomizeAgent;
+import io.leavesfly.evox.core.llm.LLMConfig;
 import io.leavesfly.evox.models.config.*;
 import io.leavesfly.evox.models.factory.LLMFactory;
 import org.slf4j.Logger;

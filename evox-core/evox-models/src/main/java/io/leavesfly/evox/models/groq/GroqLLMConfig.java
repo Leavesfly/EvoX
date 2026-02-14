@@ -1,6 +1,7 @@
 package io.leavesfly.evox.models.groq;
 
-import io.leavesfly.evox.models.config.LLMConfig;
+
+import io.leavesfly.evox.core.llm.LLMConfig;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.experimental.SuperBuilder;
