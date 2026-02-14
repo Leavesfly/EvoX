@@ -8,9 +8,10 @@ import com.alibaba.dashscope.common.Role;
 import com.alibaba.dashscope.exception.ApiException;
 import com.alibaba.dashscope.exception.InputRequiredException;
 import com.alibaba.dashscope.exception.NoApiKeyException;
+import io.leavesfly.evox.core.llm.LLMConfig;
 import io.leavesfly.evox.models.base.LLMProvider;
 import io.leavesfly.evox.models.config.AliyunLLMConfig;
-import io.leavesfly.evox.models.config.LLMConfig;
+
 import lombok.extern.slf4j.Slf4j;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;

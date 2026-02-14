@@ -1,5 +1,6 @@
 package io.leavesfly.evox.models.factory;
 
+import io.leavesfly.evox.core.llm.LLMConfig;
 import io.leavesfly.evox.models.aliyun.AliyunLLM;
 import io.leavesfly.evox.models.base.LLMProvider;
 import io.leavesfly.evox.models.config.*;

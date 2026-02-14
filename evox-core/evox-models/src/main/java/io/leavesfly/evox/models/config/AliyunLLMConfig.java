@@ -1,5 +1,6 @@
 package io.leavesfly.evox.models.config;
 
+import io.leavesfly.evox.core.llm.LLMConfig;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.experimental.SuperBuilder;

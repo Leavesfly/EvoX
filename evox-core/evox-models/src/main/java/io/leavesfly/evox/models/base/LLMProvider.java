@@ -2,11 +2,12 @@ package io.leavesfly.evox.models.base;
 
 import io.leavesfly.evox.core.llm.ILLM;
 import io.leavesfly.evox.core.llm.ILLMToolUse;
+import io.leavesfly.evox.core.llm.LLMConfig;
 import io.leavesfly.evox.core.message.Message;
 import io.leavesfly.evox.models.client.ChatCompletionResponse;
 import io.leavesfly.evox.models.client.ChatCompletionResult;
 import io.leavesfly.evox.models.client.ToolDefinition;
-import io.leavesfly.evox.models.config.LLMConfig;
+
 import reactor.core.publisher.Flux;
 
 import java.util.List;
