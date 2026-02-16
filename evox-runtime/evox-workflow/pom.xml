@@ -34,6 +34,16 @@
         </dependency>
         <dependency>
             <groupId>io.leavesfly.evox</groupId>
+            <artifactId>evox-agents</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>io.leavesfly.evox</groupId>
+            <artifactId>evox-tools</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>io.leavesfly.evox</groupId>
             <artifactId>evox-storage</artifactId>
             <scope>test</scope>
         </dependency>

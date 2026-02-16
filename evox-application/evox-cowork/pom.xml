@@ -65,6 +65,12 @@
             <artifactId>evox-mcp</artifactId>
         </dependency>
 
+        <!-- Project Reactor for reactive programming -->
+        <dependency>
+            <groupId>io.projectreactor</groupId>
+            <artifactId>reactor-core</artifactId>
+        </dependency>
+
         <!-- Spring Boot -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
