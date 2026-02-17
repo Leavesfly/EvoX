@@ -1,11 +1,8 @@
 package io.leavesfly.evox.claudecode.tool;
 
-import io.leavesfly.evox.agents.skill.SkillRegistry;
-import io.leavesfly.evox.agents.skill.SkillTool;
-import io.leavesfly.evox.agents.skill.builtin.CodeReviewSkill;
-import io.leavesfly.evox.agents.skill.builtin.RefactorSkill;
-import io.leavesfly.evox.agents.skill.builtin.WriteTestSkill;
-import io.leavesfly.evox.tools.agent.SubAgentTool;
+import io.leavesfly.evox.skill.SkillRegistry;
+import io.leavesfly.evox.skill.SkillTool;
+import io.leavesfly.evox.tools.task.TaskDelegationTool;
 import io.leavesfly.evox.tools.base.BaseTool;
 import io.leavesfly.evox.tools.base.Toolkit;
 import io.leavesfly.evox.tools.file.FileEditTool;
@@ -74,9 +71,9 @@ public class ToolRegistry {
         ProjectContextTool projectContextTool = new ProjectContextTool(workingDirectory);
         toolkit.addTool(projectContextTool);
 
-        // sub-agent delegation (executor will be injected by CodingAgent)
-        SubAgentTool subAgentTool = new SubAgentTool(workingDirectory, null);
-        toolkit.addTool(subAgentTool);
+        // task delegation (executor will be injected by CodingAgent)
+        TaskDelegationTool taskDelegationTool = new TaskDelegationTool(workingDirectory, null);
+        toolkit.addTool(taskDelegationTool);
 
         // skill execution
         SkillTool skillTool = new SkillTool(skillRegistry);
@@ -86,14 +83,28 @@ public class ToolRegistry {
     }
 
     /**
-     * 注册默认的内置技能
+     * 注册默认的内置技能。
+     * 从 classpath 的 skills/ 目录加载 SKILL.md 文件，
+     * 并从项目工作目录的 .claude/skills/ 加载自定义 Skill。
      */
     private void registerDefaultSkills() {
-        skillRegistry.registerSkill(new CodeReviewSkill());
-        skillRegistry.registerSkill(new WriteTestSkill());
-        skillRegistry.registerSkill(new RefactorSkill());
+        // 从 classpath 加载内置 SKILL.md 文件
+        int builtinCount = skillRegistry.loadBuiltinSkills();
 
-        log.info("Registered {} default skills for ClaudeCode", skillRegistry.getSkillCount());
+        // 从项目目录加载自定义 SKILL.md 文件
+        java.nio.file.Path projectSkillsDir = java.nio.file.Path.of(workingDirectory, ".claude", "skills");
+        int customCount = skillRegistry.loadSkillsFromDirectory(projectSkillsDir);
+
+        // 从用户级目录加载 SKILL.md 文件
+        String userHome = System.getProperty("user.home");
+        if (userHome != null) {
+            java.nio.file.Path userSkillsDir = java.nio.file.Path.of(userHome, ".evox", "skills");
+            int userCount = skillRegistry.loadSkillsFromDirectory(userSkillsDir);
+            log.info("Registered skills for ClaudeCode: {} builtin, {} project, {} user",
+                    builtinCount, customCount, userCount);
+        } else {
+            log.info("Registered skills for ClaudeCode: {} builtin, {} project", builtinCount, customCount);
+        }
     }
 
     /**
@@ -176,12 +187,12 @@ public class ToolRegistry {
     }
 
     /**
-     * 获取 SubAgentTool 实例（用于注入 executor）
+     * 获取 TaskDelegationTool 实例（用于注入 executor）
      */
-    public SubAgentTool getSubAgentTool() {
-        BaseTool tool = toolkit.getTool("sub_agent");
-        if (tool instanceof SubAgentTool subAgentTool) {
-            return subAgentTool;
+    public TaskDelegationTool getTaskDelegationTool() {
+        BaseTool tool = toolkit.getTool("delegate_task");
+        if (tool instanceof TaskDelegationTool delegationTool) {
+            return delegationTool;
         }
         return null;
     }

@@ -1,7 +1,7 @@
 package io.leavesfly.evox.assistant.controller;
 
-import io.leavesfly.evox.agents.skill.BaseSkill;
-import io.leavesfly.evox.agents.skill.SkillRegistry;
+import io.leavesfly.evox.skill.BaseSkill;
+import io.leavesfly.evox.skill.SkillRegistry;
 import io.leavesfly.evox.assistant.evolution.SelfEvolutionService;
 import io.leavesfly.evox.assistant.evolution.SkillGenerator;
 import io.leavesfly.evox.channels.core.ChannelRegistry;
@@ -13,7 +13,6 @@ import io.leavesfly.evox.gateway.audit.AuditLogger;
 import io.leavesfly.evox.gateway.session.SessionManager;
 import io.leavesfly.evox.scheduler.heartbeat.HeartbeatRunner;
 import io.leavesfly.evox.tools.api.ToolRegistry;
-import io.leavesfly.evox.tools.base.BaseTool;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.web.bind.annotation.*;
 

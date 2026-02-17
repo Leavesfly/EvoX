@@ -1,17 +1,17 @@
 package io.leavesfly.evox.examples.frameworks;
 
-import io.leavesfly.evox.agents.base.Agent;
-import io.leavesfly.evox.agents.builder.AgentBuilder;
+
+import io.leavesfly.evox.frameworks.consensus.ConsensusResult;
 import io.leavesfly.evox.frameworks.debate.MultiAgentDebate;
 import io.leavesfly.evox.frameworks.team.CollaborationMode;
 import io.leavesfly.evox.frameworks.team.TeamFramework;
 import io.leavesfly.evox.frameworks.team.TeamMember;
 import io.leavesfly.evox.frameworks.team.TeamRole;
 import io.leavesfly.evox.frameworks.team.TeamResult;
-import io.leavesfly.evox.frameworks.team.TaskExecution;
+
 import io.leavesfly.evox.frameworks.team.DefaultTeamMember;
 import io.leavesfly.evox.frameworks.consensus.ConsensusFramework;
-import io.leavesfly.evox.frameworks.consensus.ConsensusFramework.ConsensusAgent;
+
 import io.leavesfly.evox.frameworks.consensus.DefaultConsensusAgent;
 import io.leavesfly.evox.frameworks.consensus.strategy.MajorityVotingStrategy;
 import io.leavesfly.evox.frameworks.auction.*;
@@ -227,7 +227,7 @@ public class MultiAgentFrameworksExample {
 
         // 3. 执行共识过程
         System.out.println("开始共识讨论...");
-        io.leavesfly.evox.frameworks.consensus.ConsensusResult<String> result = 
+       ConsensusResult<String> result =
             consensus.reachConsensus("公司是否应该全面实施远程办公政策？");
 
         // 4. 输出结果

@@ -1,9 +1,5 @@
 package io.leavesfly.evox.agents.action;
 
-import io.leavesfly.evox.actions.base.Action;
-import io.leavesfly.evox.actions.base.ActionInput;
-import io.leavesfly.evox.actions.base.ActionOutput;
-import io.leavesfly.evox.actions.base.SimpleActionOutput;
 import io.leavesfly.evox.agents.base.Agent;
 import io.leavesfly.evox.core.message.Message;
 import io.leavesfly.evox.core.message.MessageType;
@@ -15,8 +11,11 @@ import java.util.*;
 import java.util.function.Function;
 
 /**
- * ActionAgent 是一个专用智能体,直接执行提供的函数而不使用 LLM
- * 它创建一个使用提供的函数作为执行骨干的动作
+ * ActionAgent 是一个专用智能体，直接执行提供的函数而不使用 LLM。
+ *
+ * <p>与普通 Agent 不同，ActionAgent 跳过了 Action 中间层，
+ * 将用户传入的 {@code Function<Map, Map>} 直接作为执行逻辑，
+ * 避免了 Message → ActionInput → ActionOutput → Message 的冗余转换。</p>
  *
  * <p>支持 Builder 模式快速创建:</p>
  * <pre>{@code
@@ -37,7 +36,7 @@ import java.util.function.Function;
 public class ActionAgent extends Agent {
 
     /**
-     * 执行函数
+     * 执行函数：核心业务逻辑，接收参数 Map 并返回结果 Map
      */
     private transient Function<Map<String, Object>, Map<String, Object>> executeFunction;
 
@@ -51,14 +50,9 @@ public class ActionAgent extends Agent {
      */
     private List<FieldSpec> outputs;
 
-    /**
-     * 主要动作名称
-     */
-    private String primaryActionName = "function_action";
-
     @Override
     protected String getPrimaryActionName() {
-        return primaryActionName;
+        return "function_action";
     }
 
     @Override
@@ -71,54 +65,17 @@ public class ActionAgent extends Agent {
     }
 
     @Override
-    public void initModule() {
-        super.initModule();
-        // 创建函数动作
-        if (executeFunction != null) {
-            FunctionAction action = createFunctionAction();
-            addAction(action);
-        }
-    }
-
-    /**
-     * 创建函数动作
-     */
-    private FunctionAction createFunctionAction() {
-        FunctionAction action = new FunctionAction();
-        action.setName(primaryActionName);
-        action.setDescription(getDescription());
-        action.setExecuteFunction(executeFunction);
-        action.setInputs(inputs);
-        action.setOutputs(outputs);
-        return action;
-    }
-
-    @Override
     public Message execute(String actionName, List<Message> messages) {
-        String resolvedName = resolveActionName(actionName);
-        Action action = getAction(resolvedName);
-        if (action == null) {
-            return Message.builder()
-                    .messageType(MessageType.ERROR)
-                    .content("Action not found: " + resolvedName)
-                    .build();
-        }
-
         try {
-            // 准备输入
-            Map<String, Object> inputData = prepareInput(messages);
-            ActionInput input = createActionInput(inputData);
-
-            // 执行动作
-            ActionOutput output = action.execute(input);
-
-            // 构建响应消息
+            Map<String, Object> inputData = extractInputData(messages);
+            validateInputData(inputData);
+            Map<String, Object> result = executeFunction.apply(inputData);
             return Message.builder()
-                    .messageType(output.isSuccess() ? MessageType.RESPONSE : MessageType.ERROR)
-                    .content(output.getData())
+                    .messageType(MessageType.RESPONSE)
+                    .content(result)
                     .build();
         } catch (Exception e) {
-            log.error("Failed to execute action: {}", resolvedName, e);
+            log.error("ActionAgent '{}' execution failed", getName(), e);
             return Message.builder()
                     .messageType(MessageType.ERROR)
                     .content("Execution failed: " + e.getMessage())
@@ -127,11 +84,10 @@ public class ActionAgent extends Agent {
     }
 
     /**
-     * 准备动作输入
+     * 从消息列表中提取输入参数
      */
-    private Map<String, Object> prepareInput(List<Message> messages) {
+    private Map<String, Object> extractInputData(List<Message> messages) {
         Map<String, Object> inputData = new HashMap<>();
-        
         for (Message msg : messages) {
             if (msg.getMessageType() == MessageType.INPUT) {
                 Object content = msg.getContent();
@@ -142,34 +98,24 @@ public class ActionAgent extends Agent {
                 }
             }
         }
-
         return inputData;
     }
 
     /**
-     * 创建动作输入对象
+     * 校验输入数据是否包含所有必填字段
+     *
+     * @throws IllegalArgumentException 如果缺少必填字段
      */
-    private ActionInput createActionInput(Map<String, Object> inputData) {
-        return new ActionInput() {
-            private final Map<String, Object> data = inputData;
-
-            @Override
-            public Map<String, Object> toMap() {
-                return data;
+    private void validateInputData(Map<String, Object> inputData) {
+        if (inputs == null) {
+            return;
+        }
+        for (FieldSpec spec : inputs) {
+            if (spec.isRequired() && !inputData.containsKey(spec.getName())) {
+                throw new IllegalArgumentException(
+                        "Missing required input field: '" + spec.getName() + "'");
             }
-
-            @Override
-            public boolean validate() {
-                if (inputs != null) {
-                    for (FieldSpec spec : inputs) {
-                        if (spec.isRequired() && !data.containsKey(spec.getName())) {
-                            return false;
-                        }
-                    }
-                }
-                return true;
-            }
-        };
+        }
     }
 
     // ===================================================================
@@ -241,7 +187,7 @@ public class ActionAgent extends Agent {
     }
 
     // ===================================================================
-    // FieldSpec — 增加 of() 静态工厂
+    // FieldSpec — 字段规格定义
     // ===================================================================
 
     /**
@@ -279,40 +225,6 @@ public class ActionAgent extends Agent {
          */
         public static FieldSpec optional(String name, String type, String description) {
             return new FieldSpec(name, type, description, false);
-        }
-    }
-
-    /**
-     * FunctionAction 内部类
-     */
-    @Data
-    @EqualsAndHashCode(callSuper = true)
-    private static class FunctionAction extends Action {
-        private transient Function<Map<String, Object>, Map<String, Object>> executeFunction;
-        private List<FieldSpec> inputs;
-        private List<FieldSpec> outputs;
-
-        @Override
-        public ActionOutput execute(ActionInput input) {
-            try {
-                Map<String, Object> result = executeFunction.apply(input.toMap());
-                return SimpleActionOutput.success(result);
-            } catch (Exception e) {
-                log.error("FunctionAction execution failed", e);
-                return SimpleActionOutput.failure("Execution failed: " + e.getMessage());
-            }
-        }
-
-        @Override
-        public String[] getInputFields() {
-            if (inputs == null) return new String[0];
-            return inputs.stream().map(FieldSpec::getName).toArray(String[]::new);
-        }
-
-        @Override
-        public String[] getOutputFields() {
-            if (outputs == null) return new String[0];
-            return outputs.stream().map(FieldSpec::getName).toArray(String[]::new);
         }
     }
 }

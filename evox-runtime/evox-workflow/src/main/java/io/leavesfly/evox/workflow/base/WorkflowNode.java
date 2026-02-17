@@ -143,10 +143,33 @@ public class WorkflowNode extends BaseModule {
     private Map<String, String> subWorkflowOutputMapping;
 
     /**
+     * 自定义节点处理器名称（用于 COLLECT 等自定义节点）
+     * 执行时通过此名称从 NodeHandlerRegistry 中查找对应的 NodeHandler
+     */
+    private String handlerName;
+
+    /**
+     * 节点自定义配置（传递给 NodeHandler 的参数）
+     */
+    private Map<String, Object> handlerConfig;
+
+    /**
      * 节点优先级
      * 数值越大，优先级越高
      */
     private int priority = 0;
+
+    /**
+     * 关联的智能体名称（用于 ACTION 节点）
+     * 执行时通过此名称从 AgentManager 中查找对应的 Agent
+     */
+    private String agentName;
+
+    /**
+     * 要执行的动作名称（用于 ACTION 节点，可选）
+     * 为 null 时使用 Agent 的默认动作
+     */
+    private String actionName;
 
     @Override
     public void initModule() {
@@ -268,7 +291,9 @@ public class WorkflowNode extends BaseModule {
         /** 循环节点 */
         LOOP,
         /** 子工作流节点 */
-        SUBWORKFLOW
+        SUBWORKFLOW,
+        /** 收集节点 - 向多个 Agent 广播问题并收集所有响应，由注册的 NodeHandler 执行 */
+        COLLECT
     }
 
     /**

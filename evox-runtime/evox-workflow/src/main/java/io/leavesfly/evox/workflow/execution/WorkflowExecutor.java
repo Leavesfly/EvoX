@@ -7,6 +7,8 @@ import io.leavesfly.evox.core.message.MessageType;
 import io.leavesfly.evox.workflow.base.Workflow;
 import io.leavesfly.evox.workflow.base.WorkflowNode;
 import io.leavesfly.evox.workflow.graph.WorkflowGraph;
+import io.leavesfly.evox.workflow.node.NodeHandler;
+import io.leavesfly.evox.workflow.node.NodeHandlerRegistry;
 import lombok.extern.slf4j.Slf4j;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
@@ -26,10 +28,28 @@ public class WorkflowExecutor {
     private final Workflow workflow;
     private final IAgentManager agentManager;
     private WorkflowContext context;
+    private final NodeHandlerRegistry handlerRegistry = new NodeHandlerRegistry();
 
     public WorkflowExecutor(Workflow workflow, IAgentManager agentManager) {
         this.workflow = workflow;
         this.agentManager = agentManager;
+    }
+
+    /**
+     * 注册节点处理器
+     *
+     * @param handlerName 处理器名称
+     * @param handler     处理器实例
+     */
+    public void registerHandler(String handlerName, NodeHandler handler) {
+        handlerRegistry.register(handlerName, handler);
+    }
+
+    /**
+     * 获取节点处理器注册表
+     */
+    public NodeHandlerRegistry getHandlerRegistry() {
+        return handlerRegistry;
     }
 
     /**
@@ -176,9 +196,34 @@ public class WorkflowExecutor {
             case PARALLEL -> executeParallelNode(node);
             case LOOP -> executeLoopNode(node);
             case SUBWORKFLOW -> executeSubWorkflowNode(node);
+            case COLLECT -> executeCollectNode(node);
             default -> Mono.error(new UnsupportedOperationException(
                     "Node type not supported: " + node.getNodeType()));
         };
+    }
+
+    /**
+     * 执行收集节点
+     * COLLECT 节点通过注册的 NodeHandler 执行自定义逻辑，
+     * 典型场景是向多个 Agent 广播问题并收集所有响应。
+     */
+    private Mono<Object> executeCollectNode(WorkflowNode node) {
+        return Mono.defer(() -> {
+            String handlerName = node.getHandlerName();
+            if (handlerName == null || handlerName.isEmpty()) {
+                return Mono.error(new RuntimeException(
+                        "COLLECT node '" + node.getName() + "' has no handlerName configured"));
+            }
+
+            NodeHandler handler = handlerRegistry.getHandler(handlerName);
+            if (handler == null) {
+                return Mono.error(new RuntimeException(
+                        "NodeHandler not found: '" + handlerName + "' for node: " + node.getName()));
+            }
+
+            log.debug("Executing COLLECT node: {} with handler: {}", node.getName(), handlerName);
+            return handler.handle(context, node);
+        });
     }
 
     /**
@@ -187,78 +232,51 @@ public class WorkflowExecutor {
     private Mono<Object> executeActionNode(WorkflowNode node) {
         return Mono.defer(() -> {
             try {
-                // 从节点获取 agent 名称和 action 名称
-                // 这里假设节点的 name 格式为 "agentName.actionName" 或单独的 actionName
-                String nodeName = node.getName();
-                String agentName;
-                String actionName;
-                
-                if (nodeName.contains(".")) {
-                    String[] parts = nodeName.split("\\.", 2);
-                    agentName = parts[0];
-                    actionName = parts[1];
-                } else {
-                    // 如果只有动作名，尝试从第一个 agent 获取
-                    agentName = null;
-                    actionName = nodeName;
+                String agentName = node.getAgentName();
+                String actionName = node.getActionName();
+
+                if (agentManager == null) {
+                    return Mono.error(new RuntimeException(
+                            "AgentManager not available, cannot execute action node: " + node.getName()));
                 }
-                
-                // 获取 Agent
-                IAgent agent = getAgentForNode(agentName);
+
+                if (agentName == null || agentName.isEmpty()) {
+                    return Mono.error(new RuntimeException(
+                            "Node '" + node.getName() + "' has no agentName configured"));
+                }
+
+                IAgent agent = agentManager.getAgent(agentName);
                 if (agent == null) {
-                    return Mono.error(new RuntimeException("No agent available for node: " + nodeName));
+                    return Mono.error(new RuntimeException(
+                            "Agent not found: '" + agentName + "' for node: " + node.getName()));
                 }
-                
-                log.debug("Executing action node: {} with agent: {}", nodeName, agent.getName());
-                
-                // 获取上下文中的消息
+
+                log.debug("Executing action node: {} with agent: {}, action: {}",
+                        node.getName(), agentName, actionName);
+
                 List<Message> messages = context.getMessages();
-                
-                // 执行动作
+
                 return agent.executeAsync(actionName, messages)
                         .map(message -> {
-                            // 将消息内容作为结果返回
                             Map<String, Object> result = new HashMap<>();
-                            result.put("node", nodeName);
-                            result.put("agent", agent.getName());
+                            result.put("node", node.getName());
+                            result.put("agent", agentName);
                             result.put("action", actionName);
                             result.put("status", "completed");
                             result.put("message", message.getContent());
                             return result;
                         })
                         .onErrorResume(error -> {
-                            log.error("Action execution failed for node {}: {}", nodeName, error.getMessage());
+                            log.error("Action execution failed for node {}: {}", node.getName(), error.getMessage());
                             return Mono.error(new RuntimeException(
                                     "Action execution failed: " + error.getMessage(), error));
                         });
-                        
+
             } catch (Exception e) {
                 log.error("Error preparing action node execution", e);
                 return Mono.error(e);
             }
         });
-    }
-    
-    /**
-     * 获取节点对应的 Agent
-     */
-    private IAgent getAgentForNode(String agentName) {
-        if (agentManager == null) {
-            log.warn("AgentManager not available, cannot execute action node");
-            return null;
-        }
-        
-        if (agentName != null && !agentName.isEmpty()) {
-            return agentManager.getAgent(agentName);
-        }
-        
-        // 如果没有指定 agent，返回第一个可用的 agent
-        Map<String, IAgent> allAgents = agentManager.getAllAgents();
-        if (allAgents != null && !allAgents.isEmpty()) {
-            return allAgents.values().iterator().next();
-        }
-        
-        return null;
     }
 
     /**

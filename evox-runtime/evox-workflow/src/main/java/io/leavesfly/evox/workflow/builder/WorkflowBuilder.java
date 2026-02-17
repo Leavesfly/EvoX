@@ -135,9 +135,10 @@ public class WorkflowBuilder {
         WorkflowNode prevNode = null;
         for (StepConfig step : steps) {
             WorkflowNode node = new WorkflowNode();
-            node.setName(step.agentName);
+            node.setName(step.stepName);
             node.setDescription(step.description != null ? step.description : step.stepName);
             node.setNodeType(WorkflowNode.NodeType.ACTION);
+            node.setAgentName(step.agentName);
             node.initModule();
             
             graph.addNode(node);

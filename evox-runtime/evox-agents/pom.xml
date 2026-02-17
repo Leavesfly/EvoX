@@ -41,6 +41,10 @@
             <artifactId>evox-tools</artifactId>
             <optional>true</optional>
         </dependency>
+        <dependency>
+            <groupId>io.leavesfly.evox</groupId>
+            <artifactId>evox-workflow</artifactId>
+        </dependency>
 
         <!-- Spring Boot -->
         <dependency>
@@ -59,6 +63,12 @@
             <groupId>org.projectlombok</groupId>
             <artifactId>lombok</artifactId>
             <scope>provided</scope>
+        </dependency>
+
+        <!-- YAML parsing for SKILL.md frontmatter -->
+        <dependency>
+            <groupId>org.yaml</groupId>
+            <artifactId>snakeyaml</artifactId>
         </dependency>
 
         <!-- Test -->

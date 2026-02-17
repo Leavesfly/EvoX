@@ -1,19 +1,28 @@
 package io.leavesfly.evox.frameworks.consensus;
 
+import io.leavesfly.evox.frameworks.base.MultiAgentFramework;
+import io.leavesfly.evox.workflow.base.Workflow;
+import io.leavesfly.evox.workflow.base.WorkflowNode;
+import io.leavesfly.evox.workflow.graph.WorkflowGraph;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 /**
  * 共识框架
  * 允许多个智能体通过不同的共识策略达成一致决策
  *
+ * <p>基于 Workflow DAG 引擎实现，将多轮共识过程抽象为工作流执行
+ *
  * @author EvoX Team
  */
 @Slf4j
 @Data
-public class ConsensusFramework<T> {
+public class ConsensusFramework<T> extends MultiAgentFramework {
 
     /**
      * 参与共识的智能体列表
@@ -26,24 +35,14 @@ public class ConsensusFramework<T> {
     private ConsensusStrategy<T> strategy;
 
     /**
-     * 最大迭代轮数
-     */
-    private int maxRounds;
-
-    /**
-     * 当前迭代轮数
-     */
-    private int currentRound;
-
-    /**
-     * 共识历史记录
-     */
-    private List<ConsensusRecord<T>> history;
-
-    /**
      * 共识配置
      */
     private ConsensusConfig config;
+
+    /**
+     * 共识结果缓存（通过回调从 NodeHandler 获取）
+     */
+    private ConsensusResult<T> cachedResult;
 
     public ConsensusFramework(List<ConsensusAgent<T>> agents, ConsensusStrategy<T> strategy) {
         this(agents, strategy, ConsensusConfig.builder().build());
@@ -53,9 +52,7 @@ public class ConsensusFramework<T> {
         this.agents = agents;
         this.strategy = strategy;
         this.config = config;
-        this.maxRounds = config.getMaxRounds();
-        this.currentRound = 0;
-        this.history = new ArrayList<>();
+        this.frameworkName = "ConsensusFramework";
     }
 
     /**
@@ -67,123 +64,89 @@ public class ConsensusFramework<T> {
     public ConsensusResult<T> reachConsensus(String question) {
         log.info("Starting consensus process for question: {}", question);
         
-        long startTime = System.currentTimeMillis();
+        // 重置缓存
+        this.cachedResult = null;
         
-        for (currentRound = 1; currentRound <= maxRounds; currentRound++) {
-            log.info("Consensus round {}/{}", currentRound, maxRounds);
-            
-            // 收集所有智能体的提议
-            List<T> proposals = collectProposals(question);
-            
-            // 记录本轮提议
-            ConsensusRecord<T> record = new ConsensusRecord<>(currentRound, proposals, System.currentTimeMillis());
-            history.add(record);
-            
-            // 使用策略评估共识
-            ConsensusEvaluation<T> evaluation = strategy.evaluate(proposals, agents);
-            record.setEvaluation(evaluation);
-            
-            log.debug("Round {} evaluation: consensus={}, confidence={}", 
-                currentRound, evaluation.isConsensusReached(), evaluation.getConfidence());
-            
-            // 检查是否达成共识
-            if (evaluation.isConsensusReached()) {
-                log.info("Consensus reached in round {} with confidence {}", 
-                    currentRound, evaluation.getConfidence());
-                
-                return ConsensusResult.<T>builder()
-                    .reached(true)
-                    .result(evaluation.getConsensusValue())
-                    .confidence(evaluation.getConfidence())
-                    .rounds(currentRound)
-                    .duration(System.currentTimeMillis() - startTime)
-                    .history(new ArrayList<>(history))
-                    .metadata(evaluation.getMetadata())
-                    .build();
-            }
-            
-            // 通知智能体本轮结果,允许调整
-            notifyAgents(evaluation);
-            
-            // 检查是否需要早停
-            if (shouldEarlyStop(evaluation)) {
-                log.info("Early stopping triggered in round {}", currentRound);
-                break;
-            }
+        // 准备输入参数
+        Map<String, Object> inputs = new HashMap<>();
+        inputs.put("question", question);
+        inputs.put("start_time", System.currentTimeMillis());
+        inputs.put("consensus_reached", false);
+        
+        // 执行工作流
+        executeWorkflow(question, inputs);
+        
+        // 从回调缓存中获取结果
+        if (cachedResult != null) {
+            log.info("Consensus process completed. Reached: {}, Confidence: {}", 
+                cachedResult.isReached(), cachedResult.getConfidence());
+            return cachedResult;
         }
         
-        // 未达成共识,返回最佳结果
-        log.warn("Consensus not reached after {} rounds", maxRounds);
-        ConsensusEvaluation<T> finalEvaluation = strategy.fallback(history, agents);
-        
-        return ConsensusResult.<T>builder()
-            .reached(false)
-            .result(finalEvaluation.getConsensusValue())
-            .confidence(finalEvaluation.getConfidence())
-            .rounds(currentRound - 1)
-            .duration(System.currentTimeMillis() - startTime)
-            .history(new ArrayList<>(history))
-            .metadata(finalEvaluation.getMetadata())
-            .build();
+        log.error("Consensus result not found after workflow execution");
+        throw new ConsensusException("Failed to get consensus result from workflow");
     }
 
     /**
-     * 收集所有智能体的提议
+     * 构建工作流 DAG 图
+     * 使用 LOOP + COLLECT 多节点结构，循环控制由 Workflow 引擎承担
+     *
+     * DAG 结构：
+     *   LOOP(consensus_loop, maxRounds, "consensus_reached == false")
+     *     └── COLLECT(consensus_round)  ← 单轮原子操作
+     *   COLLECT(consensus_fallback)     ← 回退处理
+     *
+     * @param task 任务描述
+     * @return 工作流图
      */
-    private List<T> collectProposals(String question) {
-        List<T> proposals = new ArrayList<>();
-        for (ConsensusAgent<T> agent : agents) {
-            try {
-                T proposal = agent.propose(question, history);
-                proposals.add(proposal);
-                log.debug("Agent {} proposed: {}", agent.getName(), proposal);
-            } catch (Exception e) {
-                log.error("Agent {} failed to propose: {}", agent.getName(), e.getMessage(), e);
-                if (!config.isIgnoreFailedProposals()) {
-                    throw new ConsensusException("Failed to collect proposal from agent: " + agent.getName(), e);
-                }
-            }
-        }
-        return proposals;
+    @Override
+    protected WorkflowGraph buildWorkflowGraph(String task) {
+        log.info("Building consensus workflow graph for task: {}", task);
+
+        WorkflowGraph graph = new WorkflowGraph(task);
+
+        // 1. 创建单轮共识节点（LOOP 的循环体）
+        WorkflowNode roundNode = createCollectNode("consensus_round", "consensus_round", null);
+        graph.addNode(roundNode);
+
+        // 2. 创建 LOOP 节点，循环体指向 roundNode
+        WorkflowNode loopNode = createLoopNode(
+            "consensus_loop",
+            config.getMaxRounds(),
+            "consensus_reached == false"
+        );
+        loopNode.setLoopBodyNodeId(roundNode.getNodeId());
+        graph.addNode(loopNode);
+
+        // 3. 创建回退节点（LOOP 结束后执行）
+        WorkflowNode fallbackNode = createCollectNode("consensus_fallback", "consensus_fallback", null);
+        graph.addNode(fallbackNode);
+
+        // 4. 连接边：LOOP → fallback
+        graph.addEdge(loopNode.getNodeId(), fallbackNode.getNodeId());
+
+        log.info("Consensus workflow graph built with {} nodes", graph.getNodeCount());
+        return graph;
     }
 
     /**
-     * 通知智能体本轮评估结果
+     * 注册节点处理器
+     *
+     * @param workflow 工作流实例
      */
-    private void notifyAgents(ConsensusEvaluation<T> evaluation) {
-        if (!config.isEnableAgentFeedback()) {
-            return;
-        }
-        
-        for (ConsensusAgent<T> agent : agents) {
-            try {
-                agent.onEvaluation(currentRound, evaluation);
-            } catch (Exception e) {
-                log.warn("Failed to notify agent {}: {}", agent.getName(), e.getMessage());
-            }
-        }
-    }
+    @Override
+    protected void registerNodeHandlers(Workflow workflow) {
+        // 注册单轮共识处理器
+        ConsensusNodeHandler.ConsensusRoundHandler<T> roundHandler =
+            new ConsensusNodeHandler.ConsensusRoundHandler<>(agents, strategy, config);
+        roundHandler.setResultCallback(result -> this.cachedResult = result);
+        workflow.registerHandler("consensus_round", roundHandler);
 
-    /**
-     * 判断是否应该早停
-     */
-    private boolean shouldEarlyStop(ConsensusEvaluation<T> evaluation) {
-        if (!config.isEnableEarlyStopping()) {
-            return false;
-        }
-        
-        // 如果连续多轮置信度没有提升,则早停
-        if (history.size() >= config.getEarlyStoppingPatience()) {
-            double currentConfidence = evaluation.getConfidence();
-            double previousConfidence = history.get(history.size() - config.getEarlyStoppingPatience())
-                .getEvaluation().getConfidence();
-            
-            if (currentConfidence <= previousConfidence + config.getEarlyStoppingThreshold()) {
-                return true;
-            }
-        }
-        
-        return false;
+        // 注册回退处理器
+        ConsensusNodeHandler.ConsensusFallbackHandler<T> fallbackHandler =
+            new ConsensusNodeHandler.ConsensusFallbackHandler<>(agents, strategy, config);
+        fallbackHandler.setResultCallback(result -> this.cachedResult = result);
+        workflow.registerHandler("consensus_fallback", fallbackHandler);
     }
 
     /**

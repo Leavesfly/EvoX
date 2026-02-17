@@ -5,8 +5,12 @@ import io.leavesfly.evox.actions.base.ActionInput;
 import io.leavesfly.evox.actions.base.ActionOutput;
 import io.leavesfly.evox.actions.base.SimpleActionOutput;
 import io.leavesfly.evox.agents.base.Agent;
+import io.leavesfly.evox.core.agent.IAgent;
+import io.leavesfly.evox.core.llm.ILLM;
+import io.leavesfly.evox.core.llm.LLMConfig;
 import io.leavesfly.evox.core.message.Message;
 import io.leavesfly.evox.core.message.MessageType;
+import io.leavesfly.evox.tools.agent.AgentTool;
 import io.leavesfly.evox.tools.base.BaseTool;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
@@ -16,12 +20,30 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 /**
  * ReActAgent 实现 ReAct (Reasoning + Acting) 模式
  * 通过思考-行动-观察循环来解决问题
+ *
+ * <p>支持 Builder 模式创建，以及将其他 Agent 作为工具使用（Subagent as Tool）。</p>
+ *
+ * <p>用法示例：</p>
+ * <pre>{@code
+ * // Builder 模式创建
+ * ReActAgent agent = ReActAgent.builder()
+ *     .name("ReActSolver")
+ *     .description("Solve problems using ReAct approach")
+ *     .llm(myLlm)
+ *     .tools(List.of(searchTool, calculatorTool))
+ *     .maxIterations(5)
+ *     .build();
+ *
+ * // 将其他 Agent 作为工具
+ * agent.addAgentAsTool(translatorAgent);
+ * }</pre>
  *
  * @author EvoX Team
  */
@@ -34,6 +56,11 @@ public class ReActAgent extends Agent {
      * 可用工具列表
      */
     private List<BaseTool> tools = new ArrayList<>();
+
+    /**
+     * 工具映射表（用于快速查找）
+     */
+    private transient Map<String, BaseTool> toolMap = new ConcurrentHashMap<>();
 
     /**
      * 最大迭代次数
@@ -62,18 +89,150 @@ public class ReActAgent extends Agent {
             开始吧！
             """;
 
+    /**
+     * 无参构造函数（兼容直接实例化和 setter 注入）
+     */
+    public ReActAgent() {
+        super();
+    }
+
+    /**
+     * Builder 构造函数
+     * 注意: @lombok.Builder 生成的 build() 不会自动调用 initModule()，
+     * 使用此构造函数时 autoInit 默认为 true，会自动初始化
+     */
+    @lombok.Builder
+    public ReActAgent(
+            String name,
+            String description,
+            String systemPrompt,
+            LLMConfig llmConfig,
+            ILLM llm,
+            List<BaseTool> tools,
+            Integer maxIterations,
+            String reactPrompt,
+            Boolean autoInit
+    ) {
+        this.setName(name != null ? name : "ReActAgent");
+        this.setDescription(description != null ? description :
+                "An agent that uses ReAct (Reasoning + Acting) pattern to solve problems");
+        this.setSystemPrompt(systemPrompt);
+        this.setLlmConfig(llmConfig);
+        this.setLlm(llm);
+        this.maxIterations = maxIterations != null ? maxIterations : 10;
+        this.setHuman(false);
+
+        if (reactPrompt != null) {
+            this.reactPrompt = reactPrompt;
+        }
+
+        // 初始化工具
+        if (tools != null) {
+            this.tools = new ArrayList<>(tools);
+            for (BaseTool tool : tools) {
+                toolMap.put(tool.getName(), tool);
+            }
+        }
+
+        // Builder.build() 自动调用 initModule()
+        if (autoInit == null || autoInit) {
+            initModule();
+        }
+    }
+
     @Override
     public void initModule() {
         super.initModule();
+
+        // 同步 toolMap
+        if (toolMap == null) {
+            toolMap = new ConcurrentHashMap<>();
+        }
+        for (BaseTool tool : tools) {
+            toolMap.putIfAbsent(tool.getName(), tool);
+        }
+
         // 创建 ReAct 动作
         ReActAction action = new ReActAction();
         action.setName("react");
         action.setDescription("ReAct reasoning and acting");
         action.setLlm(getLlm());
         action.setTools(tools);
+        action.setToolMap(toolMap);
         action.setMaxIterations(maxIterations);
         action.setPromptTemplate(reactPrompt);
         addAction(action);
+    }
+
+    /**
+     * 添加工具
+     *
+     * @param tool 要添加的工具
+     */
+    public void addTool(BaseTool tool) {
+        if (tool != null) {
+            tools.add(tool);
+            toolMap.put(tool.getName(), tool);
+            log.debug("Added tool {} to agent {}", tool.getName(), getName());
+        }
+    }
+
+    /**
+     * 移除工具
+     *
+     * @param toolName 工具名称
+     */
+    public void removeTool(String toolName) {
+        BaseTool removed = toolMap.remove(toolName);
+        if (removed != null) {
+            tools.remove(removed);
+            log.debug("Removed tool {} from agent {}", toolName, getName());
+        }
+    }
+
+    /**
+     * 将另一个 Agent 作为工具添加（使用默认配置）
+     * 这是 "Subagent as Tool" 模式的快捷方法
+     *
+     * @param agent 要作为工具使用的智能体
+     */
+    public void addAgentAsTool(IAgent agent) {
+        if (agent == null) {
+            log.warn("Cannot add null agent as tool");
+            return;
+        }
+        AgentTool agentTool = AgentTool.wrap(agent);
+        addTool(agentTool);
+        log.info("Added agent '{}' as tool '{}' to agent '{}'",
+                agent.getName(), agentTool.getName(), getName());
+    }
+
+    /**
+     * 将另一个 Agent 作为工具添加（自定义名称和描述）
+     *
+     * @param agent       要作为工具使用的智能体
+     * @param toolName    工具名称
+     * @param description 工具描述
+     */
+    public void addAgentAsTool(IAgent agent, String toolName, String description) {
+        if (agent == null) {
+            log.warn("Cannot add null agent as tool");
+            return;
+        }
+        AgentTool agentTool = AgentTool.wrap(agent, toolName, description);
+        addTool(agentTool);
+        log.info("Added agent '{}' as tool '{}' to agent '{}'",
+                agent.getName(), agentTool.getName(), getName());
+    }
+
+    /**
+     * 将另一个 Agent 作为工具添加（使用 Builder 进行完整配置）
+     *
+     * @param agent 要作为工具使用的智能体
+     * @return AgentTool.Builder 供进一步配置
+     */
+    public AgentTool.Builder agentAsToolBuilder(IAgent agent) {
+        return AgentTool.builder(agent);
     }
 
     @Override
@@ -152,6 +311,7 @@ public class ReActAgent extends Agent {
     @EqualsAndHashCode(callSuper = true)
     private static class ReActAction extends Action {
         private List<BaseTool> tools;
+        private Map<String, BaseTool> toolMap;
         private int maxIterations;
         private String promptTemplate;
 
@@ -262,29 +422,40 @@ public class ReActAgent extends Agent {
         }
 
         /**
-         * 执行工具动作
+         * 执行工具动作（优先使用 toolMap 快速查找，回退到忽略大小写的线性匹配）
          */
         private String executeToolAction(String toolName, String input) {
-            if (tools == null) {
+            if (toolMap == null || toolMap.isEmpty()) {
                 return "No tools available";
             }
-            
-            for (BaseTool tool : tools) {
-                if (tool.getName().equalsIgnoreCase(toolName)) {
-                    try {
-                        Map<String, Object> params = new HashMap<>();
-                        params.put("input", input);
-                        BaseTool.ToolResult result = tool.execute(params);
-                        return result != null && result.isSuccess() 
-                            ? (result.getData() != null ? result.getData().toString() : "No result")
-                            : "Error: " + result.getError();
-                    } catch (Exception e) {
-                        return "Error executing tool: " + e.getMessage();
+
+            // 优先精确匹配
+            BaseTool tool = toolMap.get(toolName);
+
+            // 回退：忽略大小写匹配
+            if (tool == null) {
+                for (BaseTool candidate : toolMap.values()) {
+                    if (candidate.getName().equalsIgnoreCase(toolName)) {
+                        tool = candidate;
+                        break;
                     }
                 }
             }
-            
-            return "Tool not found: " + toolName;
+
+            if (tool == null) {
+                return "Tool not found: " + toolName;
+            }
+
+            try {
+                Map<String, Object> params = new HashMap<>();
+                params.put("input", input);
+                BaseTool.ToolResult result = tool.execute(params);
+                return result != null && result.isSuccess()
+                        ? (result.getData() != null ? result.getData().toString() : "No result")
+                        : "Error: " + (result != null ? result.getError() : "Unknown error");
+            } catch (Exception e) {
+                return "Error executing tool: " + e.getMessage();
+            }
         }
 
         @Override

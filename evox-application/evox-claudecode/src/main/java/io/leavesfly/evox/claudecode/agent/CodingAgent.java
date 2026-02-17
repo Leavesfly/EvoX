@@ -1,6 +1,8 @@
 package io.leavesfly.evox.claudecode.agent;
 
 import io.leavesfly.evox.agents.base.Agent;
+import io.leavesfly.evox.skill.SkillActivationResult;
+import io.leavesfly.evox.skill.SkillTool;
 import io.leavesfly.evox.claudecode.config.ClaudeCodeConfig;
 import io.leavesfly.evox.claudecode.context.ProjectContext;
 import io.leavesfly.evox.claudecode.permission.PermissionManager;
@@ -108,7 +110,7 @@ public class CodingAgent extends Agent {
                 config.getContextWindow(), this::emitStream);
 
         initializeProjectContext();
-        initializeSubAgentExecutor();
+        initializeTaskExecutor();
     }
 
     // ==================== IAgent / Agent contract ====================
@@ -279,11 +281,20 @@ public class CodingAgent extends Agent {
                     Map<String, Object> parameters = toolExecutor.parseToolArguments(toolCall.getFunction().getArguments());
 
                     emitStream("\n🔧 " + toolName + "(" + toolExecutor.summarizeParams(parameters) + ")\n");
-                    String toolResultContent = toolExecutor.executeWithPermission(toolName, parameters);
 
-                    Message toolResultMessage = Message.responseMessage(toolResultContent, "claudecode", "tool_result");
-                    toolResultMessage.putMetadata("tool_call_id", toolCall.getId());
-                    conversationMessages.add(toolResultMessage);
+                    // Skill 上下文注入（对齐 Claude Code 的双消息注入机制）
+                    if (SkillTool.TOOL_NAME.equals(toolName)) {
+                        String toolResultContent = toolExecutor.executeWithPermission(toolName, parameters);
+                        handleSkillActivation(parameters, conversationMessages);
+                        Message toolResultMessage = Message.responseMessage(toolResultContent, "claudecode", "tool_result");
+                        toolResultMessage.putMetadata("tool_call_id", toolCall.getId());
+                        conversationMessages.add(toolResultMessage);
+                    } else {
+                        String toolResultContent = toolExecutor.executeWithPermission(toolName, parameters);
+                        Message toolResultMessage = Message.responseMessage(toolResultContent, "claudecode", "tool_result");
+                        toolResultMessage.putMetadata("tool_call_id", toolCall.getId());
+                        conversationMessages.add(toolResultMessage);
+                    }
                 } else {
                     // multiple tool calls — prepare and delegate to ToolExecutor for parallel execution
                     List<String> toolNames = new ArrayList<>();
@@ -363,24 +374,24 @@ public class CodingAgent extends Agent {
     }
 
     /**
-     * 初始化子代理执行器（带递归深度限制）
+     * 初始化任务委派执行器（带递归深度限制）
      */
-    private void initializeSubAgentExecutor() {
-        var subAgentTool = toolRegistry.getSubAgentTool();
-        if (subAgentTool != null) {
+    private void initializeTaskExecutor() {
+        var taskDelegationTool = toolRegistry.getTaskDelegationTool();
+        if (taskDelegationTool != null) {
             int nextDepth = currentDepth + 1;
             int maxDepth = config.getMaxSubAgentDepth();
 
-            subAgentTool.setExecutor((taskDescription, taskPrompt) -> {
+            taskDelegationTool.setExecutor((taskDescription, taskPrompt) -> {
                 if (nextDepth > maxDepth) {
-                    String errorMessage = "Sub-agent delegation rejected: maximum recursion depth ("
+                    String errorMessage = "Task delegation rejected: maximum recursion depth ("
                             + maxDepth + ") exceeded at depth " + currentDepth
                             + ". Please handle this task directly.";
                     log.warn(errorMessage);
                     return errorMessage;
                 }
 
-                log.info("Sub-agent executing at depth {}/{}: {}", nextDepth, maxDepth, taskDescription);
+                log.info("Delegating task at depth {}/{}: {}", nextDepth, maxDepth, taskDescription);
 
                 PermissionManager childPermissionManager = new PermissionManager(config, (toolName, params) ->
                         permissionManager.checkPermission(toolName, params));
@@ -388,7 +399,7 @@ public class CodingAgent extends Agent {
                 CodingAgent childAgent = new CodingAgent(config, childPermissionManager, nextDepth);
                 return childAgent.chat(taskPrompt);
             });
-            log.info("Sub-agent executor initialized (current depth: {}, max depth: {})", currentDepth, maxDepth);
+            log.info("Task delegation executor initialized (current depth: {}, max depth: {})", currentDepth, maxDepth);
         }
     }
 
@@ -436,6 +447,63 @@ public class CodingAgent extends Agent {
         } catch (IOException e) {
             log.error("Failed to load resource file: {}", resourceName, e);
             return "You are an expert software engineer working as a coding assistant.";
+        }
+    }
+
+    /**
+     * 处理 Skill 激活后的上下文注入。
+     * 对齐 Claude Code 的双消息注入机制：
+     * <ol>
+     *   <li>Message 1 (用户可见): 状态消息，告知用户 Skill 已激活</li>
+     *   <li>Message 2 (隐藏/meta): Skill prompt 注入，LLM 可见但用户不可见</li>
+     * </ol>
+     * 同时处理执行上下文修改：预批准 allowed-tools。
+     *
+     * <p>直接从 SkillRegistry 获取 SkillActivationResult，
+     * 而不是解析 ToolExecutor 的文本输出，确保数据完整性。
+     *
+     * @param parameters SkillTool 的调用参数（包含 "command" 字段）
+     * @param conversationMessages 当前对话消息列表
+     */
+    private void handleSkillActivation(Map<String, Object> parameters, List<Message> conversationMessages) {
+        try {
+            String command = parameters.getOrDefault("command", "").toString().trim().replaceFirst("^/", "");
+            if (command.isBlank()) {
+                return;
+            }
+
+            SkillActivationResult activation =
+                    toolRegistry.getSkillRegistry().activateSkill(command);
+
+            if (activation == null || !activation.isSuccess()) {
+                return;
+            }
+
+            // Message 1: 用户可见的状态消息
+            String metadataMessage = activation.getMetadataMessage();
+            if (metadataMessage != null && !metadataMessage.isBlank()) {
+                emitStream("\n✨ " + metadataMessage + "\n");
+            }
+
+            // Message 2: 隐藏的 Skill prompt 注入（对齐 Claude Code 的 isMeta=true 消息）
+            String skillPrompt = activation.getSkillPrompt();
+            if (skillPrompt != null && !skillPrompt.isBlank()) {
+                Message skillPromptMessage = Message.systemMessage(skillPrompt);
+                skillPromptMessage.putMetadata("isMeta", true);
+                skillPromptMessage.putMetadata("skillName", activation.getSkillName());
+                conversationMessages.add(skillPromptMessage);
+                log.info("Injected Skill prompt for '{}' ({} chars)", activation.getSkillName(), skillPrompt.length());
+            }
+
+            // 执行上下文修改：预批准 allowed-tools
+            List<String> allowedTools = activation.getAllowedTools();
+            if (allowedTools != null && !allowedTools.isEmpty()) {
+                permissionManager.preApproveToolsForSkill(allowedTools);
+                log.info("Pre-approved {} tools for Skill '{}'", allowedTools.size(), activation.getSkillName());
+            }
+
+        } catch (Exception e) {
+            log.warn("Failed to process Skill activation: {}", e.getMessage());
         }
     }
 

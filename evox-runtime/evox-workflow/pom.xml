@@ -32,11 +32,7 @@
             <artifactId>evox-actions</artifactId>
             <scope>test</scope>
         </dependency>
-        <dependency>
-            <groupId>io.leavesfly.evox</groupId>
-            <artifactId>evox-agents</artifactId>
-            <scope>test</scope>
-        </dependency>
+
         <dependency>
             <groupId>io.leavesfly.evox</groupId>
             <artifactId>evox-tools</artifactId>

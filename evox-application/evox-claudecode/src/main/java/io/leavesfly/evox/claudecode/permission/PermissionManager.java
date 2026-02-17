@@ -4,10 +4,15 @@ import io.leavesfly.evox.claudecode.config.ClaudeCodeConfig;
 import lombok.extern.slf4j.Slf4j;
 
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * 权限管理器
- * 控制工具调用的审批流程，拦截危险操作
+ * 控制工具调用的审批流程，拦截危险操作。
+ *
+ * <p>支持 Skill 激活期间的临时预批准机制（对齐 Claude Code 的 allowed-tools）：
+ * 当 Skill 被激活时，其 allowed-tools 列表中的工具将被临时预批准，
+ * 无需用户确认即可使用。预批准在 Skill 执行完成后自动清除。
  */
 @Slf4j
 public class PermissionManager {
@@ -15,6 +20,13 @@ public class PermissionManager {
     private final ClaudeCodeConfig config;
     private final Set<String> sessionApprovedTools;
     private final PermissionCallback callback;
+
+    /**
+     * Skill 激活期间临时预批准的工具集合。
+     * 当 Skill 被激活时，其 allowed-tools 会被添加到此集合中。
+     * 对齐 Claude Code 的 execution context modification 机制。
+     */
+    private final Set<String> skillPreApprovedTools = ConcurrentHashMap.newKeySet();
 
     /**
      * 权限审批回调接口
@@ -50,6 +62,12 @@ public class PermissionManager {
             return false;
         }
 
+        // check if tool is pre-approved by an active Skill (Claude Code allowed-tools)
+        if (skillPreApprovedTools.contains(toolName)) {
+            log.debug("Tool '{}' pre-approved by active Skill", toolName);
+            return true;
+        }
+
         // check if approval is required
         if (!config.isApprovalRequired(toolName)) {
             return true;
@@ -82,6 +100,30 @@ public class PermissionManager {
      */
     public void clearSessionApprovals() {
         sessionApprovedTools.clear();
+    }
+
+    /**
+     * 临时预批准工具列表（Skill 激活期间有效）。
+     * 对齐 Claude Code 的 allowed-tools 执行上下文修改机制。
+     *
+     * @param toolNames 要预批准的工具名称列表
+     */
+    public void preApproveToolsForSkill(List<String> toolNames) {
+        if (toolNames != null && !toolNames.isEmpty()) {
+            skillPreApprovedTools.addAll(toolNames);
+            log.info("Pre-approved {} tools for active Skill: {}", toolNames.size(), toolNames);
+        }
+    }
+
+    /**
+     * 清除 Skill 激活期间的临时预批准。
+     * 应在 Skill 执行完成后调用。
+     */
+    public void clearSkillPreApprovals() {
+        if (!skillPreApprovedTools.isEmpty()) {
+            log.debug("Clearing {} Skill pre-approved tools", skillPreApprovedTools.size());
+            skillPreApprovedTools.clear();
+        }
     }
 
     private boolean isBlockedOperation(String toolName, Map<String, Object> parameters) {

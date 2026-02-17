@@ -1,8 +1,7 @@
 package io.leavesfly.evox.assistant.controller;
 
-import io.leavesfly.evox.agents.skill.SkillRegistry;
+import io.leavesfly.evox.skill.SkillRegistry;
 import io.leavesfly.evox.channels.core.ChannelRegistry;
-import io.leavesfly.evox.channels.core.ChannelStatus;
 import io.leavesfly.evox.channels.core.IChannel;
 import io.leavesfly.evox.core.agent.IAgentManager;
 import io.leavesfly.evox.gateway.audit.AuditLogger;

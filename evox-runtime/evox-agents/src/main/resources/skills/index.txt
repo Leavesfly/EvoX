@@ -1,0 +1,5 @@
+# EvoX Built-in Skills Index
+# Each line is a skill directory name under skills/
+code_review
+write_test
+refactor

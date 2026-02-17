@@ -12,7 +12,7 @@ import io.leavesfly.evox.cowork.tool.CoworkToolRegistry;
 import io.leavesfly.evox.models.client.ChatCompletionResult;
 import io.leavesfly.evox.models.client.ToolCall;
 import io.leavesfly.evox.models.client.ToolDefinition;
-import io.leavesfly.evox.tools.agent.SubAgentTool;
+import io.leavesfly.evox.tools.task.TaskDelegationTool;
 import io.leavesfly.evox.tools.base.BaseTool;
 import io.leavesfly.evox.memory.manager.MemoryManager;
 import io.leavesfly.evox.memory.shortterm.ShortTermMemory;
@@ -95,7 +95,7 @@ public class CoworkAgent extends Agent {
         setLlm(llmProvider); // inject into base class (ILLM type)
         setHuman(false);
 
-        initializeSubAgentExecutor();
+        initializeTaskExecutor();
     }
 
     // ==================== IAgent / Agent contract ====================
@@ -292,10 +292,10 @@ public class CoworkAgent extends Agent {
         return currentProgress;
     }
 
-    private void initializeSubAgentExecutor() {
-        SubAgentTool subAgentTool = toolRegistry.getSubAgentTool();
-        if (subAgentTool != null) {
-            subAgentTool.setExecutor(this::executeSubTask);
+    private void initializeTaskExecutor() {
+        TaskDelegationTool taskDelegationTool = toolRegistry.getTaskDelegationTool();
+        if (taskDelegationTool != null) {
+            taskDelegationTool.setExecutor(this::executeSubTask);
         }
     }
 

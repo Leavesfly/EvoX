@@ -89,12 +89,16 @@ public class SequentialWorkflowExample {
         node1.setNodeId("analyze");
         node1.setName("Analyze");
         node1.setDescription("Analyze the question");
+        node1.setNodeType(WorkflowNode.NodeType.ACTION);
+        node1.setAgentName("AnalyzeAgent");
         node1.initModule();
 
         WorkflowNode node2 = new WorkflowNode();
         node2.setNodeId("answer");
         node2.setName("Answer");
         node2.setDescription("Generate answer");
+        node2.setNodeType(WorkflowNode.NodeType.ACTION);
+        node2.setAgentName("AnswerAgent");
         node2.initModule();
 
         // 创建工作流图

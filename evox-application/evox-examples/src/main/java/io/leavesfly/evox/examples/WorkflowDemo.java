@@ -59,23 +59,29 @@ public class WorkflowDemo {
         
         // 节点 1: 数据验证
         WorkflowNode validateNode = new WorkflowNode();
-        validateNode.setName("DataProcessor.validate");
+        validateNode.setName("Validate");
         validateNode.setDescription("验证输入数据");
         validateNode.setNodeType(WorkflowNode.NodeType.ACTION);
+        validateNode.setAgentName("DataProcessor");
+        validateNode.setActionName("validate");
         validateNode.initModule();
         
         // 节点 2: 数据转换
         WorkflowNode transformNode = new WorkflowNode();
-        transformNode.setName("DataProcessor.transform");
+        transformNode.setName("Transform");
         transformNode.setDescription("转换数据格式");
         transformNode.setNodeType(WorkflowNode.NodeType.ACTION);
+        transformNode.setAgentName("DataProcessor");
+        transformNode.setActionName("transform");
         transformNode.initModule();
         
         // 节点 3: 数据汇总
         WorkflowNode summarizeNode = new WorkflowNode();
-        summarizeNode.setName("DataProcessor.summarize");
+        summarizeNode.setName("Summarize");
         summarizeNode.setDescription("汇总处理结果");
         summarizeNode.setNodeType(WorkflowNode.NodeType.ACTION);
+        summarizeNode.setAgentName("DataProcessor");
+        summarizeNode.setActionName("summarize");
         summarizeNode.initModule();
         
         // 构建图
@@ -123,9 +129,11 @@ public class WorkflowDemo {
         
         // 节点 1: 数据验证
         WorkflowNode validateNode = new WorkflowNode();
-        validateNode.setName("DataProcessor.validate");
+        validateNode.setName("Validate");
         validateNode.setDescription("验证输入数据");
         validateNode.setNodeType(WorkflowNode.NodeType.ACTION);
+        validateNode.setAgentName("DataProcessor");
+        validateNode.setActionName("validate");
         validateNode.initModule();
         
         // 节点 2: 决策节点
@@ -138,16 +146,20 @@ public class WorkflowDemo {
         
         // 节点 3a: 大数据集处理
         WorkflowNode transformNode = new WorkflowNode();
-        transformNode.setName("DataProcessor.transform");
+        transformNode.setName("Transform");
         transformNode.setDescription("转换大数据集");
         transformNode.setNodeType(WorkflowNode.NodeType.ACTION);
+        transformNode.setAgentName("DataProcessor");
+        transformNode.setActionName("transform");
         transformNode.initModule();
         
         // 节点 3b: 小数据集处理
         WorkflowNode summarizeNode = new WorkflowNode();
-        summarizeNode.setName("DataProcessor.summarize");
+        summarizeNode.setName("Summarize");
         summarizeNode.setDescription("直接汇总小数据集");
         summarizeNode.setNodeType(WorkflowNode.NodeType.ACTION);
+        summarizeNode.setAgentName("DataProcessor");
+        summarizeNode.setActionName("summarize");
         summarizeNode.initModule();
         
         // 构建图
@@ -209,9 +221,11 @@ public class WorkflowDemo {
         
         // 节点 1: 数据准备
         WorkflowNode prepareNode = new WorkflowNode();
-        prepareNode.setName("DataProcessor.validate");
+        prepareNode.setName("Prepare");
         prepareNode.setDescription("准备数据");
         prepareNode.setNodeType(WorkflowNode.NodeType.ACTION);
+        prepareNode.setAgentName("DataProcessor");
+        prepareNode.setActionName("validate");
         prepareNode.initModule();
         
         // 节点 2: 并行节点
@@ -224,16 +238,20 @@ public class WorkflowDemo {
         
         // 并行子节点 1: 数据转换
         WorkflowNode transformNode = new WorkflowNode();
-        transformNode.setName("DataProcessor.transform");
+        transformNode.setName("Transform");
         transformNode.setDescription("数据转换");
         transformNode.setNodeType(WorkflowNode.NodeType.ACTION);
+        transformNode.setAgentName("DataProcessor");
+        transformNode.setActionName("transform");
         transformNode.initModule();
         
         // 并行子节点 2: 数据汇总
         WorkflowNode summarizeNode = new WorkflowNode();
-        summarizeNode.setName("DataProcessor.summarize");
+        summarizeNode.setName("Summarize");
         summarizeNode.setDescription("数据汇总");
         summarizeNode.setNodeType(WorkflowNode.NodeType.ACTION);
+        summarizeNode.setAgentName("DataProcessor");
+        summarizeNode.setActionName("summarize");
         summarizeNode.initModule();
         
         // 构建图
@@ -279,9 +297,11 @@ public class WorkflowDemo {
         
         // 节点 1: 初始化计数器
         WorkflowNode initNode = new WorkflowNode();
-        initNode.setName("DataProcessor.validate");
+        initNode.setName("Init");
         initNode.setDescription("初始化");
         initNode.setNodeType(WorkflowNode.NodeType.ACTION);
+        initNode.setAgentName("DataProcessor");
+        initNode.setActionName("validate");
         initNode.initModule();
         
         // 节点 2: 循环节点
@@ -294,9 +314,11 @@ public class WorkflowDemo {
         
         // 循环体: 数据转换
         WorkflowNode transformNode = new WorkflowNode();
-        transformNode.setName("DataProcessor.transform");
+        transformNode.setName("Transform");
         transformNode.setDescription("转换数据");
         transformNode.setNodeType(WorkflowNode.NodeType.ACTION);
+        transformNode.setAgentName("DataProcessor");
+        transformNode.setActionName("transform");
         transformNode.initModule();
         
         // 构建图

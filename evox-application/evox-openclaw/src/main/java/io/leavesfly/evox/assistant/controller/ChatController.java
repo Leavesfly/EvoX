@@ -1,7 +1,7 @@
 package io.leavesfly.evox.assistant.controller;
 
-import io.leavesfly.evox.agents.skill.BaseSkill;
-import io.leavesfly.evox.agents.skill.SkillRegistry;
+import io.leavesfly.evox.skill.BaseSkill;
+import io.leavesfly.evox.skill.SkillRegistry;
 import io.leavesfly.evox.core.message.Message;
 import io.leavesfly.evox.gateway.routing.GatewayRouter;
 import lombok.Data;

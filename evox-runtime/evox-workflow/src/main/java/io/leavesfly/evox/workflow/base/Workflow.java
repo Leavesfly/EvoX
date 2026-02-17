@@ -8,6 +8,7 @@ import io.leavesfly.evox.core.llm.ILLM;
 import io.leavesfly.evox.workflow.execution.WorkflowContext;
 import io.leavesfly.evox.workflow.execution.WorkflowExecutor;
 import io.leavesfly.evox.workflow.graph.WorkflowGraph;
+import io.leavesfly.evox.workflow.node.NodeHandler;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
@@ -82,9 +83,40 @@ public class Workflow extends BaseModule {
         if (graph == null) {
             throw new IllegalStateException("Workflow graph cannot be null");
         }
+
+        // 校验所有 ACTION 节点是否都配置了 agentName，且对应的 Agent 已注册
+        if (agentManager != null) {
+            for (WorkflowNode node : graph.getNodes().values()) {
+                if (node.getNodeType() == WorkflowNode.NodeType.ACTION) {
+                    String agentName = node.getAgentName();
+                    if (agentName == null || agentName.isEmpty()) {
+                        throw new IllegalStateException(
+                                "ACTION node '" + node.getName() + "' must have agentName configured");
+                    }
+                    if (!agentManager.hasAgent(agentName)) {
+                        throw new IllegalStateException(
+                                "ACTION node '" + node.getName() + "' references unknown agent: " + agentName);
+                    }
+                }
+            }
+        }
+
         if (executor == null) {
             executor = new WorkflowExecutor(this, agentManager);
         }
+    }
+
+    /**
+     * 注册节点处理器到工作流执行器
+     *
+     * @param handlerName 处理器名称
+     * @param handler     处理器实例
+     */
+    public void registerHandler(String handlerName, NodeHandler handler) {
+        if (executor == null) {
+            throw new IllegalStateException("Workflow must be initialized before registering handlers");
+        }
+        executor.registerHandler(handlerName, handler);
     }
 
     /**

@@ -1,6 +1,7 @@
 package io.leavesfly.evox.workflow;
 
-import io.leavesfly.evox.agents.manager.AgentManager;
+import io.leavesfly.evox.core.agent.IAgent;
+import io.leavesfly.evox.core.agent.IAgentManager;
 import io.leavesfly.evox.workflow.base.Workflow;
 import io.leavesfly.evox.workflow.base.WorkflowNode;
 import io.leavesfly.evox.workflow.graph.WorkflowGraph;
@@ -20,13 +21,13 @@ import static org.junit.jupiter.api.Assertions.*;
 @Slf4j
 class ParallelNodeTest {
 
-    private AgentManager agentManager;
+    private IAgentManager agentManager;
     private Workflow workflow;
     private WorkflowGraph graph;
 
     @BeforeEach
     void setUp() {
-        agentManager = new AgentManager();
+        agentManager = createEmptyAgentManager();
         graph = new WorkflowGraph("Parallel test workflow");
     }
 
@@ -269,5 +270,38 @@ class ParallelNodeTest {
         node.setCondition("true");
         node.initModule();
         return node;
+    }
+
+    /**
+     * 创建空的 IAgentManager 实现（测试用，不依赖 evox-agents）
+     */
+    private IAgentManager createEmptyAgentManager() {
+        return new IAgentManager() {
+            private final Map<String, IAgent> agents = new HashMap<>();
+
+            @Override
+            public IAgent getAgent(String name) { return agents.get(name); }
+
+            @Override
+            public IAgent getAgentById(String agentId) { return null; }
+
+            @Override
+            public void addAgent(IAgent agent) { }
+
+            @Override
+            public IAgent removeAgent(String name) { return agents.remove(name); }
+
+            @Override
+            public boolean hasAgent(String name) { return agents.containsKey(name); }
+
+            @Override
+            public Map<String, IAgent> getAllAgents() { return agents; }
+
+            @Override
+            public int getAgentCount() { return agents.size(); }
+
+            @Override
+            public void clear() { agents.clear(); }
+        };
     }
 }

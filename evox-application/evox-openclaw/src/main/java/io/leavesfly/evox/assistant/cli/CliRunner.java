@@ -1,6 +1,6 @@
 package io.leavesfly.evox.assistant.cli;
 
-import io.leavesfly.evox.agents.skill.SkillRegistry;
+import io.leavesfly.evox.skill.SkillRegistry;
 import io.leavesfly.evox.assistant.config.AssistantProperties;
 import io.leavesfly.evox.assistant.evolution.SelfEvolutionService;
 import io.leavesfly.evox.assistant.evolution.SkillGenerator;

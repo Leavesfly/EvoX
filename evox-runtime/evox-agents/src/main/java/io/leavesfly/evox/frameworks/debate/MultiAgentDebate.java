@@ -1,24 +1,30 @@
 package io.leavesfly.evox.frameworks.debate;
 
-
+import com.fasterxml.jackson.databind.ObjectMapper;
+import io.leavesfly.evox.frameworks.base.MultiAgentFramework;
 import io.leavesfly.evox.models.base.LLMProvider;
+import io.leavesfly.evox.workflow.base.Workflow;
+import io.leavesfly.evox.workflow.base.WorkflowNode;
+import io.leavesfly.evox.workflow.graph.WorkflowGraph;
+import io.leavesfly.evox.workflow.node.NodeHandler;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
 
 import java.util.*;
 import java.util.concurrent.*;
-
 import java.util.stream.Collectors;
 
 /**
  * 多智能体辩论框架
  * 允许多个智能体通过辩论达成共识
  *
+ * <p>基于 evox-workflow DAG 引擎实现，通过 DebateNodeHandler 封装辩论核心逻辑。
+ *
  * @author EvoX Team
  */
 @Slf4j
 @Data
-public class MultiAgentDebate {
+public class MultiAgentDebate extends MultiAgentFramework {
 
     /**
      * 参与辩论的智能体列表
@@ -91,6 +97,7 @@ public class MultiAgentDebate {
         this.currentRound = 0;
         this.history = new ArrayList<>();
         this.config = DebateConfig.builder().build();
+        this.frameworkName = "MultiAgentDebate";
 
         // 初始化每个智能体的分数
         agents.forEach(agent -> scores.put(agent.getName(), 0.0));
@@ -102,28 +109,171 @@ public class MultiAgentDebate {
     }
 
     /**
+     * 构建工作流 DAG 图
+     * 辩论框架使用多节点 DAG：LOOP + COLLECT(debate_round) + COLLECT(debate_final)
+     *
+     * @param task 任务描述（辩论问题）
+     * @return 工作流图
+     */
+    @Override
+    protected WorkflowGraph buildWorkflowGraph(String task) {
+        WorkflowGraph graph = new WorkflowGraph(task);
+
+        // 创建 LOOP 节点
+        WorkflowNode loopNode = createLoopNode(
+                "debate_loop",
+                maxRounds,
+                "debate_finished == false"
+        );
+
+        // 创建 COLLECT 节点作为循环体（单轮辩论）
+        Map<String, Object> roundHandlerConfig = new HashMap<>();
+        roundHandlerConfig.put("mode", mode);
+        WorkflowNode roundNode = createCollectNode(
+                "debate_round",
+                "debate_round_handler",
+                roundHandlerConfig
+        );
+
+        // 创建 COLLECT 节点用于生成最终答案
+        Map<String, Object> finalHandlerConfig = new HashMap<>();
+        WorkflowNode finalNode = createCollectNode(
+                "debate_final",
+                "debate_final_handler",
+                finalHandlerConfig
+        );
+
+        // 设置循环体节点
+        loopNode.setLoopBodyNodeId(roundNode.getNodeId());
+
+        // 添加节点到图
+        graph.addNode(roundNode);
+        graph.addNode(loopNode);
+        graph.addNode(finalNode);
+
+        // 添加边：LOOP → final
+        graph.addEdge(loopNode.getNodeId(), finalNode.getNodeId());
+
+        return graph;
+    }
+
+    /**
+     * 注册节点处理器
+     *
+     * @param workflow 工作流实例
+     */
+    @Override
+    protected void registerNodeHandlers(Workflow workflow) {
+        // 注册单轮辩论处理器
+        DebateNodeHandler.DebateRoundHandler roundHandler = new DebateNodeHandler.DebateRoundHandler();
+        workflow.registerHandler("debate_round_handler", roundHandler);
+
+        // 注册最终答案处理器
+        DebateNodeHandler.DebateFinalHandler finalHandler = new DebateNodeHandler.DebateFinalHandler();
+        workflow.registerHandler("debate_final_handler", finalHandler);
+    }
+
+    /**
+     * 执行前的初始化钩子
+     *
+     * @param task 任务描述
+     */
+    @Override
+    protected void beforeExecute(String task) {
+        startTime = System.currentTimeMillis();
+        status = DebateStatus.IN_PROGRESS;
+        fireEvent(DebateEventType.DEBATE_STARTED, task);
+    }
+
+    /**
      * 开始辩论
      */
     public DebateResult debate(String question) {
         log.info("开始辩论: {}", question);
 
-        startTime = System.currentTimeMillis();
-        status = DebateStatus.IN_PROGRESS;
-        fireEvent(DebateEventType.DEBATE_STARTED, null);
-
         try {
-            // 根据模式执行辩论
-            String finalAnswer = switch (mode) {
-                case ROUND_ROBIN -> executeRoundRobin(question);
-                case ADVERSARIAL -> executeAdversarial(question);
-                case PANEL -> executePanel(question);
-                case SOCRATIC -> executeSocratic(question);
-            };
+            // 准备工作流输入参数
+            Map<String, Object> inputs = new HashMap<>();
+            inputs.put("debate_agents", agents);
+            inputs.put("debate_moderator", moderator);
+            inputs.put("debate_mode", mode);
+            inputs.put("debate_config", config);
+            inputs.put("debate_max_rounds", maxRounds);
+            inputs.put("debate_question", question);
+            inputs.put("debate_event_listeners", eventListeners);
+            
+            // 初始化控制变量
+            inputs.put("debate_finished", false);
+            inputs.put("start_time", System.currentTimeMillis());
+            inputs.put("current_round", 0);
+            inputs.put("history", new ArrayList<>());
+            inputs.put("viewpoint_tracker", new HashMap<>());
+            inputs.put("scores", new HashMap<>());
 
-            status = DebateStatus.COMPLETED;
-            fireEvent(DebateEventType.DEBATE_ENDED, null);
+            // 执行工作流
+            String workflowResult = executeWorkflow(question, inputs);
 
-            return buildDebateResult(question, finalAnswer);
+            // DebateNodeHandler 将结果以 JSON 格式返回，包含 all debate state
+            // 解析结果并更新本地状态
+            try {
+                // 尝试解析 JSON 结果
+                ObjectMapper  objectMapper = new ObjectMapper();
+                @SuppressWarnings("unchecked")
+                Map<String, Object> resultMap = objectMapper.readValue(workflowResult, Map.class);
+
+                // 更新本地状态
+                if (resultMap.containsKey("history")) {
+                    @SuppressWarnings("unchecked")
+                    List<Map<String, Object>> historyData = (List<Map<String, Object>>) resultMap.get("history");
+                    this.history = new ArrayList<>();
+                    for (Map<String, Object> recordData : historyData) {
+                        int round = ((Number) recordData.get("round")).intValue();
+                        String agentName = (String) recordData.get("agentName");
+                        String response = (String) recordData.get("response");
+                        this.history.add(new DebateRecord(round, agentName, response));
+                    }
+                }
+
+                if (resultMap.containsKey("currentRound")) {
+                    this.currentRound = ((Number) resultMap.get("currentRound")).intValue();
+                }
+
+                if (resultMap.containsKey("viewpoints")) {
+                    @SuppressWarnings("unchecked")
+                    Map<String, List<Map<String, Object>>> viewpointsData = (Map<String, List<Map<String, Object>>>) resultMap.get("viewpoints");
+                    this.viewpointTracker.clear();
+                    for (Map.Entry<String, List<Map<String, Object>>> entry : viewpointsData.entrySet()) {
+                        List<Viewpoint> viewpoints = new ArrayList<>();
+                        for (Map<String, Object> vpData : entry.getValue()) {
+                            int round = ((Number) vpData.get("round")).intValue();
+                            String content = (String) vpData.get("content");
+                            viewpoints.add(Viewpoint.builder().round(round).content(content).build());
+                        }
+                        this.viewpointTracker.put(entry.getKey(), viewpoints);
+                    }
+                }
+
+                if (resultMap.containsKey("scores")) {
+                    @SuppressWarnings("unchecked")
+                    Map<String, Double> scoresData = (Map<String, Double>) resultMap.get("scores");
+                    this.scores.clear();
+                    this.scores.putAll(scoresData);
+                }
+
+                String finalAnswer = (String) resultMap.getOrDefault("finalAnswer", workflowResult);
+
+                status = DebateStatus.COMPLETED;
+                fireEvent(DebateEventType.DEBATE_ENDED, finalAnswer);
+
+                return buildDebateResult(question, finalAnswer);
+
+            } catch (Exception e) {
+                // 如果解析失败，使用原始结果
+                log.warn("解析辩论结果失败，使用原始结果: {}", e.getMessage());
+                status = DebateStatus.COMPLETED;
+                fireEvent(DebateEventType.DEBATE_ENDED, workflowResult);
+                return buildDebateResult(question, workflowResult);
+            }
 
         } catch (Exception e) {
             status = DebateStatus.ERROR;
@@ -133,298 +283,6 @@ public class MultiAgentDebate {
                     .error(e.getMessage())
                     .build();
         }
-    }
-
-    /**
-     * 轮流模式
-     */
-    private String executeRoundRobin(String question) {
-        for (currentRound = 1; currentRound <= maxRounds; currentRound++) {
-            log.info("第 {}/{} 轮", currentRound, maxRounds);
-            fireEvent(DebateEventType.ROUND_STARTED, currentRound);
-
-            for (DebateAgent agent : agents) {
-                String response = executeAgentResponse(agent, question);
-                processResponse(agent, response);
-            }
-
-            fireEvent(DebateEventType.ROUND_ENDED, currentRound);
-
-            if (checkConsensus()) {
-                log.info("第 {} 轮达成共识", currentRound);
-                break;
-            }
-        }
-
-        return generateFinalAnswer();
-    }
-
-    /**
-     * 对抗模式（正方vs反方）
-     */
-    private String executeAdversarial(String question) {
-        if (agents.size() < 2) {
-            throw new IllegalStateException("对抗模式至少需要2个智能体");
-        }
-
-        DebateAgent proponent = agents.get(0);  // 正方
-        DebateAgent opponent = agents.get(1);   // 反方
-
-        for (currentRound = 1; currentRound <= maxRounds; currentRound++) {
-            log.info("对抗第 {}/{} 轮", currentRound, maxRounds);
-
-            // 正方发言
-            String proResponse = executeAgentResponse(proponent,
-                    "作为正方，请针对'" + question + "'提出支持观点");
-            processResponse(proponent, proResponse);
-
-            // 反方发言
-            String oppResponse = executeAgentResponse(opponent,
-                    "作为反方，请针对'" + question + "'提出反对观点");
-            processResponse(opponent, oppResponse);
-
-            // 交叉质询
-            if (config.isEnableCrossExamination()) {
-                executeCrossExamination(proponent, opponent);
-            }
-        }
-
-        return generateFinalAnswer();
-    }
-
-    /**
-     * 圆桌讨论模式
-     */
-    private String executePanel(String question) {
-        for (currentRound = 1; currentRound <= maxRounds; currentRound++) {
-            log.info("圆桌讨论第 {}/{} 轮", currentRound, maxRounds);
-
-            // 所有智能体同时发言
-            List<String> responses = new ArrayList<>();
-            for (DebateAgent agent : agents) {
-                String response = executeAgentResponse(agent, question);
-                responses.add(response);
-                processResponse(agent, response);
-            }
-
-            // 回应彼此的观点
-            if (currentRound < maxRounds) {
-                for (int i = 0; i < agents.size(); i++) {
-                    DebateAgent agent = agents.get(i);
-                    String rebuttal = agent.respond(
-                            "请回应其他人的观点: " + String.join("; ", responses),
-                            history
-                    );
-                    processResponse(agent, rebuttal);
-                }
-            }
-
-            if (checkConsensus()) {
-                break;
-            }
-        }
-
-        return generateFinalAnswer();
-    }
-
-    /**
-     * 苏格拉底式讨论模式（主持人引导）
-     */
-    private String executeSocratic(String question) {
-        if (moderator == null) {
-            throw new IllegalStateException("苏格拉底模式需要主持人");
-        }
-
-        String currentQuestion = question;
-
-        for (currentRound = 1; currentRound <= maxRounds; currentRound++) {
-            log.info("苏格拉底讨论第 {}/{} 轮", currentRound, maxRounds);
-
-            // 每个智能体回答当前问题
-            for (DebateAgent agent : agents) {
-                String response = executeAgentResponse(agent, currentQuestion);
-                processResponse(agent, response);
-            }
-
-            // 主持人提出后续问题
-            if (currentRound < maxRounds) {
-                currentQuestion = generateFollowUpQuestion();
-                log.info("主持人后续问题: {}", currentQuestion);
-            }
-        }
-
-        return generateFinalAnswer();
-    }
-
-    /**
-     * 执行智能体回应
-     */
-    private String executeAgentResponse(DebateAgent agent, String question) {
-        long startTime = System.currentTimeMillis();
-
-        // 检查时间限制
-        if (config.getResponseTimeoutMs() > 0) {
-            try {
-                ExecutorService executor = Executors.newSingleThreadExecutor();
-                Future<String> future = executor.submit(() -> agent.respond(question, history));
-                String response = future.get(config.getResponseTimeoutMs(), TimeUnit.MILLISECONDS);
-                executor.shutdown();
-                return response;
-            } catch (TimeoutException e) {
-                log.warn("智能体 {} 响应超时", agent.getName());
-                return "[响应超时]";
-            } catch (Exception e) {
-                log.error("智能体 {} 响应失败", agent.getName(), e);
-                return "[响应失败: " + e.getMessage() + "]";
-            }
-        }
-
-        return agent.respond(question, history);
-    }
-
-    /**
-     * 处理响应
-     */
-    private void processResponse(DebateAgent agent, String response) {
-        DebateRecord record = new DebateRecord(currentRound, agent.getName(), response);
-        history.add(record);
-
-        // 跟踪观点
-        extractAndTrackViewpoints(agent.getName(), response);
-
-        // 评分
-        if (config.isEnableScoring()) {
-            evaluateResponse(agent.getName(), response);
-        }
-
-        fireEvent(DebateEventType.AGENT_RESPONDED, record);
-        log.debug("{}: {}", agent.getName(), response);
-    }
-
-    /**
-     * 提取并跟踪观点
-     */
-    private void extractAndTrackViewpoints(String agentName, String response) {
-        Viewpoint viewpoint = Viewpoint.builder()
-                .round(currentRound)
-                .content(response)
-                .timestamp(System.currentTimeMillis())
-                .build();
-
-        viewpointTracker.computeIfAbsent(agentName, k -> new ArrayList<>()).add(viewpoint);
-    }
-
-    /**
-     * 评估响应并评分
-     */
-    private void evaluateResponse(String agentName, String response) {
-        // 简单的评分逻辑：基于响应长度和内容质量
-        double score = 0.0;
-
-        // 基础分：响应长度
-        score += Math.min(response.length() / 100.0, 5.0);
-
-        // 包含论据支持
-        if (response.contains("因为") || response.contains("根据") || response.contains("研究表明")) {
-            score += 2.0;
-        }
-
-        // 包含引用或数据
-        if (response.matches(".*\\d+%.*") || response.matches(".*\\d+年.*")) {
-            score += 1.0;
-        }
-
-        scores.merge(agentName, score, Double::sum);
-    }
-
-    /**
-     * 执行交叉质询
-     */
-    private void executeCrossExamination(DebateAgent proponent, DebateAgent opponent) {
-        // 正方质询反方
-        String proQuestion = proponent.respond("请向反方提出一个关键问题", history);
-        String oppAnswer = opponent.respond("请回答: " + proQuestion, history);
-        history.add(new DebateRecord(currentRound, proponent.getName(), "质询: " + proQuestion));
-        history.add(new DebateRecord(currentRound, opponent.getName(), "回答: " + oppAnswer));
-
-        // 反方质询正方
-        String oppQuestion = opponent.respond("请向正方提出一个关键问题", history);
-        String proAnswer = proponent.respond("请回答: " + oppQuestion, history);
-        history.add(new DebateRecord(currentRound, opponent.getName(), "质询: " + oppQuestion));
-        history.add(new DebateRecord(currentRound, proponent.getName(), "回答: " + proAnswer));
-    }
-
-    /**
-     * 生成后续问题
-     */
-    private String generateFollowUpQuestion() {
-        StringBuilder sb = new StringBuilder();
-        sb.append("基于以下辩论历史，请提出一个能够深化讨论的后续问题：\n\n");
-
-        int startIdx = Math.max(0, history.size() - agents.size());
-        for (int i = startIdx; i < history.size(); i++) {
-            DebateRecord record = history.get(i);
-            sb.append(String.format("%s: %s\n", record.getAgentName(), record.getResponse()));
-        }
-        sb.append("\n请生成一个能够引导更深入讨论的问题：");
-
-        return moderator.generate(sb.toString());
-    }
-
-    /**
-     * 检查是否达成共识
-     */
-    private boolean checkConsensus() {
-        if (moderator == null || history.isEmpty()) {
-            return false;
-        }
-
-        log.debug("Checking for consensus among agents...");
-
-        // 构建共识检查提示词
-        StringBuilder sb = new StringBuilder();
-        sb.append("分析以下辩论历史，并判断所有参与者是否已达成明确的共识或一致意见。\n\n");
-        sb.append("辩论历史：\n");
-        for (DebateRecord record : history) {
-            sb.append(String.format("[%d] %s: %s\n", record.getRound(), record.getAgentName(), record.getResponse()));
-        }
-        sb.append("\n是否已达成共识？请以 'YES' 或 'NO' 开头回答，并简要说明理由。");
-
-        String response = moderator.generate(sb.toString());
-        boolean reached = response.trim().toUpperCase().startsWith("YES");
-
-        if (reached) {
-            log.info("Consensus detected by moderator: {}", response);
-        }
-
-        return reached;
-    }
-
-    /**
-     * 生成最终答案
-     */
-    private String generateFinalAnswer() {
-        if (history.isEmpty()) {
-            return "没有可用的辩论历史。";
-        }
-
-        if (moderator == null) {
-            DebateRecord last = history.get(history.size() - 1);
-            return String.format("辩论结束，未配置主持人。来自 %s 的最后观点：%s",
-                    last.getAgentName(), last.getResponse());
-        }
-
-        log.info("生成最终答案...");
-
-        StringBuilder sb = new StringBuilder();
-        sb.append("基于以下多智能体辩论历史，请提供一个全面的最终答案或总结，综合关键观点及达成的任何共识。\n\n");
-        sb.append("辩论历史：\n");
-        for (DebateRecord record : history) {
-            sb.append(String.format("[%d] %s: %s\n", record.getRound(), record.getAgentName(), record.getResponse()));
-        }
-        sb.append("\n最终全面回答：");
-
-        return moderator.generate(sb.toString());
     }
 
     /**
@@ -528,7 +386,7 @@ public class MultiAgentDebate {
         }
     }
 
-    // ============= 配置和枣举类 =============
+    // ============= 配置和枚举类 =============
 
     /**
      * 辩论模式

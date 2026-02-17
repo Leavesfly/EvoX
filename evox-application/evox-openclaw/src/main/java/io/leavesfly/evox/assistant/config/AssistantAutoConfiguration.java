@@ -4,9 +4,8 @@ import io.leavesfly.evox.assistant.AssistantBootstrap;
 import io.leavesfly.evox.assistant.cli.CliRunner;
 import io.leavesfly.evox.assistant.evolution.SelfEvolutionService;
 import io.leavesfly.evox.assistant.evolution.SkillGenerator;
-import io.leavesfly.evox.agents.skill.SkillMarketplace;
-import io.leavesfly.evox.agents.skill.SkillRegistry;
-import io.leavesfly.evox.agents.skill.builtin.*;
+import io.leavesfly.evox.skill.SkillMarketplace;
+import io.leavesfly.evox.skill.SkillRegistry;
 
 import io.leavesfly.evox.channels.core.ChannelRegistry;
 import io.leavesfly.evox.channels.dingtalk.DingTalkChannel;
@@ -195,14 +194,10 @@ public class AssistantAutoConfiguration {
     public SkillRegistry skillRegistry() {
         SkillRegistry registry = new SkillRegistry();
 
-        registry.registerSkill(new WeatherSkill());
-        registry.registerSkill(new ReminderSkill());
-        registry.registerSkill(new GitHubSkill());
-        registry.registerSkill(new CalendarSkill());
-        registry.registerSkill(new StockTrackerSkill());
-        registry.registerSkill(new MoltbookSkill());
+        // 从 classpath 的 skills/ 目录加载内置 SKILL.md 文件
+        int builtinCount = registry.loadBuiltinSkills();
 
-        log.info("Registered {} personal assistant skills", registry.getSkillCount());
+        log.info("Registered {} personal assistant skills from SKILL.md files", builtinCount);
         return registry;
     }
 

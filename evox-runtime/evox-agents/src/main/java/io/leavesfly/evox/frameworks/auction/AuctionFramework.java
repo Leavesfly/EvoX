@@ -1,21 +1,27 @@
 package io.leavesfly.evox.frameworks.auction;
 
+import io.leavesfly.evox.frameworks.base.MultiAgentFramework;
+import io.leavesfly.evox.workflow.base.Workflow;
+import io.leavesfly.evox.workflow.base.WorkflowNode;
+import io.leavesfly.evox.workflow.graph.WorkflowGraph;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
 
-import java.util.*;
-import java.util.stream.Collectors;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 /**
  * 拍卖框架
  * 支持多种拍卖机制的通用框架
+ * 基于 evox-workflow DAG 引擎实现
  *
  * @param <T> 拍卖物品类型
  * @author EvoX Team
  */
 @Slf4j
 @Data
-public class AuctionFramework<T> {
+public class AuctionFramework<T> extends MultiAgentFramework {
 
     /**
      * 拍卖物品
@@ -37,29 +43,19 @@ public class AuctionFramework<T> {
      */
     private AuctionConfig config;
 
-    /**
-     * 拍卖历史
-     */
-    private List<BidRecord<T>> bidHistory;
+
 
     /**
-     * 拍卖状态
+     * 拍卖结果缓存（从 workflow 获取后缓存）
      */
-    private AuctionStatus status;
-
-    /**
-     * 当前轮次
-     */
-    private int currentRound;
+    private AuctionResult<T> cachedResult;
 
     public AuctionFramework(T item, AuctionMechanism mechanism, List<Bidder<T>> bidders, AuctionConfig config) {
         this.item = item;
         this.auctionMechanism = mechanism;
         this.bidders = bidders;
         this.config = config;
-        this.bidHistory = new ArrayList<>();
-        this.status = AuctionStatus.PENDING;
-        this.currentRound = 0;
+        this.frameworkName = "AuctionFramework";
     }
 
     public AuctionFramework(T item, AuctionMechanism mechanism, List<Bidder<T>> bidders) {
@@ -73,271 +69,89 @@ public class AuctionFramework<T> {
      */
     public AuctionResult<T> startAuction() {
         log.info("Starting auction for item: {} with mechanism: {}", item, auctionMechanism);
-        
-        long startTime = System.currentTimeMillis();
-        status = AuctionStatus.RUNNING;
-        
-        try {
-            // 根据拍卖机制执行不同的拍卖流程
-            AuctionResult<T> result = switch (auctionMechanism) {
-                case ENGLISH -> executeEnglishAuction();
-                case DUTCH -> executeDutchAuction();
-                case FIRST_PRICE_SEALED -> executeFirstPriceSealedAuction();
-                case SECOND_PRICE_SEALED -> executeSecondPriceSealedAuction();
-                case VICKREY -> executeVickreyAuction();
-                case ALL_PAY -> executeAllPayAuction();
-            };
-            
-            status = AuctionStatus.COMPLETED;
-            result.setDuration(System.currentTimeMillis() - startTime);
-            result.setTotalRounds(currentRound);
-            
-            log.info("Auction completed. Winner: {}, Price: {}", 
-                result.getWinner() != null ? result.getWinner().getBidderId() : "None", 
-                result.getFinalPrice());
-            
-            return result;
-            
-        } catch (Exception e) {
-            status = AuctionStatus.FAILED;
-            log.error("Auction failed: {}", e.getMessage(), e);
-            
-            return AuctionResult.<T>builder()
-                .success(false)
-                .error(e.getMessage())
-                .duration(System.currentTimeMillis() - startTime)
-                .build();
-        }
-    }
 
-    /**
-     * 英式拍卖(递增价格)
-     */
-    private AuctionResult<T> executeEnglishAuction() {
-        double currentPrice = config.getStartingPrice();
-        Bidder<T> currentWinner = null;
+        // 构建工作流输入参数
+        Map<String, Object> inputs = new HashMap<>();
+        inputs.put("item", item);
+        inputs.put("mechanism", auctionMechanism);
+        inputs.put("bidders", bidders);
+        inputs.put("config", config);
         
-        while (currentRound < config.getMaxRounds()) {
-            currentRound++;
-            log.debug("English auction round {}, current price: {}", currentRound, currentPrice);
-            
-            // 收集本轮出价
-            List<Bid<T>> bids = collectBids(currentPrice);
-            
-            if (bids.isEmpty()) {
-                // 无人出价,拍卖结束
-                break;
-            }
-            
-            // 找出最高出价
-            Bid<T> highestBid = bids.stream()
-                .max(Comparator.comparingDouble(Bid::getAmount))
-                .orElse(null);
-            
-            if (highestBid != null && highestBid.getAmount() > currentPrice) {
-                currentPrice = highestBid.getAmount();
-                currentWinner = highestBid.getBidder();
-                recordBid(highestBid);
-            } else {
-                // 无人提高出价,拍卖结束
-                break;
-            }
-            
-            // 检查是否达到保留价
-            if (config.getReservePrice() > 0 && currentPrice >= config.getReservePrice()) {
-                break;
-            }
-        }
-        
-        return buildResult(currentWinner, currentPrice, currentWinner != null);
-    }
+        // 初始化拍卖状态
+        inputs.put("auction_finished", false);
+        inputs.put("start_time", System.currentTimeMillis());
+        inputs.put("status", AuctionStatus.PENDING);
 
-    /**
-     * 荷兰式拍卖(递减价格)
-     */
-    private AuctionResult<T> executeDutchAuction() {
-        double currentPrice = config.getStartingPrice();
-        double priceDecrement = config.getPriceIncrement(); // 用作递减值
-        
-        while (currentRound < config.getMaxRounds() && currentPrice > config.getReservePrice()) {
-            currentRound++;
-            log.debug("Dutch auction round {}, current price: {}", currentRound, currentPrice);
-            
-            // 询问竞价者是否接受当前价格
-            for (Bidder<T> bidder : bidders) {
-                if (bidder.acceptPrice(item, currentPrice, bidHistory)) {
-                    Bid<T> bid = new Bid<>(bidder, currentPrice, BidType.ACCEPT, currentRound);
-                    recordBid(bid);
-                    return buildResult(bidder, currentPrice, true);
-                }
-            }
-            
-            // 降价
-            currentPrice -= priceDecrement;
-        }
-        
-        return buildResult(null, 0, false);
-    }
+        // 执行工作流
+        String resultJson = executeWorkflow("Auction: " + item, inputs);
 
-    /**
-     * 第一价格密封拍卖
-     */
-    private AuctionResult<T> executeFirstPriceSealedAuction() {
-        currentRound = 1;
-        
-        // 所有竞价者同时提交密封出价
-        List<Bid<T>> sealedBids = collectSealedBids();
-        
-        if (sealedBids.isEmpty()) {
-            return buildResult(null, 0, false);
+        // 从缓存中获取拍卖结果（AuctionResultHandler 会将结果设置到 handler 中）
+        if (cachedResult != null) {
+            return cachedResult;
         }
-        
-        // 找出最高出价
-        Bid<T> winningBid = sealedBids.stream()
-            .max(Comparator.comparingDouble(Bid::getAmount))
-            .orElse(null);
-        
-        if (winningBid != null && winningBid.getAmount() >= config.getReservePrice()) {
-            recordBid(winningBid);
-            return buildResult(winningBid.getBidder(), winningBid.getAmount(), true);
-        }
-        
-        return buildResult(null, 0, false);
-    }
 
-    /**
-     * 第二价格密封拍卖
-     */
-    private AuctionResult<T> executeSecondPriceSealedAuction() {
-        currentRound = 1;
-        
-        // 所有竞价者同时提交密封出价
-        List<Bid<T>> sealedBids = collectSealedBids();
-        
-        if (sealedBids.size() < 2) {
-            return buildResult(null, 0, false);
-        }
-        
-        // 排序找出最高和第二高出价
-        List<Bid<T>> sortedBids = sealedBids.stream()
-            .sorted(Comparator.comparingDouble(Bid<T>::getAmount).reversed())
-            .collect(Collectors.toList());
-        
-        Bid<T> winningBid = sortedBids.get(0);
-        double secondPrice = sortedBids.get(1).getAmount();
-        
-        if (winningBid.getAmount() >= config.getReservePrice()) {
-            recordBid(winningBid);
-            // 第二价格拍卖:赢家支付第二高价
-            return buildResult(winningBid.getBidder(), secondPrice, true);
-        }
-        
-        return buildResult(null, 0, false);
-    }
-
-    /**
-     * Vickrey拍卖(第二价格密封拍卖的另一种实现)
-     */
-    private AuctionResult<T> executeVickreyAuction() {
-        return executeSecondPriceSealedAuction();
-    }
-
-    /**
-     * 全付拍卖(所有人都支付出价,只有最高者获得物品)
-     */
-    private AuctionResult<T> executeAllPayAuction() {
-        currentRound = 1;
-        
-        List<Bid<T>> sealedBids = collectSealedBids();
-        
-        if (sealedBids.isEmpty()) {
-            return buildResult(null, 0, false);
-        }
-        
-        // 记录所有出价
-        sealedBids.forEach(this::recordBid);
-        
-        // 找出最高出价者
-        Bid<T> winningBid = sealedBids.stream()
-            .max(Comparator.comparingDouble(Bid::getAmount))
-            .orElse(null);
-        
-        if (winningBid != null && winningBid.getAmount() >= config.getReservePrice()) {
-            AuctionResult<T> result = buildResult(winningBid.getBidder(), winningBid.getAmount(), true);
-            // 添加所有支付信息
-            Map<String, Double> allPayments = sealedBids.stream()
-                .collect(Collectors.toMap(
-                    bid -> bid.getBidder().getBidderId(),
-                    Bid::getAmount
-                ));
-            result.addMetadata("allPayments", allPayments);
-            return result;
-        }
-        
-        return buildResult(null, 0, false);
-    }
-
-    /**
-     * 收集本轮出价
-     */
-    private List<Bid<T>> collectBids(double currentPrice) {
-        List<Bid<T>> bids = new ArrayList<>();
-        
-        for (Bidder<T> bidder : bidders) {
-            double bidAmount = bidder.bid(item, currentPrice, bidHistory);
-            if (bidAmount > currentPrice) {
-                bids.add(new Bid<>(bidder, bidAmount, BidType.RAISE, currentRound));
-            }
-        }
-        
-        return bids;
-    }
-
-    /**
-     * 收集密封出价
-     */
-    private List<Bid<T>> collectSealedBids() {
-        List<Bid<T>> bids = new ArrayList<>();
-        
-        for (Bidder<T> bidder : bidders) {
-            double bidAmount = bidder.sealedBid(item);
-            if (bidAmount >= config.getReservePrice()) {
-                bids.add(new Bid<>(bidder, bidAmount, BidType.SEALED, currentRound));
-            }
-        }
-        
-        return bids;
-    }
-
-    /**
-     * 记录出价
-     */
-    private void recordBid(Bid<T> bid) {
-        BidRecord<T> record = new BidRecord<>(
-            bid,
-            currentRound,
-            System.currentTimeMillis()
-        );
-        bidHistory.add(record);
-    }
-
-    /**
-     * 构建拍卖结果
-     */
-    private AuctionResult<T> buildResult(Bidder<T> winner, double finalPrice, boolean success) {
-        Map<String, Object> metadata = new HashMap<>();
-        metadata.put("mechanism", auctionMechanism.name());
-        metadata.put("totalBids", bidHistory.size());
-        metadata.put("participantCount", bidders.size());
-        
+        // 如果无法从缓存中获取结果，返回失败结果
         return AuctionResult.<T>builder()
-            .success(success)
-            .item(item)
-            .winner(winner)
-            .finalPrice(finalPrice)
-            .bidHistory(new ArrayList<>(bidHistory))
-            .metadata(metadata)
+            .success(false)
+            .error("Failed to retrieve auction result from workflow")
             .build();
+    }
+
+    @Override
+    protected WorkflowGraph buildWorkflowGraph(String task) {
+        WorkflowGraph graph = new WorkflowGraph(task);
+
+        // 创建 LOOP 节点：控制拍卖轮次循环
+        WorkflowNode loopNode = createLoopNode(
+            "auction_loop",
+            config != null ? config.getMaxRounds() : 100,
+            "auction_finished == false"
+        );
+
+        // 创建 COLLECT 节点：执行单轮拍卖
+        WorkflowNode roundNode = createCollectNode(
+            "auction_round",
+            "auction_round",
+            new HashMap<>()
+        );
+
+        // 创建 COLLECT 节点：构建最终拍卖结果
+        WorkflowNode resultNode = createCollectNode(
+            "auction_result",
+            "auction_result",
+            new HashMap<>()
+        );
+
+        // 设置 LOOP 节点的循环体
+        loopNode.setLoopBodyNodeId(roundNode.getNodeId());
+
+        // 添加节点到图
+        graph.addNode(loopNode);
+        graph.addNode(roundNode);
+        graph.addNode(resultNode);
+
+        // 添加边：LOOP 结束后执行结果节点
+        graph.addEdge(loopNode.getNodeId(), resultNode.getNodeId());
+
+        return graph;
+    }
+
+    @Override
+    protected void registerNodeHandlers(Workflow workflow) {
+        // 创建拍卖轮次处理器
+        AuctionNodeHandler.AuctionRoundHandler<T> roundHandler = new AuctionNodeHandler.AuctionRoundHandler<>();
+        
+        // 创建拍卖结果处理器
+        AuctionNodeHandler.AuctionResultHandler<T> resultHandler = new AuctionNodeHandler.AuctionResultHandler<>();
+        
+        // 设置结果回调，当拍卖完成时将结果缓存到 framework 中
+        resultHandler.setResultCallback(result -> {
+            this.cachedResult = result;
+        });
+
+        // 注册处理器到工作流
+        workflow.registerHandler("auction_round", roundHandler);
+        workflow.registerHandler("auction_result", resultHandler);
     }
 
     /**

@@ -1,8 +1,8 @@
 package io.leavesfly.evox.assistant.evolution;
 
-import io.leavesfly.evox.agents.skill.BaseSkill;
-import io.leavesfly.evox.agents.skill.SkillMarketplace;
-import io.leavesfly.evox.agents.skill.SkillRegistry;
+import io.leavesfly.evox.skill.BaseSkill;
+import io.leavesfly.evox.skill.SkillMarketplace;
+import io.leavesfly.evox.skill.SkillRegistry;
 import io.leavesfly.evox.core.agent.IAgent;
 import io.leavesfly.evox.core.message.Message;
 import io.leavesfly.evox.core.message.MessageType;
@@ -134,7 +134,17 @@ public class SkillGenerator {
             prompt.append("No existing skills.\n");
         } else {
             for (BaseSkill skill : existingSkills) {
-                prompt.append("- **").append(skill.getName()).append("**: ").append(skill.getDescription()).append("\n");
+                prompt.append("- **").append(skill.getName()).append("**: ");
+                if (skill.getDescription() != null && !skill.getDescription().isBlank()) {
+                    prompt.append(skill.getDescription());
+                }
+                if (skill.getWhenToUse() != null && !skill.getWhenToUse().isBlank()) {
+                    if (skill.getDescription() != null && !skill.getDescription().isBlank()) {
+                        prompt.append(" - ");
+                    }
+                    prompt.append(skill.getWhenToUse());
+                }
+                prompt.append("\n");
             }
         }
 
@@ -144,15 +154,16 @@ public class SkillGenerator {
         prompt.append("SKILL_NAME: <snake_case name>\n");
         prompt.append("SKILL_DESCRIPTION: <one-line description>\n");
         prompt.append("SYSTEM_PROMPT: <the system prompt that defines this skill's behavior>\n");
-        prompt.append("REQUIRED_INPUTS: <comma-separated list of required input parameter names>\n");
-        prompt.append("INPUT_PARAMS:\n");
-        prompt.append("  <param_name>: <param_description>\n");
+        prompt.append("WHEN_TO_USE: <description of when this skill should be used>\n");
+        prompt.append("ALLOWED_TOOLS: <comma-separated list of tool names, or 'none'>\n");
         prompt.append("```\n\n");
         prompt.append("Requirements:\n");
         prompt.append("1. The skill name must be unique and not conflict with existing skills\n");
         prompt.append("2. The system prompt should be detailed and actionable\n");
         prompt.append("3. The skill should be self-contained and useful\n");
         prompt.append("4. Do not duplicate existing skill functionality\n");
+        prompt.append("5. WHEN_TO_USE should guide the LLM on when to activate this skill\n");
+        prompt.append("6. ALLOWED_TOOLS should list tools this skill needs (or 'none' if no tools needed)\n");
 
         return prompt.toString();
     }
@@ -165,31 +176,30 @@ public class SkillGenerator {
             String name = extractField(agentResponse, "SKILL_NAME");
             String description = extractField(agentResponse, "SKILL_DESCRIPTION");
             String systemPrompt = extractField(agentResponse, "SYSTEM_PROMPT");
-            String requiredInputsStr = extractField(agentResponse, "REQUIRED_INPUTS");
+            String whenToUse = extractField(agentResponse, "WHEN_TO_USE");
+            String allowedToolsStr = extractField(agentResponse, "ALLOWED_TOOLS");
 
             if (name == null || description == null || systemPrompt == null) {
                 log.warn("Missing required fields in skill definition");
                 return null;
             }
 
-            List<String> requiredInputs = new ArrayList<>();
-            if (requiredInputsStr != null && !requiredInputsStr.isBlank()) {
-                for (String input : requiredInputsStr.split(",")) {
-                    String trimmed = input.trim();
+            List<String> allowedTools = new ArrayList<>();
+            if (allowedToolsStr != null && !allowedToolsStr.isBlank() && !"none".equalsIgnoreCase(allowedToolsStr.trim())) {
+                for (String tool : allowedToolsStr.split(",")) {
+                    String trimmed = tool.trim();
                     if (!trimmed.isEmpty()) {
-                        requiredInputs.add(trimmed);
+                        allowedTools.add(trimmed);
                     }
                 }
             }
-
-            Map<String, String> inputParams = parseInputParams(agentResponse);
 
             return SkillDefinition.builder()
                     .name(name.trim().toLowerCase().replace(" ", "_"))
                     .description(description.trim())
                     .systemPrompt(systemPrompt.trim())
-                    .requiredInputs(requiredInputs)
-                    .inputParameters(inputParams)
+                    .whenToUse(whenToUse != null ? whenToUse.trim() : null)
+                    .allowedTools(allowedTools)
                     .build();
 
         } catch (Exception e) {
@@ -229,7 +239,7 @@ public class SkillGenerator {
      * 查找下一个字段的起始位置
      */
     private int findNextFieldIndex(String text, int fromIndex) {
-        String[] fieldNames = {"SKILL_NAME:", "SKILL_DESCRIPTION:", "SYSTEM_PROMPT:", "REQUIRED_INPUTS:", "INPUT_PARAMS:"};
+        String[] fieldNames = {"SKILL_NAME:", "SKILL_DESCRIPTION:", "SYSTEM_PROMPT:", "WHEN_TO_USE:", "ALLOWED_TOOLS:"};
         int minIndex = text.length();
         for (String field : fieldNames) {
             int index = text.indexOf(field, fromIndex);
@@ -238,39 +248,6 @@ public class SkillGenerator {
             }
         }
         return minIndex;
-    }
-
-    /**
-     * 解析输入参数定义
-     */
-    private Map<String, String> parseInputParams(String text) {
-        Map<String, String> params = new LinkedHashMap<>();
-        String paramsPrefix = "INPUT_PARAMS:";
-        int startIndex = text.indexOf(paramsPrefix);
-        if (startIndex == -1) {
-            return params;
-        }
-
-        startIndex += paramsPrefix.length();
-        String paramsSection = text.substring(startIndex);
-        String[] lines = paramsSection.split("\n");
-
-        for (String line : lines) {
-            String trimmed = line.trim();
-            if (trimmed.isEmpty() || trimmed.startsWith("```")) {
-                break;
-            }
-            int colonIndex = trimmed.indexOf(":");
-            if (colonIndex > 0) {
-                String paramName = trimmed.substring(0, colonIndex).trim();
-                String paramDesc = trimmed.substring(colonIndex + 1).trim();
-                if (!paramName.isEmpty() && !paramDesc.isEmpty()) {
-                    params.put(paramName, paramDesc);
-                }
-            }
-        }
-
-        return params;
     }
 
     /**
@@ -312,8 +289,8 @@ public class SkillGenerator {
         private String name;
         private String description;
         private String systemPrompt;
-        private List<String> requiredInputs;
-        private Map<String, String> inputParameters;
+        private String whenToUse;
+        private List<String> allowedTools;
     }
 
     /**
@@ -350,7 +327,12 @@ public class SkillGenerator {
 
     /**
      * 动态技能 — 由 Agent 自主生成的运行时 Skill。
-     * 通过委托给 Agent 执行来实现技能逻辑。
+     * 
+     * <p>新架构下，DynamicSkill 不再实现 execute() 方法。
+     * 而是通过设置 name、description、systemPrompt、whenToUse、allowedTools 等字段，
+     * 让 BaseSkill.activate() 方法自动生成 SkillActivationResult。
+     * 
+     * <p>Skill 的行为完全由 systemPrompt 定义，LLM 根据这些 prompt 指令完成任务。
      */
     public static class DynamicSkill extends BaseSkill {
 
@@ -364,45 +346,11 @@ public class SkillGenerator {
             setName(definition.getName());
             setDescription(definition.getDescription());
             setSystemPrompt(definition.getSystemPrompt());
-            setRequiredInputs(definition.getRequiredInputs() != null
-                    ? definition.getRequiredInputs() : new ArrayList<>());
-
-            if (definition.getInputParameters() != null) {
-                Map<String, Map<String, String>> inputParamDefs = new LinkedHashMap<>();
-                for (Map.Entry<String, String> entry : definition.getInputParameters().entrySet()) {
-                    Map<String, String> paramDef = new HashMap<>();
-                    paramDef.put("type", "string");
-                    paramDef.put("description", entry.getValue());
-                    inputParamDefs.put(entry.getKey(), paramDef);
-                }
-                setInputParameters(inputParamDefs);
-            }
-        }
-
-        @Override
-        public SkillResult execute(SkillContext context) {
-            try {
-                String fullPrompt = buildPrompt(context.getInput(), context.getAdditionalContext());
-
-                Message inputMessage = Message.builder()
-                        .content(fullPrompt)
-                        .messageType(MessageType.INPUT)
-                        .build();
-                inputMessage.putMetadata("dynamicSkill", getName());
-
-                Message result = agent.execute(null, List.of(inputMessage));
-
-                if (result != null && result.getContent() != null) {
-                    return SkillResult.success(result.getContent().toString(), Map.of(
-                            "skillType", "dynamic",
-                            "skillName", getName()
-                    ));
-                }
-
-                return SkillResult.failure("Agent returned no response for dynamic skill: " + getName());
-            } catch (Exception e) {
-                return SkillResult.failure("Dynamic skill execution failed: " + e.getMessage());
-            }
+            setWhenToUse(definition.getWhenToUse());
+            setAllowedTools(definition.getAllowedTools() != null
+                    ? definition.getAllowedTools() : new ArrayList<>());
+            setModel("inherit");
+            setBuiltin(false);
         }
     }
 }

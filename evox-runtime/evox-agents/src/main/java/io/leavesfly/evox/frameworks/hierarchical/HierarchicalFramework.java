@@ -1,22 +1,39 @@
 package io.leavesfly.evox.frameworks.hierarchical;
 
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import io.leavesfly.evox.frameworks.base.MultiAgentFramework;
+import io.leavesfly.evox.workflow.base.Workflow;
+import io.leavesfly.evox.workflow.base.WorkflowNode;
+import io.leavesfly.evox.workflow.graph.WorkflowGraph;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 import lombok.extern.slf4j.Slf4j;
 
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.stream.Collectors;
 
 /**
  * 分层决策框架
  * 支持多层级的决策结构,管理者-执行者模式
+ * 基于 evox-workflow DAG 引擎实现
  *
  * @param <T> 决策结果类型
  * @author EvoX Team
  */
 @Slf4j
 @Data
-public class HierarchicalFramework<T> {
+@EqualsAndHashCode(callSuper = true)
+public class HierarchicalFramework<T> extends MultiAgentFramework {
+
+
+    private static final String LAYER_DECISION_HANDLER_NAME = "LayerDecisionHandler";
+    private static final String LAYER_DECISION_NODE_NAME = "layer_decision_node";
+    private static final String HIERARCHICAL_RESULT_HANDLER_NAME = "HierarchicalResultHandler";
+    private static final String HIERARCHICAL_RESULT_NODE_NAME = "hierarchical_result_node";
+    private static final String LOOP_NODE_NAME = "hierarchical_loop_node";
+    
+    private final ObjectMapper objectMapper = new ObjectMapper();
 
     /**
      * 决策层级列表(从高到低)
@@ -48,6 +65,7 @@ public class HierarchicalFramework<T> {
         this.config = config;
         this.history = new ArrayList<>();
         this.layerMap = new ConcurrentHashMap<>();
+        this.frameworkName = "HierarchicalFramework";
         
         // 构建层级映射
         for (DecisionLayer<T> layer : layers) {
@@ -60,141 +78,135 @@ public class HierarchicalFramework<T> {
     }
 
     /**
+     * 构建工作流 DAG 图
+     * 创建多节点 DAG：LOOP + COLLECT(layer_decision) + COLLECT(hierarchical_result)
+     * LOOP 节点迭代处理所有层级，直到 all_layers_processed == true
+     *
+     * @param task 任务描述
+     * @return 工作流图
+     */
+    @Override
+    protected WorkflowGraph buildWorkflowGraph(String task) {
+        WorkflowGraph graph = new WorkflowGraph(task);
+        
+        // 创建 LOOP 节点
+        WorkflowNode loopNode = createLoopNode(
+            LOOP_NODE_NAME,
+            layers.size(),
+            "all_layers_processed == false"
+        );
+        
+        // 创建 layer_decision COLLECT 节点
+        Map<String, Object> layerDecisionConfig = new HashMap<>();
+        layerDecisionConfig.put("task", task);
+        
+        WorkflowNode layerDecisionNode = createCollectNode(
+            LAYER_DECISION_NODE_NAME,
+            LAYER_DECISION_HANDLER_NAME,
+            layerDecisionConfig
+        );
+        
+        // 创建 hierarchical_result COLLECT 节点
+        Map<String, Object> resultConfig = new HashMap<>();
+        resultConfig.put("task", task);
+        
+        WorkflowNode resultNode = createCollectNode(
+            HIERARCHICAL_RESULT_NODE_NAME,
+            HIERARCHICAL_RESULT_HANDLER_NAME,
+            resultConfig
+        );
+        
+        // 设置 LOOP 节点的循环体为 layer_decision 节点
+        loopNode.setLoopBodyNodeId(layerDecisionNode.getNodeId());
+        
+        // 添加所有节点到图中
+        graph.addNode(loopNode);
+        graph.addNode(layerDecisionNode);
+        graph.addNode(resultNode);
+        
+        // 添加边：LOOP -> hierarchical_result
+        // 当 LOOP 退出时（all_layers_processed == true），执行结果聚合
+        graph.addEdge(loopNode.getNodeId(), resultNode.getNodeId());
+        
+        return graph;
+    }
+
+    /**
+     * 注册节点处理器
+     * 注册层级决策处理器到 Workflow
+     *
+     * @param workflow 工作流实例
+     */
+    @Override
+    protected void registerNodeHandlers(Workflow workflow) {
+        // 注册层级决策节点处理器
+        LayerDecisionHandler<T> layerDecisionHandler = new LayerDecisionHandler<>();
+        workflow.registerHandler(LAYER_DECISION_HANDLER_NAME, layerDecisionHandler);
+        
+        // 注册层级结果节点处理器
+        HierarchicalResultHandler<T> resultHandler = new HierarchicalResultHandler<>();
+        workflow.registerHandler(HIERARCHICAL_RESULT_HANDLER_NAME, resultHandler);
+    }
+
+    /**
+     * 执行前的初始化钩子
+     *
+     * @param task 任务描述
+     */
+    @Override
+    protected void beforeExecute(String task) {
+        this.rootTask = task;
+        log.info("Initializing hierarchical framework for task: {}", task);
+    }
+
+    /**
      * 执行分层决策
+     * 内部调用 workflow 执行引擎
      *
      * @param task 任务描述
      * @return 决策结果
      */
     public HierarchicalResult<T> executeHierarchical(String task) {
-        this.rootTask = task;
-        long startTime = System.currentTimeMillis();
+        // 准备输入参数
+        Map<String, Object> inputs = new HashMap<>();
+        inputs.put("task", task);
+        inputs.put("hierarchical_layers", layers);
+        inputs.put("hierarchical_config", config);
+        inputs.put("hierarchical_history", new ArrayList<>());
+        inputs.put("framework", this);
+        inputs.put("all_layers_processed", false);
+        inputs.put("current_layer_index", 0);
+        inputs.put("start_time", System.currentTimeMillis());
         
-        log.info("Starting hierarchical decision for task: {}", task);
+        // 通过 workflow 执行，返回 JSON 字符串
+        String rawResult = executeWorkflow(task, inputs);
         
-        try {
-            // 从最高层开始执行
-            DecisionLayer<T> topLayer = layers.get(0);
-            LayerDecision<T> topDecision = executeLayer(topLayer, task, null);
-            
-            // 递归执行下层
-            LayerDecision<T> finalDecision = executeRecursive(topDecision, 0);
-            
-            long duration = System.currentTimeMillis() - startTime;
-            
-            return HierarchicalResult.<T>builder()
-                .success(true)
-                .result(finalDecision.getResult())
-                .layers(history.size())
-                .duration(duration)
-                .history(new ArrayList<>(history))
-                .metadata(buildMetadata())
-                .build();
-                
-        } catch (Exception e) {
-            log.error("Hierarchical decision failed: {}", e.getMessage(), e);
-            return HierarchicalResult.<T>builder()
-                .success(false)
-                .error(e.getMessage())
-                .duration(System.currentTimeMillis() - startTime)
-                .build();
-        }
-    }
-
-    /**
-     * 递归执行层级决策
-     */
-    private LayerDecision<T> executeRecursive(LayerDecision<T> currentDecision, int currentLayerIndex) {
-        // 如果当前层已经是最底层,或者不需要继续分解,直接返回
-        if (currentLayerIndex >= layers.size() - 1 || !currentDecision.isNeedDelegation()) {
-            return currentDecision;
-        }
-
-        // 如果需要委派,则委派给下一层
-        List<String> subTasks = currentDecision.getSubTasks();
-        if (subTasks == null || subTasks.isEmpty()) {
-            return currentDecision;
-        }
-
-        DecisionLayer<T> nextLayer = layers.get(currentLayerIndex + 1);
-        List<LayerDecision<T>> subDecisions = new ArrayList<>();
-
-        // 执行所有子任务
-        for (String subTask : subTasks) {
-            LayerDecision<T> subDecision = executeLayer(nextLayer, subTask, currentDecision);
-            LayerDecision<T> finalSubDecision = executeRecursive(subDecision, currentLayerIndex + 1);
-            subDecisions.add(finalSubDecision);
-        }
-
-        // 聚合子任务结果
-        T aggregatedResult = aggregateResults(subDecisions, currentDecision);
-        currentDecision.setResult(aggregatedResult);
-        currentDecision.setSubDecisions(subDecisions);
-
-        return currentDecision;
-    }
-
-    /**
-     * 执行单个层级的决策
-     */
-    private LayerDecision<T> executeLayer(DecisionLayer<T> layer, String task, LayerDecision<T> parentDecision) {
-        log.debug("Executing layer {} for task: {}", layer.getLayerId(), task);
-        
-        long startTime = System.currentTimeMillis();
-        
-        // 执行层级决策
-        LayerDecision<T> decision = layer.decide(task, parentDecision);
-        
-        long duration = System.currentTimeMillis() - startTime;
-        
-        // 记录执行历史
-        ExecutionRecord<T> record = new ExecutionRecord<>(
-            layer.getLayerId(),
-            task,
-            decision,
-            duration,
-            System.currentTimeMillis()
-        );
-        history.add(record);
-        
-        log.debug("Layer {} decision completed in {}ms", layer.getLayerId(), duration);
-        
-        return decision;
-    }
-
-    /**
-     * 聚合子结果
-     */
-    @SuppressWarnings("unchecked")
-    private T aggregateResults(List<LayerDecision<T>> subDecisions, LayerDecision<T> parentDecision) {
-        if (config.getAggregationStrategy() != null) {
-            return ((HierarchicalFramework.AggregationStrategy<T>) config.getAggregationStrategy()).aggregate(subDecisions, parentDecision);
+        // 反序列化结果
+        if (rawResult != null && !rawResult.isEmpty()) {
+            try {
+                // 尝试反序列化为 HierarchicalResult
+                HierarchicalResult<T> result = objectMapper.readValue(
+                    rawResult, 
+                    new TypeReference<HierarchicalResult<T>>() {}
+                );
+                log.info("Hierarchical workflow execution completed successfully");
+                return result;
+            } catch (Exception e) {
+                log.error("Failed to deserialize hierarchical result: {}", e.getMessage(), e);
+                // 降级处理：返回基于字符串的结果
+                return HierarchicalResult.<T>builder()
+                    .success(true)
+                    .result((T) rawResult)
+                    .build();
+            }
         }
         
-        // 默认聚合策略: 返回第一个非空结果
-        return subDecisions.stream()
-            .map(LayerDecision::getResult)
-            .filter(Objects::nonNull)
-            .findFirst()
-            .orElse(null);
-    }
-
-    /**
-     * 构建元数据
-     */
-    private Map<String, Object> buildMetadata() {
-        Map<String, Object> metadata = new HashMap<>();
-        metadata.put("totalLayers", layers.size());
-        metadata.put("executedLayers", history.stream()
-            .map(ExecutionRecord::getLayerId)
-            .distinct()
-            .count());
-        metadata.put("totalExecutions", history.size());
-        metadata.put("avgLayerDuration", history.stream()
-            .mapToLong(ExecutionRecord::getDuration)
-            .average()
-            .orElse(0.0));
-        
-        return metadata;
+        // 降级处理：如果无法获取结果，返回失败结果
+        log.warn("Failed to retrieve result from workflow");
+        return HierarchicalResult.<T>builder()
+            .success(false)
+            .error("Failed to retrieve result from workflow")
+            .build();
     }
 
     /**
