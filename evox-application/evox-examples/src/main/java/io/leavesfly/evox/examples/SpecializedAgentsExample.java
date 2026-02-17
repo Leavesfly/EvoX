@@ -1,6 +1,5 @@
 package io.leavesfly.evox.examples;
 
-import io.leavesfly.evox.agents.action.ActionAgent;
 import io.leavesfly.evox.agents.customize.CustomizeAgent;
 import io.leavesfly.evox.agents.plan.PlanAgent;
 import io.leavesfly.evox.agents.react.ReActAgent;
@@ -29,81 +28,18 @@ public class SpecializedAgentsExample {
     public static void main(String[] args) {
         SpecializedAgentsExample example = new SpecializedAgentsExample();
 
-        // 示例1: ActionAgent - 函数执行智能体
-        example.demonstrateActionAgent();
-
-        // 示例2: CustomizeAgent - 自定义智能体
+        // 示例1: CustomizeAgent - 自定义智能体
         example.demonstrateCustomizeAgent();
 
-        // 示例3: PlanAgent - 任务规划智能体
+        // 示例2: PlanAgent - 任务规划智能体
         example.demonstratePlanAgent();
 
-        // 示例4: ReActAgent - 推理行动智能体
+        // 示例3: ReActAgent - 推理行动智能体
         example.demonstrateReActAgent();
     }
 
     /**
-     * 示例1: ActionAgent - 直接执行函数，不需要 LLM
-     */
-    private void demonstrateActionAgent() {
-        log.info("\n--- ActionAgent 示例 ---");
-
-        // 创建计算器智能体
-        ActionAgent calculator = new ActionAgent();
-        calculator.setName("Calculator");
-        calculator.setDescription("执行数学计算");
-        
-        // 设置执行函数
-        calculator.setExecuteFunction(inputs -> {
-            double a = Double.parseDouble(inputs.get("a").toString());
-            double b = Double.parseDouble(inputs.get("b").toString());
-            String operation = inputs.get("operation").toString();
-            
-            Map<String, Object> result = new HashMap<>();
-            switch (operation) {
-                case "add":
-                    result.put("result", a + b);
-                    break;
-                case "subtract":
-                    result.put("result", a - b);
-                    break;
-                case "multiply":
-                    result.put("result", a * b);
-                    break;
-                case "divide":
-                    result.put("result", a / b);
-                    break;
-                default:
-                    result.put("error", "Unknown operation");
-            }
-            return result;
-        });
-
-        // 添加字段规格
-        calculator.setInputs(List.of(
-                new ActionAgent.FieldSpec("a", "number", "第一个数字"),
-                new ActionAgent.FieldSpec("b", "number", "第二个数字"),
-                new ActionAgent.FieldSpec("operation", "string", "运算类型: add, subtract, multiply, divide")
-        ));
-        
-        calculator.setOutputs(List.of(
-                new ActionAgent.FieldSpec("result", "number", "计算结果")
-        ));
-
-        // 初始化并执行
-        calculator.initModule();
-        
-        Map<String, Object> input = new HashMap<>();
-        input.put("a", 10);
-        input.put("b", 5);
-        input.put("operation", "multiply");
-        
-        Message response = calculator.call(input);
-        log.info("计算结果: {}", response.getContent());
-    }
-
-    /**
-     * 示例2: CustomizeAgent - 通过配置自定义智能体
+     * 示例1: CustomizeAgent - 通过配置自定义智能体
      */
     private void demonstrateCustomizeAgent() {
         log.info("\n--- CustomizeAgent 示例 ---");
@@ -141,7 +77,7 @@ public class SpecializedAgentsExample {
     }
 
     /**
-     * 示例3: PlanAgent - 任务规划和分解
+     * 示例2: PlanAgent - 任务规划和分解
      */
     private void demonstratePlanAgent() {
         log.info("\n--- PlanAgent 示例 ---");
@@ -168,7 +104,7 @@ public class SpecializedAgentsExample {
     }
 
     /**
-     * 示例4: ReActAgent - 推理 + 行动模式
+     * 示例3: ReActAgent - 推理 + 行动模式
      */
     private void demonstrateReActAgent() {
         log.info("\n--- ReActAgent 示例 ---");

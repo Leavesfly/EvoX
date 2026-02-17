@@ -145,7 +145,7 @@ public class WorkflowGenerator {
 
         WorkflowStep step1 = new WorkflowStep();
         step1.setName("步骤1");
-        step1.setAgent("ActionAgent");
+        step1.setAgent("DefaultAgent");
         step1.setDescription("执行任务");
         steps.add(step1);
 

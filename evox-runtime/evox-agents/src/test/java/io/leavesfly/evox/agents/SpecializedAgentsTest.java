@@ -1,6 +1,5 @@
 package io.leavesfly.evox.agents;
 
-import io.leavesfly.evox.agents.action.ActionAgent;
 import io.leavesfly.evox.agents.customize.CustomizeAgent;
 import io.leavesfly.evox.agents.plan.PlanAgent;
 import io.leavesfly.evox.agents.react.ReActAgent;
@@ -72,60 +71,6 @@ class SpecializedAgentsTest {
     }
 
     @Test
-    void testActionAgentConfiguration() {
-        // 创建执行函数
-        ActionAgent agent = new ActionAgent();
-        agent.setName("CalculatorAgent");
-        agent.setDescription("Perform calculations");
-        agent.setExecuteFunction(inputs -> {
-            int a = Integer.parseInt(inputs.get("a").toString());
-            int b = Integer.parseInt(inputs.get("b").toString());
-            Map<String, Object> result = new HashMap<>();
-            result.put("sum", a + b);
-            result.put("product", a * b);
-            return result;
-        });
-        
-        // 添加字段规格
-        agent.setInputs(List.of(
-                new ActionAgent.FieldSpec("a", "integer", "First number"),
-                new ActionAgent.FieldSpec("b", "integer", "Second number")
-        ));
-        agent.setOutputs(List.of(
-                new ActionAgent.FieldSpec("sum", "integer", "Sum of numbers"),
-                new ActionAgent.FieldSpec("product", "integer", "Product of numbers")
-        ));
-        
-        // 验证配置
-        assertNotNull(agent.getExecuteFunction());
-        assertEquals(2, agent.getInputs().size());
-        assertEquals(2, agent.getOutputs().size());
-    }
-
-    @Test
-    void testActionAgentExecution() {
-        // 创建简单的 ActionAgent
-        ActionAgent agent = new ActionAgent();
-        agent.setName("Greeter");
-        agent.setExecuteFunction(inputs -> {
-            String name = inputs.get("name").toString();
-            Map<String, Object> result = new HashMap<>();
-            result.put("greeting", "Hello, " + name + "!");
-            return result;
-        });
-        
-        agent.initModule();
-        
-        // 执行
-        Map<String, Object> input = new HashMap<>();
-        input.put("name", "Alice");
-        Message result = agent.call(input);
-        
-        assertNotNull(result);
-        assertEquals(MessageType.RESPONSE, result.getMessageType());
-    }
-
-    @Test
     void testReActAgentConfiguration() {
         ReActAgent agent = new ReActAgent();
         agent.setName("ReActSolver");
@@ -187,15 +132,6 @@ class SpecializedAgentsTest {
     }
 
     @Test
-    void testFieldSpecValidation() {
-        ActionAgent.FieldSpec requiredField = new ActionAgent.FieldSpec("name", "string", "Name field");
-        assertTrue(requiredField.isRequired());
-        
-        ActionAgent.FieldSpec optionalField = new ActionAgent.FieldSpec("email", "string", "Email field", false);
-        assertFalse(optionalField.isRequired());
-    }
-
-    @Test
     void testInputOutputSpecValidation() {
         CustomizeAgent.InputSpec input = new CustomizeAgent.InputSpec("query", "string", "Search query");
         assertEquals("query", input.getName());
@@ -237,10 +173,6 @@ class SpecializedAgentsTest {
         CustomizeAgent customizeAgent = new CustomizeAgent();
         customizeAgent.setName("CustomAgent");
         assertTrue(customizeAgent instanceof CustomizeAgent);
-
-        ActionAgent actionAgent = new ActionAgent();
-        actionAgent.setName("ActionAgent");
-        assertTrue(actionAgent instanceof ActionAgent);
 
         ReActAgent reactAgent = new ReActAgent();
         reactAgent.setName("ReActAgent");
