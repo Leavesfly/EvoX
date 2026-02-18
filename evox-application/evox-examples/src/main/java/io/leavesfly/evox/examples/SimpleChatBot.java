@@ -9,8 +9,8 @@ import io.leavesfly.evox.core.message.Message;
 import io.leavesfly.evox.core.message.MessageType;
 import io.leavesfly.evox.memory.shortterm.ShortTermMemory;
 import io.leavesfly.evox.models.spi.LLMProvider;
-import io.leavesfly.evox.models.provider.openai.OpenAILLMConfig;
-import io.leavesfly.evox.models.provider.openai.OpenAILLM;
+import io.leavesfly.evox.models.provider.ollama.OllamaLLMConfig;
+import io.leavesfly.evox.models.provider.ollama.OllamaLLM;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.extern.slf4j.Slf4j;
@@ -18,7 +18,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.*;
-import java.util.stream.Collectors;
 
 /**
  * SimpleChatBot 示例应用
@@ -35,13 +34,8 @@ public class SimpleChatBot {
     public static void main(String[] args) {
         SimpleChatBot example = new SimpleChatBot();
         
-        // 检查 API Key
-        String apiKey = System.getenv("OPENAI_API_KEY");
-        if (apiKey == null || apiKey.trim().isEmpty()) {
-            example.runWithMockMode();
-        } else {
-            example.runWithRealMode(apiKey);
-        }
+        // 直接使用 Ollama 本地模型运行
+        example.runWithRealMode();
     }
 
     /**
@@ -98,26 +92,21 @@ public class SimpleChatBot {
     }
 
     /**
-     * 真实模式运行（需要 API Key）
+     * 真实模式运行（使用 Ollama 本地模型）
      */
-    private void runWithRealMode(String apiKey) {
-        log.info("\n--- 真实模式 ---");
+    private void runWithRealMode() {
+        log.info("\n--- 真实模式 (Ollama) ---");
         
-        // 创建 OpenAI LLM 配置
-        OpenAILLMConfig config = OpenAILLMConfig.builder()
-                .apiKey(apiKey)
-                .model("gpt-3.5-turbo")
-                .temperature(0.7f)
-                .maxTokens(150)
-                .build();
+        // 创建 Ollama LLM 配置（使用默认构造函数）
+        OllamaLLMConfig config = new OllamaLLMConfig();
         
-        // 创建 OpenAI LLM 实例
-        LLMProvider llm = new OpenAILLM(config);
+        // 创建 Ollama LLM 实例
+        LLMProvider llm = new OllamaLLM(config);
         
         // 创建聊天机器人 Agent
         ChatBotAgent agent = new ChatBotAgent(llm);
         agent.setName("SimpleChatBot");
-        agent.setDescription("一个基于 OpenAI 的聊天机器人");
+        agent.setDescription("一个基于 Ollama 的聊天机器人");
         agent.initModule();
         
         // 创建短期记忆
