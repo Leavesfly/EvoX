@@ -10,7 +10,7 @@ import io.leavesfly.evox.cowork.task.TaskDecomposer;
 import io.leavesfly.evox.cowork.task.TaskManager;
 import io.leavesfly.evox.cowork.template.TemplateManager;
 import io.leavesfly.evox.cowork.workspace.WorkspaceManager;
-import io.leavesfly.evox.models.factory.LLMFactory;
+import io.leavesfly.evox.models.config.LLMFactory;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 

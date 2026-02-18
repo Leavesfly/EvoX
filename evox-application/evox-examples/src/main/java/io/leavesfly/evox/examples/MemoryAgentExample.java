@@ -6,8 +6,8 @@ import io.leavesfly.evox.core.message.MessageType;
 import io.leavesfly.evox.memory.longterm.InMemoryLongTermMemory;
 import io.leavesfly.evox.memory.manager.MemoryManager;
 import io.leavesfly.evox.memory.shortterm.ShortTermMemory;
-import io.leavesfly.evox.models.config.OpenAILLMConfig;
-import io.leavesfly.evox.models.openai.OpenAILLM;
+import io.leavesfly.evox.models.provider.ollama.OllamaLLMConfig;
+import io.leavesfly.evox.models.provider.ollama.OllamaLLM;
 import lombok.extern.slf4j.Slf4j;
 
 import java.util.Collections;
@@ -26,11 +26,8 @@ public class MemoryAgentExample {
         log.info("=== EvoX 记忆智能体集成示例 ===");
 
         // 1. 配置 LLM
-        OpenAILLMConfig config = OpenAILLMConfig.builder()
-                .apiKey(System.getenv("OPENAI_API_KEY"))
-                .model("gpt-4o-mini")
-                .build();
-        OpenAILLM llm = new OpenAILLM(config);
+        OllamaLLMConfig config = new OllamaLLMConfig();
+        OllamaLLM llm = new OllamaLLM(config);
 
         // 2. 配置记忆系统
         // 短期记忆：最近 5 条

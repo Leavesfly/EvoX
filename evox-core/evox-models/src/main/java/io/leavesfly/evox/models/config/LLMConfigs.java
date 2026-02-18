@@ -1,8 +1,13 @@
 package io.leavesfly.evox.models.config;
 
+import io.leavesfly.evox.models.provider.aliyun.AliyunLLMConfig;
+import io.leavesfly.evox.models.provider.deepseek.DeepSeekLLMConfig;
+import io.leavesfly.evox.models.provider.ollama.OllamaLLMConfig;
+import io.leavesfly.evox.models.provider.openai.OpenAILLMConfig;
+import io.leavesfly.evox.models.provider.siliconflow.SiliconFlowLLMConfig;
+
 /**
  * LLM 配置快捷创建工具类
- * 将工厂方法从 {@link LLMConfig} 中外移，让 LLMConfig 回归纯配置职责。
  *
  * <p>用法示例：
  * <pre>{@code
@@ -16,7 +21,6 @@ package io.leavesfly.evox.models.config;
 public final class LLMConfigs {
 
     private LLMConfigs() {
-        // 工具类禁止实例化
     }
 
     /**
@@ -56,6 +60,24 @@ public final class LLMConfigs {
     }
 
     /**
+     * 创建 DeepSeek 配置
+     *
+     * @param apiKey API 密钥
+     * @param model  模型名称（如 "deepseek-chat"）
+     * @return DeepSeekLLMConfig
+     */
+    public static DeepSeekLLMConfig deepSeek(String apiKey, String model) {
+        return DeepSeekLLMConfig.builder().apiKey(apiKey).model(model).build();
+    }
+
+    /**
+     * 创建 DeepSeek 配置（默认模型 deepseek-chat）
+     */
+    public static DeepSeekLLMConfig deepSeek(String apiKey) {
+        return deepSeek(apiKey, "deepseek-chat");
+    }
+
+    /**
      * 创建 Ollama 配置（本地模型）
      *
      * @param model 模型名称（如 "llama3", "mistral", "codellama"）
@@ -77,34 +99,17 @@ public final class LLMConfigs {
      *
      * @param apiKey API 密钥
      * @param model  模型名称（如 "Qwen/Qwen2.5-7B-Instruct"）
-     * @return SiliconFlowConfig
+     * @return SiliconFlowLLMConfig
      */
-    public static SiliconFlowConfig siliconFlow(String apiKey, String model) {
-        return SiliconFlowConfig.builder().siliconflowKey(apiKey).model(model).build();
+    public static SiliconFlowLLMConfig siliconFlow(String apiKey, String model) {
+        return SiliconFlowLLMConfig.builder().siliconflowKey(apiKey).model(model).build();
     }
 
     /**
      * 创建 SiliconFlow 配置（默认模型）
      */
-    public static SiliconFlowConfig siliconFlow(String apiKey) {
+    public static SiliconFlowLLMConfig siliconFlow(String apiKey) {
         return siliconFlow(apiKey, "Qwen/Qwen2.5-7B-Instruct");
     }
 
-    /**
-     * 创建 LiteLLM 配置（多模型代理）
-     *
-     * @param model   模型名称
-     * @param baseUrl LiteLLM 代理地址
-     * @return LiteLLMConfig
-     */
-    public static LiteLLMConfig liteLLM(String model, String baseUrl) {
-        return LiteLLMConfig.builder().model(model).litellmBaseUrl(baseUrl).build();
-    }
-
-    /**
-     * 创建 LiteLLM 配置（本地代理 localhost:4000）
-     */
-    public static LiteLLMConfig liteLLM(String model) {
-        return liteLLM(model, "http://localhost:4000");
-    }
 }

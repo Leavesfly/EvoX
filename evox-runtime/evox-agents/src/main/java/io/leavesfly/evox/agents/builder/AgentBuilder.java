@@ -6,9 +6,9 @@ import io.leavesfly.evox.agents.specialized.ChatBotAgent;
 import io.leavesfly.evox.core.llm.ILLM;
 
 import io.leavesfly.evox.core.llm.LLMConfig;
-import io.leavesfly.evox.models.config.OpenAILLMConfig;
-import io.leavesfly.evox.models.factory.LLMFactory;
-import io.leavesfly.evox.models.openai.OpenAILLM;
+import io.leavesfly.evox.models.provider.openai.OpenAILLMConfig;
+import io.leavesfly.evox.models.config.LLMFactory;
+import io.leavesfly.evox.models.provider.openai.OpenAILLM;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -250,21 +250,6 @@ public class AgentBuilder<T extends Agent> {
         return this;
     }
 
-    /**
-     * 配置 LiteLLM 多模型代理
-     */
-    public AgentBuilder<T> withLiteLLM(String model) {
-        this.llm = LLMFactory.litellm(model);
-        return this;
-    }
-
-    /**
-     * 配置 LiteLLM（自定义代理地址）
-     */
-    public AgentBuilder<T> withLiteLLM(String model, String baseUrl) {
-        this.llm = LLMFactory.litellm(model, baseUrl);
-        return this;
-    }
     
     /**
      * 添加动作

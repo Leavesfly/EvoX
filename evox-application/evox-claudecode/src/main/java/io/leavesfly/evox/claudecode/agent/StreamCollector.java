@@ -1,10 +1,10 @@
 package io.leavesfly.evox.claudecode.agent;
 
-import io.leavesfly.evox.models.base.LLMProvider;
-import io.leavesfly.evox.models.client.ChatCompletionResponse;
-import io.leavesfly.evox.models.client.ChatCompletionResult;
-import io.leavesfly.evox.models.client.ToolCall;
-import io.leavesfly.evox.models.client.ToolDefinition;
+import io.leavesfly.evox.models.spi.LLMProvider;
+import io.leavesfly.evox.models.protocol.ChatCompletionResponse;
+import io.leavesfly.evox.models.protocol.ChatCompletionResult;
+import io.leavesfly.evox.models.protocol.ToolCall;
+import io.leavesfly.evox.models.protocol.ToolDefinition;
 import io.leavesfly.evox.core.message.Message;
 import lombok.extern.slf4j.Slf4j;
 

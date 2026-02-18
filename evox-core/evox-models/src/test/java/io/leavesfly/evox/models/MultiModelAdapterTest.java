@@ -2,12 +2,10 @@ package io.leavesfly.evox.models;
 
 import io.leavesfly.evox.core.message.Message;
 import io.leavesfly.evox.core.message.MessageType;
-import io.leavesfly.evox.models.config.AliyunLLMConfig;
-import io.leavesfly.evox.models.config.LiteLLMConfig;
+import io.leavesfly.evox.models.provider.aliyun.AliyunLLMConfig;
+import io.leavesfly.evox.models.provider.openai.OpenAILLMConfig;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
-import reactor.core.publisher.Mono;
-import reactor.test.StepVerifier;
 
 import java.util.List;
 
@@ -46,42 +44,25 @@ class MultiModelAdapterTest {
     }
 
     @Test
-    void testLiteLLMConfig() {
-        LiteLLMConfig config = LiteLLMConfig.builder().apiKey("test-key").model("gpt-4").build();
+    void testOpenAILLMConfig() {
+        OpenAILLMConfig config = OpenAILLMConfig.builder().apiKey("test-key").model("gpt-4o").build();
         
         assertEquals("test-key", config.getApiKey());
-        assertEquals("gpt-4", config.getModel());
-        assertFalse(config.getIsLocal());
+        assertEquals("gpt-4o", config.getModel());
     }
 
     @Test
-    void testLiteLLMConfigBuilder() {
-        LiteLLMConfig config = LiteLLMConfig.builder()
+    void testOpenAILLMConfigBuilder() {
+        OpenAILLMConfig config = OpenAILLMConfig.builder()
                 .apiKey("test-key")
-                .model("claude-2")
-
+                .model("gpt-4o-mini")
                 .temperature(0.7f)
                 .maxTokens(1500)
                 .topP(0.9f)
                 .build();
         
-        assertEquals("claude-2", config.getModel());
-
+        assertEquals("gpt-4o-mini", config.getModel());
         assertEquals(0.7f, config.getTemperature());
-    }
-
-    @Test
-    void testLiteLLMConfigAzure() {
-        LiteLLMConfig config = LiteLLMConfig.builder()
-                .model("gpt-4")
-                .azureEndpoint("https://my-resource.openai.azure.com")
-
-                .azureKey("azure-key")
-                .build();
-        
-        assertEquals("https://my-resource.openai.azure.com", config.getAzureEndpoint());
-
-        assertEquals("azure-key", config.getAzureKey());
     }
 
     @Test
@@ -130,17 +111,16 @@ class MultiModelAdapterTest {
                 .maxTokens(2000)
                 .build();
         
-        LiteLLMConfig litellmConfig = LiteLLMConfig.builder()
+        OpenAILLMConfig openaiConfig = OpenAILLMConfig.builder()
                 .temperature(0.7f)
                 .maxTokens(1500)
                 .build();
         
-        // 两种配置都继承自 LLMConfig
         assertNotNull(aliyunConfig.getTemperature());
-        assertNotNull(litellmConfig.getTemperature());
+        assertNotNull(openaiConfig.getTemperature());
         
-        assertTrue(aliyunConfig.getTemperature() > litellmConfig.getTemperature());
-        assertTrue(aliyunConfig.getMaxTokens() > litellmConfig.getMaxTokens());
+        assertTrue(aliyunConfig.getTemperature() > openaiConfig.getTemperature());
+        assertTrue(aliyunConfig.getMaxTokens() > openaiConfig.getMaxTokens());
     }
 
     @Test
@@ -157,24 +137,12 @@ class MultiModelAdapterTest {
     }
 
     @Test
-    void testLiteLLMLocalModel() {
-        LiteLLMConfig config = LiteLLMConfig.builder()
-                .model("local-model")
-
-                .isLocal(true)
-                .build();
-        
-        assertTrue(config.getIsLocal());
-
-    }
-
-    @Test
     void testConfigDefaults() {
         AliyunLLMConfig aliyunConfig = new AliyunLLMConfig();
         assertEquals("qwen-turbo", aliyunConfig.getModel());
         assertFalse(aliyunConfig.getEnableSearch());
         
-        LiteLLMConfig litellmConfig = new LiteLLMConfig();
-        assertFalse(litellmConfig.getIsLocal());
+        OpenAILLMConfig openaiConfig = new OpenAILLMConfig();
+        assertEquals("gpt-4o-mini", openaiConfig.getModel());
     }
 }

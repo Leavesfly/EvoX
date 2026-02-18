@@ -5,8 +5,8 @@ import io.leavesfly.evox.agents.manager.AgentManager;
 import io.leavesfly.evox.agents.builder.AgentBuilder;
 import io.leavesfly.evox.core.message.Message;
 import io.leavesfly.evox.hitl.*;
-import io.leavesfly.evox.models.config.OpenAILLMConfig;
-import io.leavesfly.evox.models.openai.OpenAILLM;
+import io.leavesfly.evox.models.provider.ollama.OllamaLLMConfig;
+import io.leavesfly.evox.models.provider.ollama.OllamaLLM;
 import io.leavesfly.evox.workflow.base.Workflow;
 import io.leavesfly.evox.workflow.builder.WorkflowBuilder;
 import lombok.extern.slf4j.Slf4j;
@@ -45,7 +45,7 @@ public class EmailSendingWithApprovalExample {
         System.out.println("⏱️  审批超时时间: 10分钟\n");
 
         // 创建LLM
-        OpenAILLM llm = createLLM();
+        OllamaLLM llm = createLLM();
 
         // 创建智能体管理器
         AgentManager agentManager = new AgentManager();
@@ -117,7 +117,7 @@ public class EmailSendingWithApprovalExample {
     /**
      * 创建数据提取代理
      */
-    private static Agent createExtractorAgent(OpenAILLM llm) {
+    private static Agent createExtractorAgent(OllamaLLM llm) {
         return AgentBuilder.custom(Agent.class)
                 .name("extractor_agent")
                 .description("从原始文本中提取邮件信息")
@@ -146,7 +146,7 @@ public class EmailSendingWithApprovalExample {
     /**
      * 创建邮件发送代理
      */
-    private static Agent createEmailAgent(OpenAILLM llm) {
+    private static Agent createEmailAgent(OllamaLLM llm) {
         // 创建一个简单的邮件发送代理
         Agent agent = AgentBuilder.custom(Agent.class)
                 .name("email_agent")
@@ -162,20 +162,8 @@ public class EmailSendingWithApprovalExample {
     /**
      * 创建LLM实例
      */
-    private static OpenAILLM createLLM() {
-        String apiKey = System.getenv("OPENAI_API_KEY");
-        if (apiKey == null || apiKey.isEmpty()) {
-            apiKey = "your-api-key-here";
-            log.warn("未设置OPENAI_API_KEY环境变量，使用占位符");
-        }
-
-        OpenAILLMConfig config = OpenAILLMConfig.builder()
-                .model("gpt-4o-mini")
-                .apiKey(apiKey)
-                .temperature(0.7f)
-                .maxTokens(1000)
-                .build();
-
-        return new OpenAILLM(config);
+    private static OllamaLLM createLLM() {
+        OllamaLLMConfig config = new OllamaLLMConfig();
+        return new OllamaLLM(config);
     }
 }

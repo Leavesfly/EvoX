@@ -68,28 +68,7 @@ public class QAEvaluator extends Evaluator {
         }
     }
 
-    @Override
-    public EvaluationResult evaluateBatch(Object[] predictions, Object[] labels) {
-        Map<String, Double> aggregatedMetrics = new HashMap<>();
-        int successCount = 0;
 
-        for (int i = 0; i < predictions.length; i++) {
-            Object label = (labels != null && i < labels.length) ? labels[i] : null;
-            EvaluationResult result = evaluate(predictions[i], label);
-
-            if (result.isSuccess()) {
-                successCount++;
-                result.getMetrics().forEach((key, value) ->
-                        aggregatedMetrics.merge(key, value, Double::sum));
-            }
-        }
-
-        // 计算平均值
-        int finalSuccessCount = successCount;
-        aggregatedMetrics.replaceAll((k, v) -> v / finalSuccessCount);
-
-        return EvaluationResult.success(aggregatedMetrics);
-    }
 
     /**
      * 计算精确匹配分数

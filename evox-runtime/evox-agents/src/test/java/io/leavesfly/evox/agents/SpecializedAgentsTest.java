@@ -3,17 +3,16 @@ package io.leavesfly.evox.agents;
 import io.leavesfly.evox.agents.customize.CustomizeAgent;
 import io.leavesfly.evox.agents.plan.PlanAgent;
 import io.leavesfly.evox.agents.react.ReActAgent;
-import io.leavesfly.evox.core.message.Message;
-import io.leavesfly.evox.core.message.MessageType;
-import io.leavesfly.evox.models.config.OpenAILLMConfig;
-import io.leavesfly.evox.models.openai.OpenAILLM;
+
+import io.leavesfly.evox.models.provider.openai.OpenAILLMConfig;
+import io.leavesfly.evox.models.provider.openai.OpenAILLM;
 import io.leavesfly.evox.tools.base.BaseTool;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
 import java.util.HashMap;
-import java.util.List;
+
 import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.*;

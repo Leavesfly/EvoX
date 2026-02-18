@@ -1,9 +1,10 @@
 package io.leavesfly.evox.optimizers;
 
-import io.leavesfly.evox.models.base.LLMProvider;
-import io.leavesfly.evox.workflow.base.Workflow;
+import io.leavesfly.evox.optimizers.agent.AgentOptimizer;
+import io.leavesfly.evox.optimizers.base.EvaluationFeedback;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
+import lombok.NoArgsConstructor;
 import lombok.experimental.SuperBuilder;
 import lombok.extern.slf4j.Slf4j;
 
@@ -18,14 +19,10 @@ import java.util.*;
  */
 @Slf4j
 @Data
+@NoArgsConstructor
 @SuperBuilder
 @EqualsAndHashCode(callSuper = true)
-public class MIPROOptimizer extends Optimizer {
-
-    /**
-     * 用于优化的LLM
-     */
-    private LLMProvider optimizerLLM;
+public class MIPROOptimizer extends AgentOptimizer {
 
     /**
      * 引导示例的最大数量
@@ -66,6 +63,36 @@ public class MIPROOptimizer extends Optimizer {
      * 找到的最佳配置
      */
     private Map<String, Object> bestConfiguration;
+
+    @Override
+    public String optimizePrompt(String currentPrompt, Map<String, Object> agentConfig, EvaluationFeedback feedback) {
+        // 使用 MIPRO 的指令生成和贝叶斯优化方法优化 prompt
+        // 从 instructionCandidates 中选择最佳指令
+        if (instructionCandidates != null && !instructionCandidates.isEmpty()) {
+            // 简化实现：选择第一个候选
+            // 在真实实现中，会使用贝叶斯优化选择最佳候选
+            return instructionCandidates.get(0);
+        }
+        return currentPrompt;
+    }
+
+    @Override
+    public Map<String, Object> optimizeConfig(Map<String, Object> agentConfig, EvaluationFeedback feedback) {
+        // 优化 agent 配置，包括示例选择等
+        Map<String, Object> optimizedConfig = new HashMap<>(agentConfig);
+        
+        // 根据反馈调整示例配置
+        if (demonstrationPool != null && !demonstrationPool.isEmpty()) {
+            optimizedConfig.put("demonstrations", demonstrationPool);
+        }
+        
+        // 更新最佳配置
+        if (feedback.getPrimaryScore() > bestScore) {
+            bestConfiguration.putAll(optimizedConfig);
+        }
+        
+        return optimizedConfig;
+    }
 
     @Override
     public OptimizationResult optimize(Object dataset, Map<String, Object> kwargs) {
@@ -248,13 +275,11 @@ public class MIPROOptimizer extends Optimizer {
 
     /**
      * 恢复找到的最佳程序/配置。
+     * @deprecated 使用父类的 restoreBest() 方法
      */
+    @Deprecated
     public void restoreBestProgram() {
-        if (bestConfiguration != null && !bestConfiguration.isEmpty()) {
-            log.info("Restored best MIPRO configuration with score: {}", bestScore);
-        } else {
-            log.warn("No best configuration available to restore");
-        }
+        restoreBest();
     }
 
     /**

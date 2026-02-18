@@ -3,8 +3,8 @@ package io.leavesfly.evox.examples;
 import io.leavesfly.evox.agents.specialized.ChatBotAgent;
 import io.leavesfly.evox.core.message.Message;
 import io.leavesfly.evox.core.message.MessageType;
-import io.leavesfly.evox.models.config.OpenAILLMConfig;
-import io.leavesfly.evox.models.openai.OpenAILLM;
+import io.leavesfly.evox.models.provider.ollama.OllamaLLMConfig;
+import io.leavesfly.evox.models.provider.ollama.OllamaLLM;
 import lombok.extern.slf4j.Slf4j;
 
 import java.util.Collections;
@@ -27,15 +27,11 @@ import java.util.Collections;
 public class QuickStart {
     
     public static void main(String[] args) {
-        // 第 1 步: 配置 OpenAI
-        OpenAILLMConfig config = OpenAILLMConfig.builder()
-            .apiKey(System.getenv("OPENAI_API_KEY"))
-            .model("gpt-4o-mini")
-            .temperature(0.7f)
-            .build();
+        // 第 1 步: 配置 Ollama
+        OllamaLLMConfig config = new OllamaLLMConfig();
         
         // 第 2 步: 创建聊天机器人
-        ChatBotAgent agent = new ChatBotAgent(new OpenAILLM(config));
+        ChatBotAgent agent = new ChatBotAgent(new OllamaLLM(config));
         agent.setName("QuickBot");
         agent.initModule();
         

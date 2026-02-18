@@ -5,8 +5,8 @@ import io.leavesfly.evox.agents.plan.PlanAgent;
 import io.leavesfly.evox.agents.react.ReActAgent;
 import io.leavesfly.evox.core.message.Message;
 import io.leavesfly.evox.core.message.MessageType;
-import io.leavesfly.evox.models.config.OpenAILLMConfig;
-import io.leavesfly.evox.models.openai.OpenAILLM;
+import io.leavesfly.evox.models.provider.ollama.OllamaLLMConfig;
+import io.leavesfly.evox.models.provider.ollama.OllamaLLM;
 import io.leavesfly.evox.tools.base.BaseTool;
 import io.leavesfly.evox.tools.base.BaseTool.ToolResult;
 import lombok.extern.slf4j.Slf4j;
@@ -167,16 +167,10 @@ public class SpecializedAgentsExample {
     }
 
     /**
-     * 创建 OpenAI LLM 配置（示例）
+     * 创建 Ollama LLM 配置（示例）
      */
-    private static OpenAILLM createOpenAILLM() {
-        OpenAILLMConfig config = OpenAILLMConfig.builder()
-                .apiKey(System.getenv("OPENAI_API_KEY"))
-                .model("gpt-4o-mini")
-                .temperature(0.7f)
-                .maxTokens(2000)
-                .build();
-        
-        return new OpenAILLM(config);
+    private static OllamaLLM createOllamaLLM() {
+        OllamaLLMConfig config = new OllamaLLMConfig();
+        return new OllamaLLM(config);
     }
 }

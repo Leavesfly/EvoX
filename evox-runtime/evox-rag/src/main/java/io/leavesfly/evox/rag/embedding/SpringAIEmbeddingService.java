@@ -1,6 +1,6 @@
 package io.leavesfly.evox.rag.embedding;
 
-import io.leavesfly.evox.models.client.OpenAiCompatibleClient;
+import io.leavesfly.evox.models.protocol.OpenAiCompatibleClient;
 import lombok.extern.slf4j.Slf4j;
 
 import java.time.Duration;
@@ -56,13 +56,13 @@ public class SpringAIEmbeddingService implements EmbeddingService {
 
             String processedText = text.replace("\n", " ");
 
-            io.leavesfly.evox.models.client.EmbeddingRequest request =
-                    io.leavesfly.evox.models.client.EmbeddingRequest.builder()
+            io.leavesfly.evox.models.protocol.EmbeddingRequest request =
+                    io.leavesfly.evox.models.protocol.EmbeddingRequest.builder()
                             .model(model)
                             .input(List.of(processedText))
                             .build();
 
-            io.leavesfly.evox.models.client.EmbeddingResponse response = client.embeddings(request);
+            io.leavesfly.evox.models.protocol.EmbeddingResponse response = client.embeddings(request);
 
             if (response == null || response.getData() == null || response.getData().isEmpty()) {
                 log.warn("No embedding result returned");
@@ -96,13 +96,13 @@ public class SpringAIEmbeddingService implements EmbeddingService {
                     .map(text -> text != null ? text.replace("\n", " ") : "")
                     .collect(Collectors.toList());
 
-            io.leavesfly.evox.models.client.EmbeddingRequest request =
-                    io.leavesfly.evox.models.client.EmbeddingRequest.builder()
+            io.leavesfly.evox.models.protocol.EmbeddingRequest request =
+                    io.leavesfly.evox.models.protocol.EmbeddingRequest.builder()
                             .model(model)
                             .input(processedTexts)
                             .build();
 
-            io.leavesfly.evox.models.client.EmbeddingResponse response = client.embeddings(request);
+            io.leavesfly.evox.models.protocol.EmbeddingResponse response = client.embeddings(request);
 
             if (response == null || response.getData() == null) {
                 log.warn("No embedding results returned");

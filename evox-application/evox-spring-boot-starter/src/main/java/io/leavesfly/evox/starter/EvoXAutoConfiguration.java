@@ -1,9 +1,9 @@
 package io.leavesfly.evox.starter;
 
 import io.leavesfly.evox.memory.shortterm.ShortTermMemory;
-import io.leavesfly.evox.models.base.LLMProvider;
-import io.leavesfly.evox.models.config.OpenAILLMConfig;
-import io.leavesfly.evox.models.openai.OpenAILLM;
+import io.leavesfly.evox.models.spi.LLMProvider;
+import io.leavesfly.evox.models.provider.openai.OpenAILLMConfig;
+import io.leavesfly.evox.models.provider.openai.OpenAILLM;
 import io.leavesfly.evox.tools.api.ToolRegistry;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;

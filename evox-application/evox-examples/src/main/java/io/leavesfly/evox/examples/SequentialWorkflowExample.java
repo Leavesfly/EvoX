@@ -2,8 +2,8 @@ package io.leavesfly.evox.examples;
 
 import io.leavesfly.evox.agents.customize.CustomizeAgent;
 import io.leavesfly.evox.agents.manager.AgentManager;
-import io.leavesfly.evox.models.config.OpenAILLMConfig;
-import io.leavesfly.evox.models.openai.OpenAILLM;
+import io.leavesfly.evox.models.provider.openai.OpenAILLMConfig;
+import io.leavesfly.evox.models.provider.openai.OpenAILLM;
 import io.leavesfly.evox.workflow.base.Workflow;
 import io.leavesfly.evox.workflow.graph.WorkflowGraph;
 import io.leavesfly.evox.workflow.base.WorkflowNode;

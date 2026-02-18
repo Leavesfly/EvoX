@@ -1,9 +1,11 @@
 package io.leavesfly.evox.optimizers;
 
-import io.leavesfly.evox.models.base.LLMProvider;
-import io.leavesfly.evox.workflow.base.Workflow;
+import io.leavesfly.evox.models.spi.LLMProvider;
+import io.leavesfly.evox.optimizers.agent.AgentOptimizer;
+import io.leavesfly.evox.optimizers.base.EvaluationFeedback;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
+import lombok.NoArgsConstructor;
 import lombok.experimental.SuperBuilder;
 import lombok.extern.slf4j.Slf4j;
 
@@ -21,14 +23,10 @@ import java.util.Map;
  */
 @Slf4j
 @Data
+@NoArgsConstructor
 @SuperBuilder
 @EqualsAndHashCode(callSuper = true)
-public class TextGradOptimizer extends Optimizer {
-
-    /**
-     * 用于优化的LLM(生成梯度)
-     */
-    private LLMProvider optimizerLLM;
+public class TextGradOptimizer extends AgentOptimizer {
 
     /**
      * 用于执行的LLM(运行工作流)
@@ -55,10 +53,32 @@ public class TextGradOptimizer extends Optimizer {
      */
     private List<StepResult> history;
 
-    /**
-     * 最佳工作流配置
-     */
-    private Workflow bestWorkflow;
+    @Override
+    public String optimizePrompt(String currentPrompt, Map<String, Object> agentConfig, EvaluationFeedback feedback) {
+        // 使用 TextGrad 的梯度下降方法优化 prompt
+        // 在真实实现中，这里会使用 optimizerLLM 生成文本梯度并更新 prompt
+        String gradient = feedback.getTextualGradient();
+        if (gradient != null && !gradient.isEmpty()) {
+            // 根据梯度更新 prompt
+            return currentPrompt + " " + gradient;
+        }
+        return currentPrompt;
+    }
+
+    @Override
+    public Map<String, Object> optimizeConfig(Map<String, Object> agentConfig, EvaluationFeedback feedback) {
+        // TextGrad 主要优化 prompt，配置优化相对简单
+        // 可以根据反馈调整批次大小、学习率等参数
+        Map<String, Object> optimizedConfig = new HashMap<>(agentConfig);
+        
+        double score = feedback.getPrimaryScore();
+        if (score < 0.5) {
+            // 性能较差时，增加批次大小
+            optimizedConfig.put("batchSize", Math.max(1, (Integer) optimizedConfig.getOrDefault("batchSize", batchSize) + 1));
+        }
+        
+        return optimizedConfig;
+    }
 
     @Override
     public OptimizationResult optimize(Object dataset, Map<String, Object> kwargs) {
@@ -68,7 +88,7 @@ public class TextGradOptimizer extends Optimizer {
 
         reset();
         history = new ArrayList<>();
-        bestWorkflow = workflow; // 在真实实现中克隆或深拷贝
+        bestPrompt = currentPrompt; // 在真实实现中克隆或深拷贝
 
         for (int step = 0; step < maxSteps; step++) {
             currentStep = step;
@@ -94,10 +114,10 @@ public class TextGradOptimizer extends Optimizer {
                     break;
                 }
 
-                // 如果有改善则更新最佳工作流
+                // 如果有改善则更新最佳 prompt
                 if (currentScore > bestScore - 0.001) { // 小的epsilon用于浮点数比较
-                    bestWorkflow = workflow; // 克隆或深拷贝
-                    log.info("Updated best workflow at step {}", step + 1);
+                    bestPrompt = currentPrompt; // 克隆或深拷贝
+                    log.info("Updated best prompt at step {}", step + 1);
                 }
             }
         }
@@ -171,14 +191,11 @@ public class TextGradOptimizer extends Optimizer {
 
     /**
      * 恢复优化过程中找到的最佳工作流。
+     * @deprecated 使用父类的 restoreBest() 方法
      */
+    @Deprecated
     public void restoreBestWorkflow() {
-        if (bestWorkflow != null) {
-            this.workflow = bestWorkflow;
-            log.info("Restored best workflow with score: {}", bestScore);
-        } else {
-            log.warn("No best workflow available to restore");
-        }
+        restoreBest();
     }
 
     /**

@@ -1,7 +1,10 @@
 package io.leavesfly.evox.optimizers;
 
+import io.leavesfly.evox.optimizers.agent.AgentOptimizer;
+import io.leavesfly.evox.optimizers.base.EvaluationFeedback;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
+import lombok.NoArgsConstructor;
 import lombok.experimental.SuperBuilder;
 import lombok.extern.slf4j.Slf4j;
 
@@ -18,9 +21,10 @@ import java.util.stream.IntStream;
  */
 @Slf4j
 @Data
+@NoArgsConstructor
 @SuperBuilder
 @EqualsAndHashCode(callSuper = true)
-public class EvoPromptOptimizer extends Optimizer {
+public class EvoPromptOptimizer extends AgentOptimizer {
 
     /**
      * 种群大小
@@ -71,6 +75,48 @@ public class EvoPromptOptimizer extends Optimizer {
      * 最佳分数
      */
     private Map<String, Double> bestScores;
+
+    @Override
+    public String optimizePrompt(String currentPrompt, Map<String, Object> agentConfig, EvaluationFeedback feedback) {
+        // 使用进化算法优化 prompt
+        // 在真实实现中，这里会使用当前的种群和进化操作生成新的 prompt
+        if (nodePopulations != null && !nodePopulations.isEmpty()) {
+            // 从种群中选择最佳个体
+            for (Map.Entry<String, String[]> entry : nodePopulations.entrySet()) {
+                String[] population = entry.getValue();
+                double[] scores = nodeScores.get(entry.getKey());
+                
+                if (scores != null && scores.length > 0) {
+                    int bestIndex = 0;
+                    for (int i = 1; i < scores.length; i++) {
+                        if (scores[i] > scores[bestIndex]) {
+                            bestIndex = i;
+                        }
+                    }
+                    return population[bestIndex];
+                }
+            }
+        }
+        return currentPrompt;
+    }
+
+    @Override
+    public Map<String, Object> optimizeConfig(Map<String, Object> agentConfig, EvaluationFeedback feedback) {
+        // 优化进化算法的配置参数
+        Map<String, Object> optimizedConfig = new HashMap<>(agentConfig);
+        
+        // 根据反馈调整变异率和交叉率
+        double score = feedback.getPrimaryScore();
+        if (score < 0.3) {
+            // 性能较差时，增加变异率以增加探索
+            optimizedConfig.put("mutationRate", Math.min(0.5, mutationRate + 0.1));
+        } else if (score > 0.8) {
+            // 性能较好时，降低变异率以增加利用
+            optimizedConfig.put("mutationRate", Math.max(0.05, mutationRate - 0.05));
+        }
+        
+        return optimizedConfig;
+    }
 
     /**
      * 初始化种群

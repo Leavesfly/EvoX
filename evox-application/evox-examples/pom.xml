@@ -106,6 +106,13 @@
             <artifactId>logback-classic</artifactId>
         </dependency>
 
+        <!-- Netty macOS DNS resolver (消除 macOS 上的 DNS 警告) -->
+        <dependency>
+            <groupId>io.netty</groupId>
+            <artifactId>netty-resolver-dns-native-macos</artifactId>
+            <classifier>osx-aarch_64</classifier>
+        </dependency>
+
         <!-- Lombok -->
         <dependency>
             <groupId>org.projectlombok</groupId>

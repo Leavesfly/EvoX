@@ -1,8 +1,8 @@
 package io.leavesfly.evox.tools.image;
 
-import io.leavesfly.evox.models.client.ImageGenerationRequest;
-import io.leavesfly.evox.models.client.ImageGenerationResponse;
-import io.leavesfly.evox.models.client.OpenAiCompatibleClient;
+import io.leavesfly.evox.models.protocol.ImageGenerationRequest;
+import io.leavesfly.evox.models.protocol.ImageGenerationResponse;
+import io.leavesfly.evox.models.protocol.OpenAiCompatibleClient;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.extern.slf4j.Slf4j;

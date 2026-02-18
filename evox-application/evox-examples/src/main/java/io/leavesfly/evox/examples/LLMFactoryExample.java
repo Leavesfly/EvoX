@@ -2,8 +2,12 @@ package io.leavesfly.evox.examples;
 
 import io.leavesfly.evox.agents.customize.CustomizeAgent;
 import io.leavesfly.evox.core.llm.LLMConfig;
-import io.leavesfly.evox.models.config.*;
-import io.leavesfly.evox.models.factory.LLMFactory;
+import io.leavesfly.evox.models.provider.aliyun.AliyunLLMConfig;
+import io.leavesfly.evox.models.config.LLMConfigs;
+import io.leavesfly.evox.models.provider.ollama.OllamaLLMConfig;
+import io.leavesfly.evox.models.provider.openai.OpenAILLMConfig;
+import io.leavesfly.evox.models.provider.siliconflow.SiliconFlowLLMConfig;
+import io.leavesfly.evox.models.config.LLMFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -84,11 +88,6 @@ public class LLMFactoryExample {
         log.info("\nSiliconFlow: LLMFactory.siliconflow(apiKey)");
         log.info("             LLMFactory.siliconflow(apiKey, \"Qwen/Qwen2.5-72B-Instruct\")");
 
-        // --- LiteLLM 多模型代理 ---
-        // LLMProvider lite = LLMFactory.litellm("gpt-4");
-        // LLMProvider lite = LLMFactory.litellm("claude-3-opus", "http://my-proxy:4000");
-        log.info("\nLiteLLM:     LLMFactory.litellm(\"gpt-4\")");
-        log.info("             LLMFactory.litellm(\"claude-3-opus\", \"http://proxy:4000\")");
     }
 
     // ===================================================================
@@ -105,14 +104,12 @@ public class LLMFactoryExample {
         OpenAILLMConfig openaiConfig = LLMConfigs.openAI("sk-xxx", "gpt-4o");
         AliyunLLMConfig aliyunConfig = LLMConfigs.aliyun("sk-xxx", "qwen-max");
         OllamaLLMConfig ollamaConfig = LLMConfigs.ollama("llama3");
-        SiliconFlowConfig sfConfig = LLMConfigs.siliconFlow("sk-xxx");
-        LiteLLMConfig litellmConfig = LLMConfigs.liteLLM("gpt-4");
+        SiliconFlowLLMConfig sfConfig = LLMConfigs.siliconFlow("sk-xxx");
 
         log.info("OpenAI config:      provider={}, model={}", openaiConfig.getProvider(), openaiConfig.getModel());
         log.info("Aliyun config:      provider={}, model={}", aliyunConfig.getProvider(), aliyunConfig.getModel());
         log.info("Ollama config:      provider={}, model={}", ollamaConfig.getProvider(), ollamaConfig.getModel());
         log.info("SiliconFlow config: provider={}, model={}", sfConfig.getProvider(), sfConfig.getModel());
-        log.info("LiteLLM config:     provider={}, model={}", litellmConfig.getProvider(), litellmConfig.getModel());
 
         // 对比旧写法：
         // OpenAILLMConfig old = OpenAILLMConfig.builder().apiKey("sk-xxx").model("gpt-4o").build();
@@ -136,8 +133,7 @@ public class LLMFactoryExample {
                 LLMConfigs.openAI("sk-xxx"),
                 LLMConfigs.aliyun("sk-xxx"),
                 LLMConfigs.ollama("llama3"),
-                LLMConfigs.siliconFlow("sk-xxx"),
-                LLMConfigs.liteLLM("gpt-4")
+                LLMConfigs.siliconFlow("sk-xxx")
         };
 
         for (LLMConfig config : configs) {
@@ -227,10 +223,6 @@ public class LLMFactoryExample {
         log.info("  AgentBuilder.chatBot().withSiliconFlow().build()");
         log.info("  AgentBuilder.chatBot().withSiliconFlow(apiKey).build()");
         log.info("  AgentBuilder.chatBot().withSiliconFlow(apiKey, model).build()");
-        log.info("");
-        log.info("  // LiteLLM 多模型代理");
-        log.info("  AgentBuilder.chatBot().withLiteLLM(\"gpt-4\").build()");
-        log.info("  AgentBuilder.chatBot().withLiteLLM(model, proxyUrl).build()");
         log.info("");
         log.info("  // 通用：传入任意 LLMConfig");
         log.info("  AgentBuilder.chatBot().withConfig(LLMConfigs.aliyun(key)).build()");

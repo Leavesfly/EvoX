@@ -1,9 +1,12 @@
 package io.leavesfly.evox.optimizers;
 
-import io.leavesfly.evox.models.base.LLMProvider;
+import io.leavesfly.evox.models.spi.LLMProvider;
+import io.leavesfly.evox.optimizers.base.EvaluationFeedback;
+import io.leavesfly.evox.optimizers.workflow.WorkflowOptimizer;
 import io.leavesfly.evox.workflow.base.Workflow;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
+import lombok.NoArgsConstructor;
 import lombok.experimental.SuperBuilder;
 import lombok.extern.slf4j.Slf4j;
 
@@ -24,8 +27,9 @@ import java.util.*;
 @Slf4j
 @Data
 @SuperBuilder
+@NoArgsConstructor
 @EqualsAndHashCode(callSuper = true)
-public class SEWOptimizer extends Optimizer {
+public class SEWOptimizer extends WorkflowOptimizer {
 
     /**
      * 工作流表示方案
@@ -47,11 +51,6 @@ public class SEWOptimizer extends Optimizer {
         REORDER,        // 重新排序
         MODIFY_PARAMS   // 修改参数
     }
-
-    /**
-     * 用于变异操作的LLM
-     */
-    private LLMProvider mutatorLLM;
 
     /**
      * 用于评估的LLM
@@ -420,10 +419,10 @@ public class SEWOptimizer extends Optimizer {
         MutationType mutationType = selectRandomMutation();
         log.debug("应用变异类型: {}", mutationType);
         
-        if (mutatorLLM != null) {
-            // 使用LLM进行智能变异
+        if (optimizerLLM != null) {
+            // 使用父类的optimizerLLM进行智能变异
             String prompt = buildMutationPrompt(workflowRepresentation, mutationType);
-            return mutatorLLM.generate(prompt);
+            return optimizerLLM.generate(prompt);
         }
         
         // 默认简单变异
@@ -553,12 +552,27 @@ public class SEWOptimizer extends Optimizer {
     /**
      * 恢复最佳工作流
      */
+    @Override
     public void restoreBestWorkflow() {
         if (bestCandidate != null && bestCandidate.getWorkflow() != null) {
+            super.restoreBestWorkflow();
             this.workflow = bestCandidate.getWorkflow();
             log.info("已恢复最佳工作流，适应度: {}", bestCandidate.getFitness());
         } else {
             log.warn("没有可用的最佳工作流");
         }
+    }
+
+    @Override
+    public Workflow optimizeWorkflow(Workflow currentWorkflow, EvaluationFeedback feedback) {
+        // 实现工作流优化的核心逻辑
+        // 这里使用SEW的进化算法基于反馈信息优化工作流
+        log.debug("Optimizing workflow with SEW, feedback: {}", feedback);
+        
+        // 简化实现:基于反馈调整工作流
+        // 在真实实现中,这里将使用进化算法探索工作流修改空间
+        
+        // 更新工作流(占位符实现)
+        return currentWorkflow;
     }
 }

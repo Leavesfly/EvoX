@@ -1,7 +1,7 @@
 package io.leavesfly.evox.cowork.task;
 
 import io.leavesfly.evox.core.message.Message;
-import io.leavesfly.evox.models.base.LLMProvider;
+import io.leavesfly.evox.models.spi.LLMProvider;
 import lombok.extern.slf4j.Slf4j;
 
 import java.util.ArrayList;

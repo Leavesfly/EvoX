@@ -63,7 +63,7 @@ public class EvoXProperties {
     @Data
     public static class LLMProperties {
         /**
-         * LLM 提供商 (openai, dashscope, litellm)
+         * LLM 提供商 (openai, aliyun, ollama, siliconflow)
          */
         private String provider = "openai";
         

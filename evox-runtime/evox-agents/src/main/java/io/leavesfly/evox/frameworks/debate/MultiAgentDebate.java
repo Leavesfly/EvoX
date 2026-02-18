@@ -2,7 +2,7 @@ package io.leavesfly.evox.frameworks.debate;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.leavesfly.evox.frameworks.base.MultiAgentFramework;
-import io.leavesfly.evox.models.base.LLMProvider;
+import io.leavesfly.evox.models.spi.LLMProvider;
 import io.leavesfly.evox.workflow.base.Workflow;
 import io.leavesfly.evox.workflow.base.WorkflowNode;
 import io.leavesfly.evox.workflow.graph.WorkflowGraph;

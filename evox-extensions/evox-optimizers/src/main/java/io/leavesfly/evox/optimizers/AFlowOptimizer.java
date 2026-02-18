@@ -1,9 +1,12 @@
 package io.leavesfly.evox.optimizers;
 
-import io.leavesfly.evox.models.base.LLMProvider;
+import io.leavesfly.evox.models.spi.LLMProvider;
+import io.leavesfly.evox.optimizers.base.EvaluationFeedback;
+import io.leavesfly.evox.optimizers.workflow.WorkflowOptimizer;
 import io.leavesfly.evox.workflow.base.Workflow;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
+import lombok.NoArgsConstructor;
 import lombok.experimental.SuperBuilder;
 import lombok.extern.slf4j.Slf4j;
 
@@ -19,13 +22,9 @@ import java.util.*;
 @Slf4j
 @Data
 @SuperBuilder
+@NoArgsConstructor
 @EqualsAndHashCode(callSuper = true)
-public class AFlowOptimizer extends Optimizer {
-
-    /**
-     * 用于优化的LLM
-     */
-    private LLMProvider optimizerLLM;
+public class AFlowOptimizer extends WorkflowOptimizer {
 
     /**
      * 每步的最大迭代次数
@@ -51,11 +50,6 @@ public class AFlowOptimizer extends Optimizer {
      * 收敛窗口大小
      */
     private int convergenceWindow;
-
-    /**
-     * 找到的最佳工作流
-     */
-    private Workflow bestWorkflow;
 
     /**
      * 用于收敛检测的分数历史
@@ -268,13 +262,10 @@ public class AFlowOptimizer extends Optimizer {
     /**
      * 恢复优化过程中找到的最佳工作流。
      */
+    @Override
     public void restoreBestWorkflow() {
-        if (bestWorkflow != null) {
-            this.workflow = bestWorkflow;
-            log.info("Restored best AFlow workflow with score: {}", bestScore);
-        } else {
-            log.warn("No best workflow available to restore");
-        }
+        super.restoreBestWorkflow();
+        log.info("Restored best AFlow workflow with score: {}", bestScore);
     }
 
     /**
@@ -293,5 +284,18 @@ public class AFlowOptimizer extends Optimizer {
         private final String modification;
         private final double score;
         private final long timestamp;
+    }
+
+    @Override
+    public Workflow optimizeWorkflow(Workflow currentWorkflow, EvaluationFeedback feedback) {
+        // 实现工作流优化的核心逻辑
+        // 这里使用AFlow的MCTS算法基于反馈信息优化工作流
+        log.debug("Optimizing workflow with AFlow, feedback: {}", feedback);
+        
+        // 简化实现:基于反馈调整工作流
+        // 在真实实现中,这里将使用MCTS算法探索工作流修改空间
+        
+        // 更新工作流(占位符实现)
+        return currentWorkflow;
     }
 }

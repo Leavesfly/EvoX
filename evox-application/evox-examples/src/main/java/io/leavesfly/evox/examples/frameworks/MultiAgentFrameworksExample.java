@@ -18,8 +18,8 @@ import io.leavesfly.evox.frameworks.auction.*;
 import io.leavesfly.evox.frameworks.hierarchical.*;
 import io.leavesfly.evox.frameworks.debate.DefaultDebateAgent;
 
-import io.leavesfly.evox.models.config.OpenAILLMConfig;
-import io.leavesfly.evox.models.openai.OpenAILLM;
+import io.leavesfly.evox.models.provider.ollama.OllamaLLMConfig;
+import io.leavesfly.evox.models.provider.ollama.OllamaLLM;
 import lombok.extern.slf4j.Slf4j;
 
 import java.util.ArrayList;
@@ -47,7 +47,7 @@ public class MultiAgentFrameworksExample {
         System.out.println("========================================\n");
 
         // 创建LLM
-        OpenAILLM llm = createLLM();
+        OllamaLLM llm = createLLM();
 
         // 示例1: 辩论框架
         demonstrateDebateFramework(llm);
@@ -72,7 +72,7 @@ public class MultiAgentFrameworksExample {
     /**
      * 演示辩论框架
      */
-    private static void demonstrateDebateFramework(OpenAILLM llm) {
+    private static void demonstrateDebateFramework(OllamaLLM llm) {
         System.out.println("【示例 1】辩论框架 (Debate Framework)");
         System.out.println("----------------------------------------");
         System.out.println("场景: 多个智能体辩论\"AI是否会取代程序员\"");
@@ -124,7 +124,7 @@ public class MultiAgentFrameworksExample {
     /**
      * 演示团队协作框架
      */
-    private static void demonstrateTeamFramework(OpenAILLM llm) {
+    private static void demonstrateTeamFramework(OllamaLLM llm) {
         System.out.println("【示例 2】团队协作框架 (Team Framework)");
         System.out.println("----------------------------------------");
         System.out.println("场景: 团队协作完成\"开发一个智能客服系统\"的任务");
@@ -192,7 +192,7 @@ public class MultiAgentFrameworksExample {
     /**
      * 演示共识框架
      */
-    private static void demonstrateConsensusFramework(OpenAILLM llm) {
+    private static void demonstrateConsensusFramework(OllamaLLM llm) {
         System.out.println("【示例 3】共识框架 (Consensus Framework)");
         System.out.println("----------------------------------------");
         System.out.println("场景: 多个专家对\"公司是否应该远程办公\"达成共识");
@@ -243,7 +243,7 @@ public class MultiAgentFrameworksExample {
     /**
      * 演示拍卖框架
      */
-    private static void demonstrateAuctionFramework(OpenAILLM llm) {
+    private static void demonstrateAuctionFramework(OllamaLLM llm) {
         System.out.println("【示例 4】拍卖框架 (Auction Framework)");
         System.out.println("----------------------------------------");
         System.out.println("场景: 三个智能体竞拍\"一张稀有的复古海报\"");
@@ -310,7 +310,7 @@ public class MultiAgentFrameworksExample {
     /**
      * 演示分层决策框架
      */
-    private static void demonstrateHierarchicalFramework(OpenAILLM llm) {
+    private static void demonstrateHierarchicalFramework(OllamaLLM llm) {
         System.out.println("【示例 5】分层决策框架 (Hierarchical Framework)");
         System.out.println("----------------------------------------");
         System.out.println("场景: 软件开发项目的分层规划与执行");
@@ -362,20 +362,8 @@ public class MultiAgentFrameworksExample {
     /**
      * 创建LLM实例
      */
-    private static OpenAILLM createLLM() {
-        String apiKey = System.getenv("OPENAI_API_KEY");
-        if (apiKey == null || apiKey.isEmpty()) {
-            apiKey = "your-api-key-here";
-            log.warn("未设置OPENAI_API_KEY环境变量，使用占位符");
-        }
-
-        OpenAILLMConfig config = OpenAILLMConfig.builder()
-                .model("gpt-4o-mini")
-                .apiKey(apiKey)
-                .temperature(0.7f)
-                .maxTokens(1000)
-                .build();
-
-        return new OpenAILLM(config);
+    private static OllamaLLM createLLM() {
+        OllamaLLMConfig config = new OllamaLLMConfig();
+        return new OllamaLLM(config);
     }
 }

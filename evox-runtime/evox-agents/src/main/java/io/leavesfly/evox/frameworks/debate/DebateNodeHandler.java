@@ -1,6 +1,6 @@
 package io.leavesfly.evox.frameworks.debate;
 
-import io.leavesfly.evox.models.base.LLMProvider;
+import io.leavesfly.evox.models.spi.LLMProvider;
 import io.leavesfly.evox.workflow.base.WorkflowNode;
 import io.leavesfly.evox.workflow.execution.WorkflowContext;
 import io.leavesfly.evox.workflow.node.NodeHandler;

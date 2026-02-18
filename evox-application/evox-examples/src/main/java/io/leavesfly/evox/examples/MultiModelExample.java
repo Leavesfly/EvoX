@@ -2,12 +2,11 @@ package io.leavesfly.evox.examples;
 
 import io.leavesfly.evox.core.message.Message;
 import io.leavesfly.evox.core.message.MessageType;
-import io.leavesfly.evox.models.base.LLMProvider;
-import io.leavesfly.evox.models.aliyun.AliyunLLM;
-import io.leavesfly.evox.models.config.AliyunLLMConfig;
-import io.leavesfly.evox.models.config.LiteLLMConfig;
-import io.leavesfly.evox.models.litellm.LiteLLM;
-import lombok.extern.slf4j.Slf4j;
+import io.leavesfly.evox.models.spi.LLMProvider;
+import io.leavesfly.evox.models.provider.aliyun.AliyunLLM;
+import io.leavesfly.evox.models.provider.aliyun.AliyunLLMConfig;
+import io.leavesfly.evox.models.provider.openai.OpenAILLMConfig;
+import io.leavesfly.evox.models.provider.openai.OpenAILLM;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -15,7 +14,7 @@ import java.util.List;
 
 /**
  * 多模型适配器示例
- * 演示如何使用阿里云通义千问和 LiteLLM 通用适配器
+ * 演示如何使用阿里云通义千问和 OpenAI 适配器
  *
  * @author EvoX Team
  */
@@ -28,8 +27,8 @@ public class MultiModelExample {
         // 示例1：使用阿里云通义千问模型
         example.demonstrateAliyunModel();
         
-        // 示例2：使用 LiteLLM 通用适配器
-        example.demonstrateLiteLLM();
+        // 示例2：使用 OpenAI 模型
+        example.demonstrateOpenAIModel();
         
         // 示例3：配置对比
         example.demonstrateConfigComparison();
@@ -68,56 +67,26 @@ public class MultiModelExample {
     }
 
     /**
-     * 示例2：使用 LiteLLM 通用适配器
+     * 示例2：使用 OpenAI 模型
      */
-    private void demonstrateLiteLLM() {
-        log.info("\n--- 示例2：LiteLLM 通用适配器 ---");
+    private void demonstrateOpenAIModel() {
+        log.info("\n--- 示例2：OpenAI 模型 ---");
         
-        // 配置1：使用 OpenAI 兼容接口
-        LiteLLMConfig openaiConfig = LiteLLMConfig.builder()
+        OpenAILLMConfig openaiConfig = OpenAILLMConfig.builder()
                 .apiKey("your-openai-api-key")
-                .model("gpt-3.5-turbo")
-                .baseUrl("https://api.openai.com/v1")
+                .model("gpt-4o-mini")
                 .temperature(0.8f)
                 .maxTokens(2000)
                 .build();
         
-        log.info("OpenAI 兼容配置:");
+        log.info("OpenAI 配置:");
         log.info("  模型: {}", openaiConfig.getModel());
         log.info("  API地址: {}", openaiConfig.getBaseUrl());
         log.info("  Temperature: {}", openaiConfig.getTemperature());
         
-        // 配置2：使用本地模型
-        LiteLLMConfig localConfig = LiteLLMConfig.builder()
-                .model("local-llama2")
-                .baseUrl("http://localhost:8080")
-                .isLocal(true)
-                .temperature(0.7f)
-                .build();
-        
-        log.info("\n本地模型配置:");
-        log.info("  模型: {}", localConfig.getModel());
-        log.info("  API地址: {}", localConfig.getBaseUrl());
-        log.info("  本地模型: {}", localConfig.getIsLocal());
-        
-        // 配置3：使用 Azure OpenAI
-        LiteLLMConfig azureConfig = LiteLLMConfig.builder()
-                .model("gpt-4")
-                .azureEndpoint("https://your-resource.openai.azure.com")
-                .azureKey("your-azure-key")
-                .apiVersion("2023-05-15")
-                .temperature(0.7f)
-                .build();
-        
-        log.info("\nAzure OpenAI 配置:");
-        log.info("  模型: {}", azureConfig.getModel());
-        log.info("  Azure Endpoint: {}", azureConfig.getAzureEndpoint());
-        log.info("  API版本: {}", azureConfig.getApiVersion());
-        
-        // 创建 LiteLLM 实例
-        LLMProvider liteLLM = new LiteLLM(openaiConfig);
-        log.info("\n✓ LiteLLM 通用适配器已初始化");
-        log.info("  提示：支持 OpenAI、Azure、本地模型等多种接口");
+        LLMProvider openaiLLM = new OpenAILLM(openaiConfig);
+        log.info("✓ OpenAI 模型已初始化");
+        log.info("  提示：实际使用需要配置有效的 OpenAI API Key");
     }
 
     /**
@@ -129,24 +98,22 @@ public class MultiModelExample {
         AliyunLLMConfig aliyunConfig = AliyunLLMConfig.builder()
                 .temperature(0.8f)
                 .maxTokens(2000)
-                .enableSearch(true)  // 阿里云特有功能
+                .enableSearch(true)
                 .build();
         
-        LiteLLMConfig litellmConfig = LiteLLMConfig.builder()
+        OpenAILLMConfig openaiConfig = OpenAILLMConfig.builder()
                 .temperature(0.7f)
                 .maxTokens(1500)
-                .isLocal(false)  // LiteLLM 特有功能
                 .build();
         
         log.info("配置继承演示:");
-        log.info("  阿里云 Temperature: {}, LiteLLM Temperature: {}", 
-                aliyunConfig.getTemperature(), litellmConfig.getTemperature());
-        log.info("  阿里云 MaxTokens: {}, LiteLLM MaxTokens: {}", 
-                aliyunConfig.getMaxTokens(), litellmConfig.getMaxTokens());
+        log.info("  阿里云 Temperature: {}, OpenAI Temperature: {}", 
+                aliyunConfig.getTemperature(), openaiConfig.getTemperature());
+        log.info("  阿里云 MaxTokens: {}, OpenAI MaxTokens: {}", 
+                aliyunConfig.getMaxTokens(), openaiConfig.getMaxTokens());
         
         log.info("\n特有功能:");
         log.info("  阿里云启用搜索: {}", aliyunConfig.getEnableSearch());
-        log.info("  LiteLLM 本地模式: {}", litellmConfig.getIsLocal());
         
         log.info("\n✓ 两种配置都继承自 LLMConfig，共享基础参数");
     }

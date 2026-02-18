@@ -169,7 +169,7 @@ public class ChatBotAgent extends Agent {
                 response = "我收到了你的消息：" + lastUserMessage;
             }
             
-            return new SimpleActionOutput(true, "成功", response);
+            return new SimpleActionOutput(true, response, null);
         }
         
         /**
@@ -180,7 +180,7 @@ public class ChatBotAgent extends Agent {
                 // 直接使用 Message 列表调用 LLM
                 String response = llm.chat(messages);
                 
-                return new SimpleActionOutput(true, "成功", response);
+                return new SimpleActionOutput(true, response, null);
                 
             } catch (Exception e) {
                 log.error("LLM generation failed", e);

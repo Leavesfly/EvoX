@@ -2,7 +2,7 @@ package io.leavesfly.evox.examples;
 
 import io.leavesfly.evox.agents.customize.CustomizeAgent;
 import io.leavesfly.evox.core.message.Message;
-import io.leavesfly.evox.models.config.OpenAILLMConfig;
+import io.leavesfly.evox.models.provider.ollama.OllamaLLMConfig;
 import lombok.extern.slf4j.Slf4j;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -41,11 +41,7 @@ public class CustomizeAgentExample {
         log.info("=== 示例1: 最简单的智能体 ===");
 
         // 配置LLM
-        OpenAILLMConfig config = OpenAILLMConfig.builder()
-                .model("gpt-4o-mini")
-                .apiKey(System.getenv("OPENAI_API_KEY"))
-                .temperature(0.7f)
-                .build();
+        OllamaLLMConfig config = new OllamaLLMConfig();
 
         // 创建智能体
         CustomizeAgent agent = new CustomizeAgent();
@@ -68,10 +64,7 @@ public class CustomizeAgentExample {
     public void agentWithInputs() {
         log.info("=== 示例2: 带输入的智能体 ===");
 
-        OpenAILLMConfig config = OpenAILLMConfig.builder()
-                .model("gpt-4o-mini")
-                .apiKey(System.getenv("OPENAI_API_KEY"))
-                .build();
+        OllamaLLMConfig config = new OllamaLLMConfig();
 
         // 定义输入参数
         List<Map<String, Object>> inputs = new ArrayList<>();
@@ -111,10 +104,7 @@ public class CustomizeAgentExample {
     public void agentWithInputsAndOutputs() {
         log.info("=== 示例3: 带输入和输出的智能体 ===");
 
-        OpenAILLMConfig config = OpenAILLMConfig.builder()
-                .model("gpt-4o-mini")
-                .apiKey(System.getenv("OPENAI_API_KEY"))
-                .build();
+        OllamaLLMConfig config = new OllamaLLMConfig();
 
         // 定义输入
         List<Map<String, Object>> inputs = new ArrayList<>();
@@ -166,10 +156,7 @@ public class CustomizeAgentExample {
     public void agentWithTools() {
         log.info("=== 示例4: 带工具的智能体 ===");
 
-        OpenAILLMConfig config = OpenAILLMConfig.builder()
-                .model("gpt-4o-mini")
-                .apiKey(System.getenv("OPENAI_API_KEY"))
-                .build();
+        OllamaLLMConfig config = new OllamaLLMConfig();
 
         // TODO: 添加工具后取消注释
         /*

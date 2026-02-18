@@ -1,9 +1,12 @@
 package io.leavesfly.evox.optimizers;
 
 import io.leavesfly.evox.memory.shortterm.ShortTermMemory;
-import io.leavesfly.evox.models.base.LLMProvider;
+import io.leavesfly.evox.models.spi.LLMProvider;
+import io.leavesfly.evox.optimizers.memory.BaseMemoryOptimizer;
+import io.leavesfly.evox.optimizers.base.EvaluationFeedback;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
+import lombok.NoArgsConstructor;
 import lombok.experimental.SuperBuilder;
 import lombok.extern.slf4j.Slf4j;
 
@@ -19,28 +22,14 @@ import java.util.Map;
 @Slf4j
 @Data
 @SuperBuilder
+@NoArgsConstructor
 @EqualsAndHashCode(callSuper = true)
-public class MemoryOptimizer extends Optimizer {
+public class MemoryOptimizer extends BaseMemoryOptimizer {
 
     /**
      * 要优化的记忆系统
      */
     private ShortTermMemory memory;
-
-    /**
-     * LLM用于分析记忆重要性
-     */
-    private LLMProvider llm;
-
-    /**
-     * 记忆压缩比例 (0-1)
-     */
-    private double compressionRatio;
-
-    /**
-     * 是否启用智能摘要
-     */
-    private boolean enableSmartSummary;
 
     // 无参构造函数供 SuperBuilder 使用
 
@@ -197,7 +186,7 @@ public class MemoryOptimizer extends Optimizer {
     /**
      * 压缩冗余记忆
      */
-    private boolean compressRedundantMemories() {
+    protected boolean compressRedundantMemories() {
         if (memory == null) {
             return false;
         }
@@ -218,7 +207,7 @@ public class MemoryOptimizer extends Optimizer {
     /**
      * 裁剪低重要性记忆
      */
-    private boolean pruneUnimportantMemories() {
+    protected boolean pruneUnimportantMemories() {
         if (memory == null) {
             return false;
         }
@@ -258,7 +247,7 @@ public class MemoryOptimizer extends Optimizer {
     /**
      * 评估记忆质量
      */
-    private double evaluateMemoryQuality() {
+    protected double evaluateMemoryQuality() {
         if (memory == null) {
             return 0.0;
         }
@@ -303,7 +292,7 @@ public class MemoryOptimizer extends Optimizer {
     /**
      * 记忆分析结果
      */
-    private static class MemoryAnalysis {
+    protected static class MemoryAnalysis {
         final double redundancyScore;
         final double importanceVariance;
         final double summaryPotential;
@@ -313,5 +302,42 @@ public class MemoryOptimizer extends Optimizer {
             this.importanceVariance = importanceVariance;
             this.summaryPotential = summaryPotential;
         }
+    }
+
+    @Override
+    public boolean optimizeMemory(EvaluationFeedback feedback) {
+        if (memory == null) {
+            return false;
+        }
+
+        log.debug("根据反馈优化记忆: {}", feedback);
+
+        try {
+            // 根据反馈调整记忆策略
+            if (feedback.getPrimaryScore() < 0.5) {
+                // 如果评分较低，执行压缩和裁剪
+                return compressMemory() || pruneMemory();
+            }
+
+            return true;
+        } catch (Exception e) {
+            log.error("优化记忆失败", e);
+            return false;
+        }
+    }
+
+    @Override
+    public double analyzeMemoryQuality() {
+        return evaluateMemoryQuality();
+    }
+
+    @Override
+    public boolean compressMemory() {
+        return compressRedundantMemories();
+    }
+
+    @Override
+    public boolean pruneMemory() {
+        return pruneUnimportantMemories();
     }
 }

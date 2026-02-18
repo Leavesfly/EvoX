@@ -3,7 +3,7 @@ package io.leavesfly.evox.optimizers.evaluators;
 import io.leavesfly.evox.core.evaluation.EvaluationResult;
 import io.leavesfly.evox.core.evaluation.IEvaluator;
 import io.leavesfly.evox.optimizers.evaluators.metrics.EvaluationMetric;
-import io.leavesfly.evox.models.base.LLMProvider;
+import io.leavesfly.evox.models.spi.LLMProvider;
 import lombok.extern.slf4j.Slf4j;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
