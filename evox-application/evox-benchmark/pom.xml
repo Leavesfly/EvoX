@@ -34,12 +34,6 @@
         
         <dependency>
             <groupId>io.leavesfly.evox</groupId>
-            <artifactId>evox-actions</artifactId>
-            <version>${project.version}</version>
-        </dependency>
-        
-        <dependency>
-            <groupId>io.leavesfly.evox</groupId>
             <artifactId>evox-agents</artifactId>
             <version>${project.version}</version>
         </dependency>

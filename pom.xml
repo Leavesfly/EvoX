@@ -49,7 +49,6 @@
         <!-- 核心层 (Core Layer) - 提供基础抽象和模型适配 -->
         <module>evox-core/evox-core</module>
         <module>evox-core/evox-models</module>
-        <module>evox-core/evox-actions</module>
         <module>evox-core/evox-mcp</module>
         <!-- 运行时层 (Runtime Layer) - 存储、工具、记忆、RAG、智能体、工作流 -->
         <module>evox-runtime/evox-storage</module>
@@ -108,11 +107,6 @@
             <dependency>
                 <groupId>io.leavesfly.evox</groupId>
                 <artifactId>evox-models</artifactId>
-                <version>${project.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>io.leavesfly.evox</groupId>
-                <artifactId>evox-actions</artifactId>
                 <version>${project.version}</version>
             </dependency>
             <dependency>

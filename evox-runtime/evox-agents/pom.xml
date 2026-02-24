@@ -29,10 +29,6 @@
         </dependency>
         <dependency>
             <groupId>io.leavesfly.evox</groupId>
-            <artifactId>evox-actions</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>io.leavesfly.evox</groupId>
             <artifactId>evox-memory</artifactId>
             <optional>true</optional>
         </dependency>
