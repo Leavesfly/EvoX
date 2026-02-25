@@ -140,12 +140,17 @@ public class WorkflowGenerator {
         definition.setDescription("自动生成");
 
         // 实际应该使用Jackson解析JSON
-        // 这里简化实现
+        // 这里简化实现，使用第一个可用的agent
         List<WorkflowStep> steps = new ArrayList<>();
 
         WorkflowStep step1 = new WorkflowStep();
         step1.setName("步骤1");
-        step1.setAgent("DefaultAgent");
+        // 使用第一个可用的agent而不是硬编码的"DefaultAgent"
+        if (!availableAgents.isEmpty()) {
+            step1.setAgent(availableAgents.get(0).getName());
+        } else {
+            step1.setAgent("DefaultAgent");
+        }
         step1.setDescription("执行任务");
         steps.add(step1);
 

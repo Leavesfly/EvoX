@@ -64,9 +64,9 @@
         <module>evox-extensions/evox-optimizers</module>
         <module>evox-extensions/evox-hitl</module>
         <module>evox-extensions/evox-evaluation</module>
-        <module>evox-extensions/evox-channels</module>
-        <module>evox-extensions/evox-scheduler</module>
-        <module>evox-extensions/evox-gateway</module>
+        <!-- <module>evox-extensions/evox-channels</module> -->
+        <!-- <module>evox-extensions/evox-scheduler</module> -->
+        <!-- <module>evox-extensions/evox-gateway</module> -->
 
         <!-- 应用层 (Application Layer) - 示例和基准测试 -->
         <module>evox-application/evox-examples</module>
@@ -75,7 +75,7 @@
         <module>evox-application/evox-claudecode</module>
         <module>evox-application/evox-cowork</module>
 
-        <module>evox-application/evox-openclaw</module>
+        <!-- <module>evox-application/evox-openclaw</module> -->
     </modules>
 
     <dependencyManagement>

@@ -257,13 +257,43 @@ Workflow workflow = WorkflowBuilder.sequential()
 | 示例 | 说明 |
 |------|------|
 | `MultiAgentFrameworksExample` | 五种多智能体协同框架演示 |
-
+| `AutomaticWorkflowGenerationDemo` | 多智能体工作流自动化生成演示 |
 **框架类型**:
 - **Debate**: 辩论框架，多智能体通过辩论达成最优解
 - **Team**: 团队协作框架，多种协作模式完成复杂任务
 - **Consensus**: 共识框架，通过投票和讨论达成共识
 - **Auction**: 拍卖框架，支持多种拍卖机制的资源分配
 - **Hierarchical**: 分层决策框架，多层级管理与执行模式
+
+### 10. 自动化工作流生成
+
+| 示例 | 说明 |
+|------|------|
+| `AutomaticWorkflowGenerationDemo` | 多智能体工作流自动化生成演示 |
+
+**核心功能**:
+- **自然语言驱动**: 输入自然语言任务描述，自动生成工作流
+- **模板驱动**: 基于预定义模板快速创建工作流
+- **智能分解**: 复杂任务自动分解为可执行步骤
+- **多阶段执行**: 支持多阶段任务的自动化执行
+
+**自动化工作流核心代码**:
+```java
+// 1. 创建工作流生成器
+WorkflowGenerator generator = new WorkflowGenerator(llm);
+generator.setAvailableAgents(agentList);
+
+// 2. 基于自然语言描述生成工作流
+String taskDescription = "分析用户行为数据并生成报告";
+Workflow workflow = generator.generateWorkflow(taskDescription);
+
+// 3. 执行生成的工作流
+String result = workflow.execute(inputs);
+
+// 4. 基于模板快速创建工作流
+WorkflowTemplateManager templateManager = new WorkflowTemplateManager(generator);
+Workflow workflow = templateManager.createFromTemplate("data_processing", agentList);
+```
 
 **辩论框架示例**:
 ```java

@@ -45,13 +45,14 @@ public class WorkflowTemplateManager {
      */
     private void initializeDefaultTemplates() {
         // 数据处理模板
+        // 使用实际可用的agent名称
         registerTemplate("data_processing", WorkflowTemplate.builder()
                 .name("数据处理")
                 .description("ETL数据处理流程")
                 .steps(List.of(
-                        new TemplateStep("数据提取", "ExtractAgent", "从数据源提取数据"),
-                        new TemplateStep("数据转换", "TransformAgent", "转换数据格式"),
-                        new TemplateStep("数据加载", "LoadAgent", "加载到目标系统")
+                        new TemplateStep("数据提取", "data_processor", "从数据源提取数据"),
+                        new TemplateStep("数据验证", "validator", "验证数据质量"),
+                        new TemplateStep("数据汇总", "summarizer", "汇总处理结果")
                 ))
                 .build());
 
