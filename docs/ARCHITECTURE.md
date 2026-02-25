@@ -5,7 +5,7 @@
 **EvoX：自进化的多智能体框架 - 技术架构详解**
 
 版本：1.0.0  
-更新时间：2026-02-16
+更新时间：2026-02-25
 
 </div>
 
@@ -48,7 +48,6 @@ graph TB
         APP_EXAMPLES["evox-examples<br/>示例应用"]
         APP_COWORK["evox-cowork<br/>协作应用"]
         APP_CLAUDECODE["evox-claudecode<br/>代码助手"]
-        APP_OPENCLAW["evox-openclaw<br/>OpenClaw助手"]
         APP_BENCHMARK["evox-benchmark<br/>性能基准"]
         APP_STARTER["evox-spring-boot-starter<br/>自动配置"]
     end
@@ -58,8 +57,6 @@ graph TB
         EXT_HITL["evox-hitl<br/>人机协同"]
         EXT_EVALUATION["evox-evaluation<br/>评估系统"]
         EXT_CHANNELS["evox-channels<br/>多渠道通信"]
-        EXT_SCHEDULER["evox-scheduler<br/>任务调度"]
-        EXT_GATEWAY["evox-gateway<br/>网关安全"]
     end
     
     subgraph "运行时层 (Runtime Layer)"
@@ -482,8 +479,6 @@ public interface BaseTool {
 | **evox-hitl** | 人机协同系统 | evox-core, evox-agents | HITLManager, HITLInterceptor |
 | **evox-evaluation** | 评估系统 | evox-core | Evaluator, Metrics |
 | **evox-channels** | 多渠道通信 | evox-core | ChannelAdapter |
-| **evox-scheduler** | 任务调度 | evox-core | TaskScheduler |
-| **evox-gateway** | 网关与安全 | evox-core | Gateway, SecurityFilter |
 
 ### 4.2 优化器系统（evox-optimizers）
 
@@ -544,7 +539,6 @@ workflow.addHITLPoint("approval");
 | **evox-examples** | 15+ 完整示例 | 教程 |
 | **evox-cowork** | 多智能体协作应用 | 应用 |
 | **evox-claudecode** | 代码助手应用 | 应用 |
-| **evox-openclaw** | OpenClaw 助手 | 应用 |
 | **evox-benchmark** | 性能基准测试 | 测试 |
 | **evox-spring-boot-starter** | 自动配置 | 集成 |
 
@@ -1033,7 +1027,7 @@ graph LR
 <div align="center">
 
 **📖 文档版本**：v1.0.0  
-**📅 最后更新**：2026-02-16  
+**📅 最后更新**：2026-02-25  
 **✍️ 维护团队**：EvoX Team
 
 如有问题或建议，欢迎提交 [Issue](https://github.com/your-org/evox/issues)
