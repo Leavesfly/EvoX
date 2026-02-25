@@ -1,216 +1,310 @@
 # EvoX Core 核心抽象模块
 
-## 📦 模块定位
-
 **层级**: 核心层 (Core Layer)  
-**职责**: 提供框架最底层的抽象和基础设施  
-**依赖**: 无(仅依赖 Spring Boot 和基础库)
+**职责**: 提供框架最底层的抽象和基础设施，所有模块的零依赖基础  
+**对外依赖**: 仅依赖 Spring Boot 3.2+、Project Reactor、Jackson
 
-## 🎯 核心功能
+evox-core 是整个 EvoX 框架的基石，定义了所有模块共同依赖的核心接口、消息协议、动作抽象与配置体系。它本身不包含任何业务逻辑，只提供稳定的 SPI 接口与基础设施。
 
-evox-core 是整个 EvoX 框架的基石，提供了所有模块共同依赖的核心抽象、消息系统、注册机制和容错能力。
+## 核心功能
 
-### 1. 核心抽象
+### 1. 模块基类 — BaseModule
 
-#### BaseModule
-所有模块的基类，提供统一的序列化和生命周期管理能力：
+所有 EvoX 模块的基类（`io.leavesfly.evox.core.module`），提供统一的序列化与生命周期能力：
 
-- **序列化支持**: `toJson()`, `toPrettyJson()`, `toDict()`
-- **反序列化支持**: `fromJson()`, `fromDict()`
-- **文件持久化**: `saveModule()`, `loadModule()`
-- **深拷贝**: `copy()`
-- **初始化钩子**: `initModule()`
+| 方法 | 说明 |
+|------|------|
+| `toJson()` / `toPrettyJson()` | 序列化为 JSON 字符串 |
+| `toDict()` | 序列化为 `Map<String, Object>` |
+| `fromJson(json, Class)` | 从 JSON 字符串反序列化（静态方法）|
+| `fromDict(dict, Class)` | 从 Map 反序列化（静态方法）|
+| `saveModule(Path)` | 持久化到文件 |
+| `loadModule(Path, Class)` | 从文件加载（静态方法）|
+| `copy()` | 创建深拷贝 |
+| `initModule()` | 初始化钩子，子类可覆写 |
 
-**使用示例**:
 ```java
-// 自定义模块
-public class MyModule extends BaseModule {
+public class MyAgent extends BaseModule {
     private String name;
-    private Integer value;
-    
+
     @Override
     public void initModule() {
-        // 自定义初始化逻辑
+        log.info("初始化 Agent: {}", name);
     }
 }
 
-// 序列化
-MyModule module = new MyModule();
-String json = module.toJson();
+// 序列化 / 持久化
+MyAgent agent = new MyAgent();
+String json = agent.toJson();
+agent.saveModule(Paths.get("agent.json"));
 
-// 反序列化
-MyModule loaded = BaseModule.fromJson(json, MyModule.class);
-
-// 持久化
-module.saveModule(Paths.get("module.json"));
+// 反序列化 / 加载
+MyAgent loaded = BaseModule.fromJson(json, MyAgent.class);
+MyAgent restored = BaseModule.loadModule(Paths.get("agent.json"), MyAgent.class);
 ```
 
-#### IAgent
-智能体核心接口，用于打破模块间的循环依赖：
+### 2. 智能体接口 — IAgent / IAgentManager
 
-- `getAgentId()`: 获取智能体唯一标识
-- `getName()`: 获取智能体名称
-- `execute()`: 同步执行指定动作
-- `executeAsync()`: 异步执行指定动作
-- `isHuman()`: 判断是否为人类用户
+定义于 `io.leavesfly.evox.core.agent`，用于打破 evox-core 与 evox-agents 之间的循环依赖：
 
-#### IAgentManager
-智能体管理接口，提供智能体的注册、查询和管理：
+**IAgent** — 智能体的核心 SPI：
 
-- `addAgent()`: 添加智能体
-- `getAgent()`: 根据名称获取智能体
-- `removeAgent()`: 移除智能体
-- `getAllAgents()`: 获取所有智能体
-
-### 2. 消息系统
-
-#### Message
-统一的消息模型，支持智能体间的通信：
-
-**核心字段**:
-- `content`: 消息内容
-- `messageType`: 消息类型 (INPUT/OUTPUT/RESPONSE/ERROR/SYSTEM)
-- `agent`: 发送或接收的 Agent 名称
-- `action`: 关联的 Action 名称
-- `workflowGoal`: 工作流目标
-- `workflowTask`: 工作流任务
-- `timestamp`: 时间戳
-
-**使用示例**:
 ```java
-Message message = Message.builder()
-    .content("用户输入内容")
-    .messageType(MessageType.INPUT)
-    .agent("ChatAgent")
-    .action("chat")
-    .workflowGoal("完成对话任务")
-    .build();
-```
+public interface IAgent {
+    String getAgentId();             // 唯一标识
+    String getName();                // 名称
+    String getDescription();         // 描述
 
-### 3. 模块注册与配置
+    // 同步执行
+    Message execute(String actionName, List<Message> messages);
+    default Message execute(List<Message> messages);  // 使用默认动作
 
-#### ModuleRegistry
-模块注册表，管理所有模块的注册和查询。
+    // 异步执行（基于 Project Reactor）
+    Mono<Message> executeAsync(String actionName, List<Message> messages);
+    default Mono<Message> executeAsync(List<Message> messages);
+    default Mono<Message> callAsync(String input);    // 字符串快捷方法
 
-#### EvoXCoreConfig
-核心模块配置类，自动注册核心 Bean。
-
-### 4. 容错机制
-
-#### CircuitBreaker (熔断器)
-保护系统不被失败调用压垮：
-
-**核心特性**:
-- **三种状态**: CLOSED(正常)、OPEN(熔断)、HALF_OPEN(尝试恢复)
-- **自动状态转换**: 失败达到阈值自动熔断，超时后自动尝试恢复
-- **快速失败**: 熔断状态下快速返回失败
-
-**使用示例**:
-```java
-CircuitBreaker breaker = CircuitBreaker.defaultBreaker("myService");
-
-// 执行操作
-try {
-    String result = breaker.execute(() -> {
-        // 可能失败的操作
-        return callExternalService();
-    });
-} catch (ExecutionException e) {
-    // 处理熔断或执行失败
+    boolean isHuman();               // 是否为人类用户
 }
-
-// 查询状态
-CircuitBreaker.State state = breaker.getState();
 ```
 
-**配置选项**:
-- `failureThreshold`: 失败阈值(默认 5 次)
-- `timeout`: 超时时间(默认 30 秒)
-- `resetTimeout`: 重置超时(默认 1 分钟)
+**IAgentManager** — 智能体注册与查询：
 
-#### RetryPolicy (重试策略)
-智能重试机制，支持指数退避和抖动：
+- `addAgent(IAgent)` — 注册智能体
+- `getAgent(String name)` — 按名称查询
+- `removeAgent(String name)` — 移除智能体
+- `getAllAgents()` — 获取全部已注册智能体
 
-**核心特性**:
-- **指数退避**: 延迟时间按倍数增长
-- **抖动(Jitter)**: 避免重试风暴
-- **最大延迟限制**: 防止无限等待
-- **可重试异常判断**: 灵活控制哪些异常可重试
+### 3. 消息系统 — Message / MessageType
 
-**预设策略**:
-- `defaultPolicy()`: 默认策略(3 次重试，100ms 初始延迟)
-- `fastRetry()`: 快速重试(3 次，50ms 初始延迟)
-- `robustRetry()`: 稳健重试(5 次，500ms 初始延迟)
+定义于 `io.leavesfly.evox.core.message`，是智能体间通信的统一载体：
 
-**使用示例**:
+**核心字段**：
+
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| `messageId` | `String` | 自动生成的 UUID |
+| `content` | `Object` | 消息内容（支持任意类型）|
+| `messageType` | `MessageType` | 消息类型 |
+| `agent` | `String` | 发送 Agent 名称 |
+| `action` | `String` | 关联 Action 名称 |
+| `prompt` | `String` | 关联的提示词 |
+| `timestamp` | `Instant` | 自动记录时间戳 |
+| `metadata` | `Map<String, Object>` | 扩展字段（工作流语义等）|
+
+**MessageType 枚举**：`INPUT` / `OUTPUT` / `RESPONSE` / `ERROR` / `SYSTEM` / `UNKNOWN`
+
+**工作流扩展字段**（通过 metadata 承载，保持 Message 职责单一）：
+- `workflowGoal` — 工作流目标
+- `workflowTask` — 当前工作流任务
+- `workflowTaskDesc` — 任务描述
+- `nextActions` — 下一步动作列表
+
+**静态工厂方法**：
+
 ```java
-// 使用默认策略
-RetryPolicy policy = RetryPolicy.defaultPolicy();
-RetryExecutor executor = new RetryExecutor(policy);
+// 常用快捷方法
+Message msg = Message.inputMessage("用户输入");
+Message msg = Message.outputMessage("AI 响应");
+Message msg = Message.systemMessage("系统提示");
+Message msg = Message.errorMessage("错误信息");
+Message msg = Message.responseMessage(content, "MyAgent", "chat");
 
-String result = executor.execute(() -> {
-    // 可能失败的操作
-    return callUnstableService();
-});
-
-// 自定义策略
-RetryPolicy customPolicy = RetryPolicy.builder()
-    .maxAttempts(5)
-    .initialDelay(Duration.ofMillis(200))
-    .backoffMultiplier(1.5)
-    .maxDelay(Duration.ofSeconds(10))
-    .retryableException(e -> e instanceof IOException)
+// Builder 完整构建
+Message msg = Message.builder()
+    .content("内容")
+    .messageType(MessageType.INPUT)
+    .agent("MyAgent")
+    .workflowGoal("完成对话任务")     // metadata 便捷方法
+    .workflowTask("执行第一步")
     .build();
 ```
 
-### 5. 异常体系
+### 4. LLM 接口体系 — ILLM 族
 
-#### EvoXException
-框架统一异常基类：
+定义于 `io.leavesfly.evox.core.llm`，采用分级接口设计，按需依赖：
 
-**核心特性**:
-- **错误码**: 支持自定义错误码
-- **上下文信息**: 携带错误上下文对象
-- **结构化信息**: 便于日志记录和问题排查
+```
+ILLMSync          — 同步调用：generate(String) / chat(List<Message>) / getModelName()
+  └─ ILLMAsync    — 异步调用：generateAsync / chatAsync（返回 Mono）
+      └─ ILLM     — 流式调用：generateStream / chatStream（返回 Flux）
 
-**使用示例**:
+ILLMToolUse       — 工具调用能力（独立接口）：chatWithTools
+LLMConfig         — 配置基类：apiKey / model / temperature / maxTokens / timeout
+```
+
+**使用建议**：
+- 只需文本生成 → 依赖 `ILLMSync`
+- 需要异步调用 → 依赖 `ILLMAsync`  
+- 需要流式输出 → 依赖 `ILLM`
+- 需要 Function Calling → 同时依赖 `ILLMToolUse`
+
+### 5. 动作系统 — Action / ActionInput / ActionOutput
+
+定义于 `io.leavesfly.evox.actions.base`，是智能体执行的最小单元：
+
 ```java
-throw new EvoXException("AGENT_ERROR", "Agent执行失败", context);
+// 自定义 Action
+public class MyAction extends Action {
+
+    @Override
+    public ActionOutput execute(ActionInput input) {
+        String prompt = input.get("prompt");
+        String result = llm.generate(prompt);
+        return SimpleActionOutput.of(result);
+    }
+
+    @Override
+    public String[] getInputFields() { return new String[]{"prompt"}; }
+
+    @Override
+    public String[] getOutputFields() { return new String[]{"result"}; }
+}
 ```
 
-**派生异常类**:
-- `ModuleException`: 模块相关异常
-- `ExecutionException`: 执行相关异常
-- 其他业务异常...
+- `Action` — 抽象基类，持有 `ILLM` 实例，支持同步 `execute` 和异步 `executeAsync`
+- `ActionInput` — 输入容器，Map 结构，键值对传参
+- `ActionOutput` — 输出接口，支持结构化结果
+- `SimpleActionOutput` — 纯文本输出的默认实现
 
-## 📂 目录结构
+### 6. 提示词管理 — PromptTemplate / PromptConstants
 
-```
-evox-core/
-├── agent/              # Agent 接口定义
-│   ├── IAgent.java
-│   └── IAgentManager.java
-├── circuitbreaker/     # 熔断器
-│   └── CircuitBreaker.java
-├── config/             # 配置类
-│   └── EvoXCoreConfig.java
-├── exception/          # 异常体系
-│   ├── EvoXException.java
-│   ├── ModuleException.java
-│   └── ExecutionException.java
-├── message/            # 消息系统
-│   ├── Message.java
-│   └── MessageType.java
-├── module/             # 模块抽象
-│   └── BaseModule.java
-├── registry/           # 注册机制
-│   └── ModuleRegistry.java
-└── retry/              # 重试机制
-    ├── RetryPolicy.java
-    └── RetryExecutor.java
+定义于 `io.leavesfly.evox.prompt`：
+
+- **PromptTemplate** — 提示词模板引擎，支持变量占位符替换
+- **PromptConstants** — 内置常量提示词（系统提示、角色设定、任务描述等）
+
+### 7. 评估接口 — IEvaluator
+
+定义于 `io.leavesfly.evox.core.evaluation`，供 `evox-optimizers` 依赖，具体实现在 `evox-evaluation`：
+
+```java
+public interface IEvaluator {
+    EvaluationResult evaluate(Object prediction, Object label);          // 单样本评估
+    EvaluationResult evaluateBatch(Object[] predictions, Object[] labels); // 批量评估
+    EvaluationResult evaluateWorkflow(Function<Map,String> workflow,      // 工作流评估
+                                      List<Map.Entry<Map,Object>> dataset); // P = T(W, D)
+    Mono<EvaluationResult> evaluateAsync(...);                           // 异步版本
+}
 ```
 
-## 🚀 快速开始
+### 8. 注册机制 — IModuleRegistry
+
+定义于 `io.leavesfly.evox.core.registry`，提供模块注册与查找的标准 SPI。
+
+### 9. 异常体系
+
+定义于 `io.leavesfly.evox.core.exception`：
+
+| 异常类 | 说明 |
+|--------|------|
+| `EvoXException` | 框架统一异常基类，携带错误码和上下文 |
+| `ModuleException` | 模块初始化、注册相关异常 |
+| `ExecutionException` | 动作/智能体执行期间的异常 |
+| `ConfigurationException` | 配置缺失或格式错误 |
+| `ValidationException` | 输入参数校验失败 |
+
+### 10. 配置属性 — EvoXProperties
+
+定义于 `io.leavesfly.evox.core.config`，Spring Boot `@ConfigurationProperties` 绑定 `evox.*`：
+
+```yaml
+evox:
+  llm:
+    provider: openai        # LLM 提供商
+    temperature: 0.7
+    max-tokens: 2000
+    timeout: 30000          # ms
+    retry:
+      max-attempts: 3
+      initial-delay: 1000
+      max-delay: 10000
+  agents:
+    default-timeout: 60000  # ms
+    max-concurrent: 10
+  memory:
+    short-term:
+      capacity: 100
+      window-size: 10
+    long-term:
+      enabled: true
+      storage-type: in-memory  # in-memory | redis | database
+  storage:
+    type: in-memory            # in-memory | h2 | postgresql
+    vector:
+      enabled: false
+      provider: in-memory      # in-memory | qdrant | milvus
+      dimension: 1536
+  workflow:
+    max-depth: 10
+    timeout: 300000
+    enable-parallel: true
+  tools:
+    enabled: true
+    timeout: 30000
+    max-retries: 3
+```
+
+### 11. 工具类 — utils
+
+定义于 `io.leavesfly.evox.utils`：
+
+- **CommonUtils** — 通用工具方法（字符串处理、集合操作等）
+- **SanitizeUtils** — 输入清洗工具，防止 prompt 注入
+
+## 包结构
+
+```
+io.leavesfly.evox
+│
+├── core/
+│   ├── agent/                 # 智能体 SPI
+│   │   ├── IAgent.java
+│   │   └── IAgentManager.java
+│   ├── config/                # Spring Boot 配置
+│   │   ├── EvoXCoreConfig.java
+│   │   └── EvoXProperties.java
+│   ├── evaluation/            # 评估器 SPI
+│   │   ├── IEvaluator.java
+│   │   └── EvaluationResult.java
+│   ├── exception/             # 异常体系
+│   │   ├── EvoXException.java
+│   │   ├── ModuleException.java
+│   │   ├── ExecutionException.java
+│   │   ├── ConfigurationException.java
+│   │   └── ValidationException.java
+│   ├── llm/                   # LLM 接口族
+│   │   ├── ILLM.java
+│   │   ├── ILLMSync.java
+│   │   ├── ILLMAsync.java
+│   │   ├── ILLMStream.java
+│   │   ├── ILLMToolUse.java
+│   │   └── LLMConfig.java
+│   ├── message/               # 消息系统
+│   │   ├── Message.java
+│   │   └── MessageType.java
+│   ├── module/                # 模块基类
+│   │   └── BaseModule.java
+│   └── registry/              # 注册 SPI
+│       └── IModuleRegistry.java
+│
+├── actions/
+│   └── base/                  # 动作基础抽象
+│       ├── Action.java
+│       ├── ActionInput.java
+│       ├── ActionOutput.java
+│       └── SimpleActionOutput.java
+│
+├── prompt/                    # 提示词管理
+│   ├── PromptTemplate.java
+│   └── PromptConstants.java
+│
+└── utils/                     # 工具类
+    ├── CommonUtils.java
+    └── SanitizeUtils.java
+```
+
+## 快速上手
 
 ### Maven 依赖
 
@@ -222,50 +316,57 @@ evox-core/
 </dependency>
 ```
 
-### 基本用法
+### 常用示例
 
 ```java
-// 1. 创建自定义模块
+// 1. 创建消息
+Message input = Message.inputMessage("请帮我分析这段代码");
+Message sys   = Message.systemMessage("你是一个代码分析专家");
+
+// 2. 自定义模块
 public class MyModule extends BaseModule {
     private String name;
-    
+    @Override public void initModule() { log.info("初始化: {}", name); }
+}
+MyModule m = new MyModule();
+m.saveModule(Paths.get("module.json"));
+MyModule restored = BaseModule.loadModule(Paths.get("module.json"), MyModule.class);
+
+// 3. 自定义 Action
+public class SummarizeAction extends Action {
     @Override
-    public void initModule() {
-        log.info("模块初始化: {}", name);
+    public ActionOutput execute(ActionInput input) {
+        String text = (String) input.get("text");
+        return SimpleActionOutput.of(llm.generate("总结：" + text));
     }
+    @Override public String[] getInputFields()  { return new String[]{"text"}; }
+    @Override public String[] getOutputFields() { return new String[]{"summary"}; }
 }
 
-// 2. 构建消息
-Message message = Message.builder()
-    .content("Hello EvoX")
-    .messageType(MessageType.INPUT)
-    .build();
-
-// 3. 使用熔断器
-CircuitBreaker breaker = CircuitBreaker.defaultBreaker("service");
-String result = breaker.execute(() -> externalCall());
-
-// 4. 使用重试
-RetryExecutor retry = new RetryExecutor(RetryPolicy.defaultPolicy());
-String data = retry.execute(() -> fetchData());
+// 4. 使用提示词模板
+String prompt = PromptTemplate.of("你是 {{role}}，请回答：{{question}}")
+    .bind("role", "Java 专家")
+    .bind("question", "什么是虚拟线程？")
+    .render();
 ```
 
-## 🎓 设计原则
+## 设计原则
 
-- **最小依赖**: 仅依赖必要的基础库，保持轻量
-- **稳定接口**: 提供稳定的 API 供上层模块使用
-- **高内聚低耦合**: 职责清晰，模块独立
-- **容错设计**: 内置容错机制，提升系统可靠性
+| 原则 | 说明 |
+|------|------|
+| **最小依赖** | 仅依赖 Spring Boot 基础库，不引入任何业务框架 |
+| **稳定接口** | SPI 接口遵循向后兼容，上层模块不受影响 |
+| **职责单一** | 每个包只负责一个关注点，无交叉引用 |
+| **依赖倒置** | 上层依赖此处的抽象，而非具体实现 |
+| **响应式友好** | 所有异步接口基于 Reactor `Mono`/`Flux` |
 
-## 📊 适用场景
+## 相关模块
 
-- 作为所有 EvoX 模块的基础依赖
-- 构建自定义模块和扩展
-- 实现分布式调用的容错保护
-- 统一消息通信协议
-
-## 🔗 相关模块
-
-- **evox-models**: 基于 evox-core 实现 LLM 模型适配
-- **evox-actions**: 基于 evox-core 实现动作执行引擎
-- **所有上层模块**: 都依赖 evox-core 提供的基础能力
+| 模块 | 与 evox-core 的关系 |
+|------|---------------------|
+| **evox-models** | 实现 `ILLM` / `ILLMToolUse` 接口，提供具体模型适配 |
+| **evox-mcp** | 依赖 evox-core 消息协议，定义 MCP 协议层 |
+| **evox-agents** | 实现 `IAgent` 接口，提供智能体运行时 |
+| **evox-workflow** | 基于 `IAgent` 接口编排工作流，无需感知具体实现 |
+| **evox-evaluation** | 实现 `IEvaluator` 接口，提供评估算法 |
+| **所有上层模块** | 均以 evox-core 为最终依赖基础 |
