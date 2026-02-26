@@ -1,5 +1,7 @@
 package io.leavesfly.evox.workflow.generation;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import io.leavesfly.evox.core.agent.IAgent;
 import io.leavesfly.evox.core.llm.ILLM;
 import io.leavesfly.evox.workflow.base.Workflow;
@@ -132,31 +134,76 @@ public class WorkflowGenerator {
 
     /**
      * 解析工作流定义
+     * 从LLM返回的JSON字符串中提取工作流定义，支持裸JSON和Markdown代码块两种格式
      */
     private WorkflowDefinition parseWorkflowDefinition(String response) {
-        // 简化的JSON解析
-        WorkflowDefinition definition = new WorkflowDefinition();
-        definition.setName("生成的工作流");
-        definition.setDescription("自动生成");
+        try {
+            String json = extractJson(response);
+            ObjectMapper mapper = new ObjectMapper();
+            JsonNode root = mapper.readTree(json);
 
-        // 实际应该使用Jackson解析JSON
-        // 这里简化实现，使用第一个可用的agent
-        List<WorkflowStep> steps = new ArrayList<>();
+            WorkflowDefinition definition = new WorkflowDefinition();
+            definition.setName(root.path("name").asText("生成的工作流"));
+            definition.setDescription(root.path("description").asText("自动生成"));
 
-        WorkflowStep step1 = new WorkflowStep();
-        step1.setName("步骤1");
-        // 使用第一个可用的agent而不是硬编码的"DefaultAgent"
-        if (!availableAgents.isEmpty()) {
-            step1.setAgent(availableAgents.get(0).getName());
-        } else {
-            step1.setAgent("DefaultAgent");
+            List<WorkflowStep> steps = new ArrayList<>();
+            JsonNode stepsNode = root.path("steps");
+            if (stepsNode.isArray()) {
+                for (JsonNode stepNode : stepsNode) {
+                    WorkflowStep step = new WorkflowStep();
+                    step.setName(stepNode.path("name").asText("步骤"));
+                    step.setAgent(stepNode.path("agent").asText(""));
+                    step.setDescription(stepNode.path("description").asText(""));
+                    steps.add(step);
+                }
+            }
+
+            if (steps.isEmpty()) {
+                log.warn("LLM返回的工作流定义中没有步骤，将使用默认步骤");
+                WorkflowStep defaultStep = new WorkflowStep();
+                defaultStep.setName("步骤1");
+                defaultStep.setAgent(availableAgents.isEmpty() ? "DefaultAgent" : availableAgents.get(0).getName());
+                defaultStep.setDescription("执行任务");
+                steps.add(defaultStep);
+            }
+
+            definition.setSteps(steps);
+            return definition;
+
+        } catch (Exception e) {
+            log.error("解析LLM响应失败，使用默认工作流定义。原始响应: {}", response, e);
+            WorkflowDefinition fallback = new WorkflowDefinition();
+            fallback.setName("生成的工作流");
+            fallback.setDescription("自动生成");
+            List<WorkflowStep> steps = new ArrayList<>();
+            WorkflowStep defaultStep = new WorkflowStep();
+            defaultStep.setName("步骤1");
+            defaultStep.setAgent(availableAgents.isEmpty() ? "DefaultAgent" : availableAgents.get(0).getName());
+            defaultStep.setDescription("执行任务");
+            steps.add(defaultStep);
+            fallback.setSteps(steps);
+            return fallback;
         }
-        step1.setDescription("执行任务");
-        steps.add(step1);
+    }
 
-        definition.setSteps(steps);
-
-        return definition;
+    /**
+     * 从LLM响应中提取JSON字符串
+     * 兼容裸JSON和Markdown代码块（```json ... ``` 或 ``` ... ```）两种格式
+     */
+    private String extractJson(String response) {
+        if (response == null || response.isBlank()) {
+            throw new IllegalArgumentException("LLM响应为空");
+        }
+        String trimmed = response.trim();
+        // 处理 ```json ... ``` 或 ``` ... ``` 格式
+        if (trimmed.startsWith("```")) {
+            int start = trimmed.indexOf('\n');
+            int end = trimmed.lastIndexOf("```");
+            if (start != -1 && end > start) {
+                return trimmed.substring(start + 1, end).trim();
+            }
+        }
+        return trimmed;
     }
 
     /**
