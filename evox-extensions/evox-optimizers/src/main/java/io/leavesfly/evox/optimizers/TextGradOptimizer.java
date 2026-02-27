@@ -54,15 +54,15 @@ public class TextGradOptimizer extends AgentOptimizer {
     private List<StepResult> history;
 
     @Override
-    public String optimizePrompt(String currentPrompt, Map<String, Object> agentConfig, EvaluationFeedback feedback) {
+    public String optimizePrompt(String prompt, Map<String, Object> agentConfig, EvaluationFeedback feedback) {
         // 使用 TextGrad 的梯度下降方法优化 prompt
         // 在真实实现中，这里会使用 optimizerLLM 生成文本梯度并更新 prompt
         String gradient = feedback.getTextualGradient();
         if (gradient != null && !gradient.isEmpty()) {
             // 根据梯度更新 prompt
-            return currentPrompt + " " + gradient;
+            return prompt + " " + gradient;
         }
-        return currentPrompt;
+        return prompt;
     }
 
     @Override
@@ -108,6 +108,8 @@ public class TextGradOptimizer extends AgentOptimizer {
                 double currentScore = metrics.getScore();
                 log.info("Step {} evaluation score: {}", step + 1, currentScore);
 
+                double prevBestScore = bestScore;
+
                 // 检查收敛
                 if (checkConvergence(currentScore)) {
                     log.info("Optimization converged at step {}", step + 1);
@@ -115,8 +117,8 @@ public class TextGradOptimizer extends AgentOptimizer {
                 }
 
                 // 如果有改善则更新最佳 prompt
-                if (currentScore > bestScore - 0.001) { // 小的epsilon用于浮点数比较
-                    bestPrompt = currentPrompt; // 克隆或深拷贝
+                if (currentScore >= prevBestScore) {
+                    bestPrompt = currentPrompt;
                     log.info("Updated best prompt at step {}", step + 1);
                 }
             }

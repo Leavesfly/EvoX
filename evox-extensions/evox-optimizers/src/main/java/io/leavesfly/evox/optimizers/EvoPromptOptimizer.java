@@ -8,6 +8,8 @@ import lombok.NoArgsConstructor;
 import lombok.experimental.SuperBuilder;
 import lombok.extern.slf4j.Slf4j;
 
+import lombok.Builder;
+
 import java.util.*;
 import java.util.concurrent.*;
 import java.util.stream.Collectors;
@@ -44,12 +46,14 @@ public class EvoPromptOptimizer extends AgentOptimizer {
     /**
      * 种群(节点名->提示词列表)
      */
-    private Map<String, String[]> nodePopulations;
+    @Builder.Default
+    private Map<String, String[]> nodePopulations = new HashMap<>();
 
     /**
      * 分数(节点名->分数列表)
      */
-    private Map<String, double[]> nodeScores;
+    @Builder.Default
+    private Map<String, double[]> nodeScores = new HashMap<>();
 
     /**
      * 变异率
@@ -69,15 +73,17 @@ public class EvoPromptOptimizer extends AgentOptimizer {
     /**
      * 最佳个体
      */
-    private Map<String, String> bestIndividuals;
+    @Builder.Default
+    private Map<String, String> bestIndividuals = new HashMap<>();
 
     /**
      * 最佳分数
      */
-    private Map<String, Double> bestScores;
+    @Builder.Default
+    private Map<String, Double> bestScores = new HashMap<>();
 
     @Override
-    public String optimizePrompt(String currentPrompt, Map<String, Object> agentConfig, EvaluationFeedback feedback) {
+    public String optimizePrompt(String prompt, Map<String, Object> agentConfig, EvaluationFeedback feedback) {
         // 使用进化算法优化 prompt
         // 在真实实现中，这里会使用当前的种群和进化操作生成新的 prompt
         if (nodePopulations != null && !nodePopulations.isEmpty()) {
@@ -97,7 +103,7 @@ public class EvoPromptOptimizer extends AgentOptimizer {
                 }
             }
         }
-        return currentPrompt;
+        return prompt;
     }
 
     @Override

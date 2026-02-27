@@ -1,7 +1,6 @@
 package io.leavesfly.evox.optimizers;
 
 import io.leavesfly.evox.memory.shortterm.ShortTermMemory;
-import io.leavesfly.evox.models.spi.LLMProvider;
 import io.leavesfly.evox.optimizers.memory.BaseMemoryOptimizer;
 import io.leavesfly.evox.optimizers.base.EvaluationFeedback;
 import lombok.Data;

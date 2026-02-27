@@ -98,6 +98,8 @@ public class AFlowOptimizer extends WorkflowOptimizer {
                     scoreHistory.removeFirst();
                 }
 
+                double prevBestScore = bestScore;
+
                 // 检查收敛
                 if (checkAFlowConvergence()) {
                     log.info("AFlow optimization converged at step {}", step + 1);
@@ -105,7 +107,7 @@ public class AFlowOptimizer extends WorkflowOptimizer {
                 }
 
                 // 更新最佳工作流
-                if (currentScore > bestScore - 0.001) {
+                if (currentScore >= prevBestScore) {
                     bestScore = currentScore;
                     bestWorkflow = workflow; // Clone or deep copy
                     log.info("Updated best workflow at step {}", step + 1);
@@ -135,12 +137,17 @@ public class AFlowOptimizer extends WorkflowOptimizer {
     public StepResult step(Map<String, Object> kwargs) {
         log.debug("Executing AFlow step {}", currentStep);
 
-        // 简化的步骤实现
-        // 在真实实现中,这将会:
-        // 1. 从缓冲区中采样经验
-        // 2. 使用MCTS探索工作流修改
-        // 3. 评估修改
-        // 4. 选择最佳修改
+        // 使用 optimizeWorkflow 接口契约方法进行工作流优化
+        // 基于当前最新的评估反馈驱动工作流结构调整
+        EvaluationFeedback feedback = EvaluationFeedback.builder()
+                .primaryScore(bestScore)
+                .evalMode("step")
+                .build();
+        Workflow optimized = optimizeWorkflow(workflow, feedback);
+        if (optimized != null && optimized != workflow) {
+            workflow = optimized;
+            log.debug("Workflow updated by optimizeWorkflow at step {}", currentStep);
+        }
 
         String modification = String.format(
                 "AFlow步骤 %d: 使用MCTS探索了 %d 个工作流候选项",
@@ -253,7 +260,7 @@ public class AFlowOptimizer extends WorkflowOptimizer {
         boolean converged = stdDev < 0.01; // 收敛阈值
 
         if (converged) {
-            log.info("AFlow converged: score std dev = {:.4f} < 0.01", stdDev);
+            log.info("AFlow converged: score std dev = {} < 0.01", String.format("%.4f", stdDev));
         }
 
         return converged;

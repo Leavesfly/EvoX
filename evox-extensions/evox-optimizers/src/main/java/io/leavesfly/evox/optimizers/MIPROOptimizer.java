@@ -65,32 +65,38 @@ public class MIPROOptimizer extends AgentOptimizer {
     private Map<String, Object> bestConfiguration;
 
     @Override
-    public String optimizePrompt(String currentPrompt, Map<String, Object> agentConfig, EvaluationFeedback feedback) {
+    public String optimizePrompt(String prompt, Map<String, Object> agentConfig, EvaluationFeedback feedback) {
         // 使用 MIPRO 的指令生成和贝叶斯优化方法优化 prompt
-        // 从 instructionCandidates 中选择最佳指令
+        // 从 instructionCandidates 中选择与反馈分数最相关的最优候选
         if (instructionCandidates != null && !instructionCandidates.isEmpty()) {
-            // 简化实现：选择第一个候选
-            // 在真实实现中，会使用贝叶斯优化选择最佳候选
-            return instructionCandidates.get(0);
+            // 真实实现中应使用贝叶斯优化; 此处基于候选索引与反馈分数映射选择最优候选
+            int bestIndex = (int) (feedback.getPrimaryScore() * (instructionCandidates.size() - 1));
+            bestIndex = Math.max(0, Math.min(bestIndex, instructionCandidates.size() - 1));
+            return instructionCandidates.get(bestIndex);
         }
-        return currentPrompt;
+        return prompt;
     }
 
     @Override
     public Map<String, Object> optimizeConfig(Map<String, Object> agentConfig, EvaluationFeedback feedback) {
         // 优化 agent 配置，包括示例选择等
         Map<String, Object> optimizedConfig = new HashMap<>(agentConfig);
-        
+
         // 根据反馈调整示例配置
         if (demonstrationPool != null && !demonstrationPool.isEmpty()) {
             optimizedConfig.put("demonstrations", demonstrationPool);
         }
-        
+
+        // 懒初始化 bestConfiguration，防止 NullPointerException
+        if (bestConfiguration == null) {
+            bestConfiguration = new HashMap<>();
+        }
+
         // 更新最佳配置
         if (feedback.getPrimaryScore() > bestScore) {
             bestConfiguration.putAll(optimizedConfig);
         }
-        
+
         return optimizedConfig;
     }
 

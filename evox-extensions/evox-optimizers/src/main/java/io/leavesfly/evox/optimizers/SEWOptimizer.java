@@ -180,13 +180,24 @@ public class SEWOptimizer extends WorkflowOptimizer {
     public StepResult step(Map<String, Object> kwargs) {
         // 单步进化
         int generation = currentStep;
-        
+
+        // 使用 optimizeWorkflow 接口契约方法基于当前反馈优化工作流
+        EvaluationFeedback feedback = EvaluationFeedback.builder()
+                .primaryScore(bestScore)
+                .evalMode("step")
+                .build();
+        Workflow optimized = optimizeWorkflow(workflow, feedback);
+        if (optimized != null && optimized != workflow) {
+            workflow = optimized;
+            log.debug("Workflow updated by optimizeWorkflow at step {}", currentStep);
+        }
+
         // 评估并选择
         Object dataset = kwargs.get("dataset");
         if (dataset != null) {
             evaluatePopulation(dataset, kwargs);
         }
-        
+
         List<WorkflowCandidate> elites = selectElites();
         population = evolvePopulation(elites, generation + 1);
         currentStep++;

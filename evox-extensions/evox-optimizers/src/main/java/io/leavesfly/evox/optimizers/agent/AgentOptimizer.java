@@ -66,12 +66,15 @@ public abstract class AgentOptimizer extends Optimizer {
      * 执行 Agent 级优化操作
      * 子类实现具体的优化算法（如 TextGrad 的梯度下降、MIPRO 的贝叶斯优化）
      *
-     * @param currentPrompt 当前 prompt
+     * <p>注意：参数 {@code prompt} 为本次优化的输入提示词（可与字段 {@code currentPrompt} 不同），
+     * 返回值为优化后的提示词，调用方负责决定是否写回 {@code currentPrompt} 字段。</p>
+     *
+     * @param prompt      本次优化的输入提示词
      * @param agentConfig 当前 agent 配置
-     * @param feedback 评估反馈
-     * @return 优化后的 prompt
+     * @param feedback    评估反馈
+     * @return 优化后的提示词
      */
-    public abstract String optimizePrompt(String currentPrompt, Map<String, Object> agentConfig,
+    public abstract String optimizePrompt(String prompt, Map<String, Object> agentConfig,
                                           EvaluationFeedback feedback);
 
     /**

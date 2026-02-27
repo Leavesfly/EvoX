@@ -4,6 +4,8 @@ import io.leavesfly.evox.core.module.BaseModule;
 import io.leavesfly.evox.optimizers.base.EvaluationFeedback;
 import io.leavesfly.evox.optimizers.base.OptimizationContext;
 import io.leavesfly.evox.optimizers.base.OptimizationType;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
@@ -140,15 +142,17 @@ public abstract class Optimizer extends BaseModule {
 
     /**
      * 检查优化是否已收敛。
+     * 若 currentScore >= bestScore 视为有改善（至少没有退化），重置计数器；
+     * 否则计数器+1，超过阈值则认为收敛。
      *
      * @param currentScore 当前分数
      * @return 如果已收敛返回true,否则返回false
      */
     public boolean checkConvergence(double currentScore) {
-        if (currentScore > bestScore) {
+        if (currentScore >= bestScore) {
             bestScore = currentScore;
             stepsWithoutImprovement = 0;
-            log.info("New best score: {}", bestScore);
+            log.info("Score updated to: {}", bestScore);
             return false;
         } else {
             stepsWithoutImprovement++;
@@ -177,52 +181,37 @@ public abstract class Optimizer extends BaseModule {
     }
 
     /**
-     * 从 JSON 字符串恢复 Optimizer 状态
-     * 仅恢复可序列化的基本字段
-     * 
+     * 从 JSON 字符串恢复 Optimizer 状态（仅恢复可序列化的基本字段）
+     * 使用 Jackson 进行安全的 JSON 解析
+     *
      * @param json JSON字符串
      */
     public void fromJson(String json) {
+        if (json == null || json.trim().isEmpty()) {
+            log.warn("Empty JSON string provided for deserialization");
+            return;
+        }
         try {
-            if (json == null || json.trim().isEmpty()) {
-                log.warn("Empty JSON string provided for deserialization");
-                return;
+            ObjectMapper mapper = new ObjectMapper();
+            ObjectNode node = (ObjectNode) mapper.readTree(json);
+
+            if (node.has("maxSteps")) {
+                this.maxSteps = node.get("maxSteps").asInt();
             }
-            
-            String content = json.replaceAll("[{}\"]", "");
-            String[] pairs = content.split(",");
-            
-            for (String pair : pairs) {
-                String[] keyValue = pair.split(":");
-                if (keyValue.length != 2) {
-                    continue;
-                }
-                
-                String key = keyValue[0].trim();
-                String value = keyValue[1].trim();
-                
-                switch (key) {
-                    case "maxSteps":
-                        this.maxSteps = Integer.parseInt(value);
-                        break;
-                    case "currentStep":
-                        this.currentStep = Integer.parseInt(value);
-                        break;
-                    case "bestScore":
-                        this.bestScore = Double.parseDouble(value);
-                        break;
-                    case "type":
-                        log.debug("Deserializing optimizer of type: {}", value);
-                        break;
-                    case "optimizationType":
-                        log.debug("Optimizer optimization type: {}", value);
-                        break;
-                    default:
-                        log.debug("Unknown field in JSON: {}", key);
-                }
+            if (node.has("currentStep")) {
+                this.currentStep = node.get("currentStep").asInt();
             }
-            
-            log.info("Successfully deserialized Optimizer state");
+            if (node.has("bestScore")) {
+                this.bestScore = node.get("bestScore").asDouble();
+            }
+            if (node.has("type")) {
+                log.debug("Deserializing optimizer of type: {}", node.get("type").asText());
+            }
+            if (node.has("optimizationType")) {
+                log.debug("Optimizer optimization type: {}", node.get("optimizationType").asText());
+            }
+
+            log.info("Successfully deserialized Optimizer state from JSON");
         } catch (Exception e) {
             log.error("Failed to deserialize JSON: {}", json, e);
             throw new RuntimeException("Failed to deserialize Optimizer from JSON", e);
