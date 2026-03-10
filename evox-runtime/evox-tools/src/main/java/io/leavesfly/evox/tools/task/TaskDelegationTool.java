@@ -9,61 +9,25 @@ import java.util.*;
 import java.util.concurrent.*;
 
 /**
- * 任务委派工具 (Task Delegation Tool)
- * 
- * <p>允许将复杂任务委派给外部执行器进行处理。执行器可以是任何实现了 {@link TaskExecutor} 接口的对象，
- * 例如另一个 LLM 调用、远程服务、或自定义的任务处理逻辑。</p>
- * 
- * <p><b>核心特性：</b></p>
- * <ul>
- *   <li><b>任务隔离</b>: 每个委派任务在独立线程中执行，互不干扰</li>
- *   <li><b>并发控制</b>: 支持批量任务的并发执行，可配置最大并发数</li>
- *   <li><b>超时保护</b>: 可配置任务执行超时时间，防止长时间阻塞</li>
- *   <li><b>灵活扩展</b>: 通过注入 TaskExecutor 实现自定义执行逻辑</li>
- * </ul>
- * 
- * <p><b>使用场景：</b></p>
- * <ul>
- *   <li>将复杂任务拆分为多个独立子任务并行执行</li>
- *   <li>调研多个相关但独立的问题</li>
- *   <li>执行需要独立上下文的长时间任务</li>
- *   <li>调用外部服务或 API 处理特定任务</li>
- * </ul>
- * 
- * <p><b>使用示例：</b></p>
- * <pre>{@code
- * // 创建任务委派工具
- * TaskDelegationTool tool = new TaskDelegationTool(
- *     "./workspace",
- *     (description, prompt) -> {
- *         // 自定义任务执行逻辑
- *         return callExternalService(prompt);
- *     }
- * );
- * 
- * // 执行单个任务
- * Map<String, Object> params = Map.of(
- *     "description", "数据分析",
- *     "prompt", "分析销售数据并提供洞察"
- * );
- * ToolResult result = tool.execute(params);
- * 
- * // 批量执行多个任务
- * List<Map<String, String>> tasks = List.of(
- *     Map.of("description", "Task1", "prompt", "..."),
- *     Map.of("description", "Task2", "prompt", "...")
- * );
- * List<ToolResult> results = tool.executeBatch(tasks);
- * }</pre>
- * 
- * <p><b>注意事项：</b></p>
- * <ul>
- *   <li>使用前必须通过构造函数或 {@link #setExecutor(TaskExecutor)} 设置执行器</li>
- *   <li>任务执行器应该是线程安全的，因为可能被并发调用</li>
- *   <li>建议为长时间运行的任务设置合理的超时时间</li>
- * </ul>
+ * 任务委派工具。
  *
- * @author EvoX Team
+ * 将复杂任务委派给外部执行器处理，执行器可实现 {@link TaskExecutor}，如 LLM 调用、远程服务或自定义逻辑。
+ *
+ * 核心特性：
+ * - 任务隔离：每个任务在独立线程中执行
+ * - 并发控制：批量任务并发执行，可配置最大并发数
+ * - 超时保护：可配置超时时间，防止长时间阻塞
+ * - 灵活扩展：通过注入 TaskExecutor 自定义执行逻辑
+ *
+ * 使用场景：拆分复杂任务为独立子任务、调研多个独立问题、执行需独立上下文的长时间任务、调用外部 API。
+ *
+ * 使用示例：
+ * {@code TaskDelegationTool tool = new TaskDelegationTool("./workspace", (d, p) -> callService(p));}
+ * {@code ToolResult result = tool.execute(Map.of("description", "数据分析", "prompt", "..."));}
+ * {@code List<ToolResult> results = tool.executeBatch(tasks);}
+ *
+ * 注意事项：使用前需通过构造函数或 {@link #setExecutor} 设置执行器；执行器应线程安全；建议设置合理超时。
+ *
  * @see TaskExecutor
  * @see BaseTool
  */
@@ -84,17 +48,12 @@ public class TaskDelegationTool extends BaseTool {
     /** 任务执行器 */
     private TaskExecutor executor;
 
-    /**
-     * 默认构造函数
-     * 使用当前用户目录作为工作目录，需要后续设置执行器
-     */
+    /** 默认构造，工作目录为当前用户目录，需后续设置执行器 */
     public TaskDelegationTool() {
         this(System.getProperty("user.dir"), null);
     }
 
     /**
-     * 构造函数
-     *
      * @param workingDirectory 工作目录路径
      * @param executor         任务执行器
      */
@@ -111,30 +70,17 @@ public class TaskDelegationTool extends BaseTool {
         this.maxConcurrentTasks = 3;
         this.taskTimeoutSeconds = 300;
 
-        this.inputs = new HashMap<>();
-        this.required = new ArrayList<>();
-
-        // 定义 description 参数
-        Map<String, String> descriptionParam = new HashMap<>();
-        descriptionParam.put("type", "string");
-        descriptionParam.put("description", "A short description of the task (used for tracking and logging)");
-        this.inputs.put("description", descriptionParam);
-        this.required.add("description");
-
-        // 定义 prompt 参数
-        Map<String, String> promptParam = new HashMap<>();
-        promptParam.put("type", "string");
-        promptParam.put("description", "Detailed instructions for the task. Be specific about what to do and what to return.");
-        this.inputs.put("prompt", promptParam);
-        this.required.add("prompt");
+        this.inputs = Map.of(
+                "description", Map.of("type", "string", "description", "A short description of the task (used for tracking and logging)"),
+                "prompt", Map.of("type", "string", "description", "Detailed instructions for the task. Be specific about what to do and what to return.")
+        );
+        this.required = List.of("description", "prompt");
     }
 
     /**
-     * 执行任务委派
-     * 
-     * <p>该方法验证参数，调用配置的执行器处理任务，并在独立线程中运行以避免阻塞。</p>
+     * 执行任务委派。验证参数后调用执行器，在独立线程中运行以避免阻塞。
      *
-     * @param parameters 任务参数，必须包含 "description" 和 "prompt"
+     * @param parameters 任务参数，必须包含 description 和 prompt
      * @return 任务执行结果
      */
     @Override
@@ -157,9 +103,7 @@ public class TaskDelegationTool extends BaseTool {
     }
 
     /**
-     * 使用执行器执行任务
-     * 
-     * <p>在独立线程中执行任务，支持超时控制。</p>
+     * 使用执行器执行任务。在独立线程中运行，支持超时控制。
      *
      * @param taskDescription 任务描述
      * @param taskPrompt      任务详细指令
@@ -204,22 +148,10 @@ public class TaskDelegationTool extends BaseTool {
     }
 
     /**
-     * 批量并发执行多个任务
-     * 
-     * <p>使用线程池并发执行多个任务，每个任务独立运行。并发数受 {@link #maxConcurrentTasks} 限制。</p>
-     * 
-     * <p><b>使用示例：</b></p>
-     * <pre>{@code
-     * List<Map<String, String>> tasks = List.of(
-     *     Map.of("description", "分析用户行为", "prompt", "..."),
-     *     Map.of("description", "生成报告", "prompt", "..."),
-     *     Map.of("description", "发送通知", "prompt", "...")
-     * );
-     * List<ToolResult> results = tool.executeBatch(tasks);
-     * }</pre>
+     * 批量并发执行多个任务。使用线程池，并发数受 maxConcurrentTasks 限制。
      *
-     * @param tasks 任务列表，每个任务包含 "description" 和 "prompt" 字段
-     * @return 所有任务的执行结果列表，顺序与输入任务列表一致
+     * @param tasks 任务列表，每项包含 description 和 prompt
+     * @return 执行结果列表，顺序与输入一致
      */
     public List<ToolResult> executeBatch(List<Map<String, String>> tasks) {
         if (tasks == null || tasks.isEmpty()) {
