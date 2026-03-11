@@ -89,17 +89,6 @@
             <artifactId>spring-boot-starter</artifactId>
         </dependency>
 
-        <!-- Logging -->
-        <dependency>
-            <groupId>org.slf4j</groupId>
-            <artifactId>slf4j-api</artifactId>
-        </dependency>
-
-        <dependency>
-            <groupId>ch.qos.logback</groupId>
-            <artifactId>logback-classic</artifactId>
-        </dependency>
-
         <!-- Netty macOS DNS resolver (消除 macOS 上的 DNS 警告) -->
         <dependency>
             <groupId>io.netty</groupId>

@@ -13,26 +13,20 @@ import java.util.*;
 /**
  * 技能基类（Skill）— 声明式 Prompt 模板。
  *
- * <p>对齐 Claude Code 的 Skill 标准：
- * Skill 是 <b>prompt-based conversation and execution context modifier</b>，
- * 而非可执行代码。当 Skill 被激活时，它通过注入 prompt 到对话上下文、
- * 修改工具权限来引导 LLM 完成特定任务。
+ * 对齐 Claude Code 的 Skill 标准：Skill 是 prompt-based conversation and execution context modifier，
+ * 而非可执行代码。当 Skill 被激活时，通过注入 prompt 到对话上下文、修改工具权限来引导 LLM 完成特定任务。
  *
- * <p>Skill 与 Tool 的区别：
- * <ul>
- *   <li>Tool：单一的原子操作（如读文件、执行命令），有 execute() 方法</li>
- *   <li>Skill：面向特定场景的 prompt 模板（如代码审查、写测试），无 execute() 方法</li>
- * </ul>
+ * Skill 与 Tool 的区别：
+ * - Tool：单一的原子操作（如读文件、执行命令），有 execute() 方法
+ * - Skill：面向特定场景的 prompt 模板（如代码审查、写测试），无 execute() 方法
  *
- * <p>每个 Skill 包含：
- * <ul>
- *   <li>专用的 prompt 模板（定义 Skill 的行为和输出格式）</li>
- *   <li>预批准工具列表（Skill 激活期间自动批准的工具）</li>
- *   <li>when_to_use 描述（LLM 判断何时使用此 Skill 的依据）</li>
- *   <li>可选的模型覆盖</li>
- * </ul>
+ * 每个 Skill 包含：
+ * - 专用的 prompt 模板（定义 Skill 的行为和输出格式）
+ * - 预批准工具列表（Skill 激活期间自动批准的工具）
+ * - when_to_use 描述（LLM 判断何时使用此 Skill 的依据）
+ * - 可选的模型覆盖
  *
- * <p>Skill 可以从 SKILL.md 文件加载（推荐），也可以通过代码构建。
+ * Skill 可从 SKILL.md 文件加载（推荐），也可通过代码构建。
  *
  * @see SkillDefinitionFile
  * @see SkillLoader
@@ -84,48 +78,41 @@ public class BaseSkill extends BaseModule {
     private boolean builtin;
 
     /**
-     * 激活 Skill — 生成上下文注入结果。
-     *
-     * <p>对齐 Claude Code 的 Skill 执行机制：
-     * 不直接执行业务逻辑，而是返回 {@link SkillActivationResult}，
-     * 包含要注入到对话上下文中的消息和执行上下文修改。
+     * 激活 Skill，生成上下文注入结果。
+     * 不直接执行业务逻辑，而是返回 SkillActivationResult，包含要注入到对话上下文中的消息和执行上下文修改。
      *
      * @return Skill 激活结果
      */
     public SkillActivationResult activate() {
-        String metadataMessage = "<command-message>The \"" + name + "\" skill is loading</command-message>\n"
-                + "<command-name>" + name + "</command-name>";
-
+        String metadataMessage = buildMetadataMessage();
         String modelOverride = isModelInherit() ? null : model;
+        return SkillActivationResult.success(name, metadataMessage, systemPrompt, allowedTools, modelOverride);
+    }
 
-        return SkillActivationResult.success(
-                name,
-                metadataMessage,
-                systemPrompt,
-                allowedTools,
-                modelOverride
-        );
+    private String buildMetadataMessage() {
+        return "<command-message>The \"" + name + "\" skill is loading</command-message>\n"
+                + "<command-name>" + name + "</command-name>";
     }
 
     /**
      * 生成 Skill 在 SkillTool description 中的展示文本。
-     * 对齐 Claude Code 的 formatSkill() 逻辑。
      *
      * @return 格式化的 Skill 列表条目
      */
     public String toSkillListEntry() {
-        StringBuilder entry = new StringBuilder();
-        entry.append("\"").append(name).append("\": ");
-        if (description != null && !description.isBlank()) {
-            entry.append(description);
+        boolean hasDesc = isNotBlank(description);
+        boolean hasWhen = isNotBlank(whenToUse);
+        if (!hasDesc && !hasWhen) {
+            return "\"" + name + "\": ";
         }
-        if (whenToUse != null && !whenToUse.isBlank()) {
-            if (description != null && !description.isBlank()) {
-                entry.append(" - ");
-            }
-            entry.append(whenToUse);
-        }
-        return entry.toString();
+        String desc = hasDesc ? description : "";
+        String when = hasWhen ? whenToUse : "";
+        String separator = hasDesc && hasWhen ? " - " : "";
+        return "\"" + name + "\": " + desc + separator + when;
+    }
+
+    private static boolean isNotBlank(String s) {
+        return s != null && !s.isBlank();
     }
 
     /**
@@ -136,17 +123,16 @@ public class BaseSkill extends BaseModule {
     }
 
     /**
-     * 检查此 Skill 是否可以被 SkillTool 发现和调用。
-     * 对齐 Claude Code 的过滤逻辑：必须有 description 或 whenToUse。
+     * 检查此 Skill 是否可被 SkillTool 发现和调用。
+     * 必须有 description 或 whenToUse 之一。
      */
     public boolean isDiscoverable() {
-        return (description != null && !description.isBlank())
-                || (whenToUse != null && !whenToUse.isBlank());
+        return isNotBlank(description) || isNotBlank(whenToUse);
     }
 
     /**
      * 获取此 Skill 所需的工具列表（兼容旧 API）。
-     * 等同于 {@link #getAllowedTools()}。
+     * 等同于 getAllowedTools()。
      */
     public List<String> getRequiredTools() {
         return allowedTools;
@@ -207,7 +193,7 @@ public class BaseSkill extends BaseModule {
     }
 
     /**
-     * 从 {@link SkillDefinitionFile} 构建 BaseSkill 实例。
+     * 从 SkillDefinitionFile 构建 BaseSkill 实例。
      *
      * @param definition SKILL.md 解析后的定义
      * @return BaseSkill 实例
@@ -219,7 +205,8 @@ public class BaseSkill extends BaseModule {
         skill.setWhenToUse(definition.getWhenToUse());
         skill.setSystemPrompt(definition.getPromptContent());
         skill.setAllowedTools(definition.getAllowedTools() != null
-                ? new ArrayList<>(definition.getAllowedTools()) : new ArrayList<>());
+                ? new ArrayList<>(definition.getAllowedTools())
+                : new ArrayList<>());
         skill.setModel(definition.getModel());
         skill.setSourcePath(definition.getSourcePath());
         skill.setBuiltin(definition.isBuiltin());

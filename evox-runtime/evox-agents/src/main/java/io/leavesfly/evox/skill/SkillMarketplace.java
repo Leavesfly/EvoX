@@ -11,8 +11,8 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
 /**
- * Skills 市场
- * 管理 Skill 的发现、安装、搜索
+ * Skill 市场。
+ * 管理 Skill 的发现、安装、搜索和分类。
  */
 @Slf4j
 public class SkillMarketplace {
@@ -77,6 +77,9 @@ public class SkillMarketplace {
                 .collect(Collectors.toList());
     }
 
+    /**
+     * 按关键词搜索 Skill（匹配名称、描述、标签）。
+     */
     public List<SkillMetadata> searchSkills(String keyword) {
         if (keyword == null || keyword.isBlank()) {
             return getAvailableSkills();
@@ -84,14 +87,19 @@ public class SkillMarketplace {
 
         String lowerKeyword = keyword.toLowerCase();
         return availableSkills.values().stream()
-                .filter(metadata -> {
-                    boolean matchesName = metadata.getName() != null && metadata.getName().toLowerCase().contains(lowerKeyword);
-                    boolean matchesDesc = metadata.getDescription() != null && metadata.getDescription().toLowerCase().contains(lowerKeyword);
-                    boolean matchesTags = metadata.getTags() != null && metadata.getTags().stream()
-                            .anyMatch(tag -> tag.toLowerCase().contains(lowerKeyword));
-                    return matchesName || matchesDesc || matchesTags;
-                })
+                .filter(metadata -> matchesKeyword(metadata, lowerKeyword))
                 .collect(Collectors.toList());
+    }
+
+    private boolean matchesKeyword(SkillMetadata metadata, String lowerKeyword) {
+        return containsIgnoreCase(metadata.getName(), lowerKeyword)
+                || containsIgnoreCase(metadata.getDescription(), lowerKeyword)
+                || (metadata.getTags() != null && metadata.getTags().stream()
+                        .anyMatch(tag -> containsIgnoreCase(tag, lowerKeyword)));
+    }
+
+    private static boolean containsIgnoreCase(String text, String keyword) {
+        return text != null && text.toLowerCase().contains(keyword);
     }
 
     public List<SkillMetadata> getSkillsByCategory(String category) {

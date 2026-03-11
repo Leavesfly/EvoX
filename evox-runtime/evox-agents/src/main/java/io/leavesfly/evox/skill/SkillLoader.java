@@ -13,25 +13,16 @@ import java.util.stream.Stream;
 /**
  * SKILL.md 文件加载器。
  *
- * <p>对齐 Claude Code 的 Skill 加载机制：
- * <ul>
- *   <li>从文件系统目录扫描 SKILL.md 文件</li>
- *   <li>从 classpath 资源加载内置 SKILL.md 文件</li>
- *   <li>解析 YAML frontmatter + Markdown 正文</li>
- * </ul>
+ * 支持：
+ * - 从文件系统目录扫描 SKILL.md 文件
+ * - 从 classpath 资源加载内置 SKILL.md 文件
+ * - 解析 YAML frontmatter + Markdown 正文
  *
- * <p>支持两种目录结构：
- * <ol>
- *   <li>子目录模式：{skillsDir}/{skillName}/SKILL.md</li>
- *   <li>根文件模式：{skillsDir}/SKILL.md（Skill 名称从 frontmatter 中读取）</li>
- * </ol>
+ * 目录结构：
+ * - 子目录模式：{skillsDir}/{skillName}/SKILL.md
+ * - 根文件模式：{skillsDir}/SKILL.md（Skill 名称从 frontmatter 读取）
  *
- * <p>扫描路径优先级（对齐 Claude Code）：
- * <ol>
- *   <li>项目级：{workingDirectory}/.claude/skills/</li>
- *   <li>用户级：~/.evox/skills/</li>
- *   <li>内置级：classpath resources/skills/</li>
- * </ol>
+ * 扫描路径优先级：项目级 > 用户级 > 内置级
  */
 @Slf4j
 public class SkillLoader {

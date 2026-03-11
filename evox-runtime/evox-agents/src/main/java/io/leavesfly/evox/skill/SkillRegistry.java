@@ -10,13 +10,11 @@ import java.util.concurrent.ConcurrentHashMap;
  * 技能注册中心。
  * 管理所有可用的 Skill，提供注册、发现和激活能力。
  *
- * <p>对齐 Claude Code 的 Skill 管理机制：
- * <ul>
- *   <li>支持从 SKILL.md 文件加载 Skill（推荐方式）</li>
- *   <li>支持代码注册 Skill（兼容旧方式）</li>
- *   <li>支持从 classpath 加载内置 Skill</li>
- *   <li>支持从项目目录加载自定义 Skill</li>
- * </ul>
+ * 支持：
+ * - 从 SKILL.md 文件加载 Skill（推荐）
+ * - 代码注册 Skill（兼容旧方式）
+ * - 从 classpath 加载内置 Skill
+ * - 从项目目录加载自定义 Skill
  *
  * @see BaseSkill
  * @see SkillLoader
@@ -143,10 +141,7 @@ public class SkillRegistry {
     }
 
     /**
-     * 激活技能 — 返回上下文注入结果。
-     *
-     * <p>对齐 Claude Code 的 Skill 执行机制：
-     * 不直接执行业务逻辑，而是返回 {@link SkillActivationResult}。
+     * 激活技能，返回上下文注入结果。
      *
      * @param skillName 技能名称
      * @return 激活结果
@@ -154,8 +149,7 @@ public class SkillRegistry {
     public SkillActivationResult activateSkill(String skillName) {
         BaseSkill skill = skills.get(skillName);
         if (skill == null) {
-            return SkillActivationResult.failure("Skill not found: " + skillName
-                    + ". Available skills: " + String.join(", ", skills.keySet()));
+            return SkillActivationResult.failure(buildSkillNotFoundMessage(skillName));
         }
 
         try {
@@ -169,11 +163,13 @@ public class SkillRegistry {
         }
     }
 
+    private String buildSkillNotFoundMessage(String skillName) {
+        return "Skill not found: " + skillName + ". Available skills: " + String.join(", ", skills.keySet());
+    }
+
     /**
      * 执行技能（兼容旧 API）。
-     *
-     * <p>通过激活 Skill 并将 SkillContext 中的输入作为 prompt 的一部分，
-     * 返回 SkillResult。此方法桥接旧的执行模型和新的声明式激活模型。
+     * 通过激活 Skill 并返回 SkillResult，桥接旧的执行模型和新的声明式激活模型。
      *
      * @param skillName 技能名称
      * @param context   执行上下文
@@ -182,8 +178,7 @@ public class SkillRegistry {
     public BaseSkill.SkillResult executeSkill(String skillName, BaseSkill.SkillContext context) {
         BaseSkill skill = skills.get(skillName);
         if (skill == null) {
-            return BaseSkill.SkillResult.failure("Skill not found: " + skillName
-                    + ". Available skills: " + String.join(", ", skills.keySet()));
+            return BaseSkill.SkillResult.failure(buildSkillNotFoundMessage(skillName));
         }
 
         try {
@@ -205,25 +200,24 @@ public class SkillRegistry {
     }
 
     /**
-     * 生成所有技能的描述文本（用于注入到系统提示词中）
+     * 生成所有技能的描述文本（用于注入到系统提示词中）。
      */
     public String generateSkillDescriptions() {
         if (skills.isEmpty()) {
             return "";
         }
 
-        StringBuilder descriptions = new StringBuilder();
-        descriptions.append("## Available Skills\n\n");
-        descriptions.append("Skills are prompt-based capabilities that inject expert instructions ")
+        StringBuilder sb = new StringBuilder();
+        sb.append("## Available Skills\n\n");
+        sb.append("Skills are prompt-based capabilities that inject expert instructions ")
                 .append("into the conversation context. Use the Skill tool to activate a skill.\n\n");
 
-        for (BaseSkill skill : skills.values()) {
-            if (skill.isDiscoverable()) {
-                descriptions.append("- ").append(skill.toSkillListEntry()).append("\n");
-            }
-        }
+        skills.values().stream()
+                .filter(BaseSkill::isDiscoverable)
+                .map(BaseSkill::toSkillListEntry)
+                .forEach(entry -> sb.append("- ").append(entry).append("\n"));
 
-        return descriptions.toString();
+        return sb.toString();
     }
 
     /**

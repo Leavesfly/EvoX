@@ -11,27 +11,19 @@ import java.util.List;
 /**
  * SKILL.md 文件解析后的数据结构。
  *
- * <p>对齐 Claude Code 的 Skill 标准：
- * <ul>
- *   <li>YAML frontmatter 定义元数据（name, description, when_to_use, allowed-tools, model）</li>
- *   <li>Markdown 正文作为 Skill 的 prompt 模板</li>
- * </ul>
+ * 结构：YAML frontmatter 定义元数据（name, description, when_to_use, allowed-tools, model），
+ * Markdown 正文作为 Skill 的 prompt 模板。
  *
- * <p>示例 SKILL.md 格式：
- * <pre>
+ * 示例 SKILL.md 格式：
  * ---
  * name: code_review
  * description: "Review code for bugs, security issues, performance problems"
  * when_to_use: "When user asks to review, check, or audit code quality"
- * allowed-tools:
- *   - file_system
- *   - grep
- *   - glob
+ * allowed-tools: [file_system, grep, glob]
  * model: inherit
  * ---
  *
  * You are an expert code reviewer...
- * </pre>
  */
 @Data
 @Builder

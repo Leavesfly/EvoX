@@ -8,25 +8,14 @@ import lombok.extern.slf4j.Slf4j;
 import java.util.*;
 
 /**
- * Skill Meta-Tool — 对齐 Claude Code 的 Skill tool 架构。
+ * Skill Meta-Tool，作为 Skill 系统与 LLM function calling 之间的桥梁。
  *
- * <p>SkillTool 是一个 meta-tool：它不直接执行业务逻辑，
- * 而是作为 Skill 系统和 LLM function calling 之间的桥梁。
- *
- * <p>核心机制（对齐 Claude Code）：
- * <ol>
- *   <li>SkillTool 出现在 LLM 的 tools 数组中</li>
- *   <li>其 description 动态嵌入 {@code <available_skills>} 列表</li>
- *   <li>LLM 通过推理决定调用哪个 skill（传入 command 参数）</li>
- *   <li>SkillTool 返回 {@link SkillActivationResult}，包含上下文注入指令</li>
- *   <li>调用方（如 CodingAgent）负责执行上下文注入和权限修改</li>
- * </ol>
- *
- * <p>与旧版的区别：
- * <ul>
- *   <li>旧版：直接执行 Skill 并返回结果</li>
- *   <li>新版：返回上下文修改指令，由调用方注入对话上下文</li>
- * </ul>
+ * SkillTool 不直接执行业务逻辑，核心机制：
+ * 1. 出现在 LLM 的 tools 数组中
+ * 2. description 动态嵌入 available_skills 列表
+ * 3. LLM 通过推理决定调用哪个 skill（传入 command 参数）
+ * 4. 返回 SkillActivationResult，包含上下文注入指令
+ * 5. 调用方负责执行上下文注入和权限修改
  *
  * @see BaseSkill
  * @see SkillActivationResult
@@ -58,10 +47,8 @@ public class SkillTool extends BaseTool {
     }
 
     /**
-     * 动态生成 tool description，嵌入 {@code <available_skills>} 列表。
-     * 对齐 Claude Code 的 Skill tool description 生成逻辑。
-     *
-     * <p>只有满足 {@link BaseSkill#isDiscoverable()} 的 Skill 才会出现在列表中。
+     * 动态生成 tool description，嵌入 available_skills 列表。
+     * 仅包含满足 isDiscoverable 的 Skill。
      */
     @Override
     public String getDescription() {
@@ -69,16 +56,13 @@ public class SkillTool extends BaseTool {
         desc.append("Activate a skill by name. Skills are specialized prompt-based capabilities ")
                 .append("that inject expert instructions into the conversation context. ")
                 .append("Each skill provides domain-specific guidance for tasks like code review, ")
-                .append("writing tests, refactoring, etc.\n\n");
-        desc.append("<available_skills>\n");
+                .append("writing tests, refactoring, etc.\n\n")
+                .append("<available_skills>\n");
 
-        List<BaseSkill> discoverableSkills = skillRegistry.getAllSkills().stream()
+        skillRegistry.getAllSkills().stream()
                 .filter(BaseSkill::isDiscoverable)
-                .toList();
-
-        for (BaseSkill skill : discoverableSkills) {
-            desc.append(skill.toSkillListEntry()).append("\n");
-        }
+                .map(BaseSkill::toSkillListEntry)
+                .forEach(entry -> desc.append(entry).append("\n"));
 
         desc.append("</available_skills>");
         return desc.toString();
@@ -86,9 +70,7 @@ public class SkillTool extends BaseTool {
 
     /**
      * 激活指定 Skill。
-     *
-     * <p>不直接执行业务逻辑，而是返回 {@link SkillActivationResult} 的序列化结果。
-     * 调用方（如 CodingAgent）需要解析此结果并执行上下文注入。
+     * 不直接执行业务逻辑，返回 SkillActivationResult 的序列化结果，由调用方解析并执行上下文注入。
      *
      * @param parameters 包含 "command" 参数（Skill 名称）
      * @return 包含 SkillActivationResult 序列化数据的 ToolResult
@@ -96,31 +78,40 @@ public class SkillTool extends BaseTool {
     @Override
     public ToolResult execute(Map<String, Object> parameters) {
         validateParameters(parameters);
-        String command = getParameter(parameters, "command", "");
+        String skillName = extractSkillName(getParameter(parameters, "command", ""));
 
-        if (command.isBlank()) {
-            return ToolResult.failure("'command' parameter is required. "
-                    + "Available skills: " + String.join(", ", skillRegistry.getSkillNames()));
+        if (skillName.isBlank()) {
+            return ToolResult.failure(buildCommandRequiredMessage());
         }
-
-        // 去除可能的前导斜杠（对齐 Claude Code 的 command.trim().replace(/^\//, "")）
-        String skillName = command.trim().replaceFirst("^/", "");
 
         BaseSkill skill = skillRegistry.getSkill(skillName);
         if (skill == null) {
-            return ToolResult.failure("Unknown skill: " + skillName
-                    + ". Available skills: " + String.join(", ", skillRegistry.getSkillNames()));
+            return ToolResult.failure("Unknown skill: " + skillName + ". " + buildAvailableSkillsSuffix());
         }
 
         log.info("Activating skill: {}", skillName);
-
         SkillActivationResult activation = skill.activate();
 
         if (!activation.isSuccess()) {
             return ToolResult.failure("Skill activation failed: " + activation.getError());
         }
 
-        // 将 SkillActivationResult 序列化为 Map 返回给调用方
+        return ToolResult.success(toResultData(activation));
+    }
+
+    private String extractSkillName(String command) {
+        return command.trim().replaceFirst("^/", "");
+    }
+
+    private String buildCommandRequiredMessage() {
+        return "'command' parameter is required. " + buildAvailableSkillsSuffix();
+    }
+
+    private String buildAvailableSkillsSuffix() {
+        return "Available skills: " + String.join(", ", skillRegistry.getSkillNames());
+    }
+
+    private Map<String, Object> toResultData(SkillActivationResult activation) {
         Map<String, Object> resultData = new LinkedHashMap<>();
         resultData.put("skillName", activation.getSkillName());
         resultData.put("success", true);
@@ -130,12 +121,11 @@ public class SkillTool extends BaseTool {
         if (activation.getModelOverride() != null) {
             resultData.put("modelOverride", activation.getModelOverride());
         }
-
-        return ToolResult.success(resultData);
+        return resultData;
     }
 
     /**
-     * 覆盖 getToolSchema 以使用动态 description。
+     * 使用动态生成的 description 构建 tool schema。
      */
     @Override
     public Map<String, Object> getToolSchema() {

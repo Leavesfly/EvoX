@@ -53,18 +53,6 @@
             <scope>provided</scope>
         </dependency>
 
-        <!-- Guava -->
-        <dependency>
-            <groupId>com.google.guava</groupId>
-            <artifactId>guava</artifactId>
-        </dependency>
-
-        <!-- SLF4J API -->
-        <dependency>
-            <groupId>org.slf4j</groupId>
-            <artifactId>slf4j-api</artifactId>
-        </dependency>
-
         <!-- Project Reactor for reactive programming -->
         <dependency>
             <groupId>io.projectreactor</groupId>

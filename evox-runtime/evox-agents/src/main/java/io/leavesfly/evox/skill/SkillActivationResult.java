@@ -11,19 +11,14 @@ import java.util.List;
 /**
  * Skill 激活结果。
  *
- * <p>对齐 Claude Code 的 Skill 执行机制：
  * Skill 不直接执行业务逻辑，而是返回上下文修改指令，包括：
- * <ul>
- *   <li>要注入到对话历史中的消息（metadata message + skill prompt）</li>
- *   <li>预批准的工具列表（修改执行上下文的权限）</li>
- *   <li>模型覆盖（修改执行上下文的模型选择）</li>
- * </ul>
+ * - 要注入到对话历史中的消息（metadata message + skill prompt）
+ * - 预批准的工具列表（修改执行上下文的权限）
+ * - 模型覆盖（修改执行上下文的模型选择）
  *
- * <p>对话注入遵循 Claude Code 的双消息机制：
- * <ol>
- *   <li>Message 1 (isMeta=false)：用户可见的状态消息（如 "The code_review skill is loading"）</li>
- *   <li>Message 2 (isMeta=true)：隐藏的 Skill prompt，仅发送给 LLM</li>
- * </ol>
+ * 对话注入遵循双消息机制：
+ * 1. Message 1 (isMeta=false)：用户可见的状态消息
+ * 2. Message 2 (isMeta=true)：隐藏的 Skill prompt，仅发送给 LLM
  */
 @Data
 @Builder
@@ -40,7 +35,6 @@ public class SkillActivationResult {
 
     /**
      * 用户可见的元数据消息（isMeta=false）。
-     * 格式示例：{@code <command-message>The "code_review" skill is loading</command-message>}
      */
     private String metadataMessage;
 
