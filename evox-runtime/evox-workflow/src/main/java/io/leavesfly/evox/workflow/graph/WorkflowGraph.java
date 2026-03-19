@@ -273,8 +273,17 @@ public class WorkflowGraph {
             throw new IllegalStateException("Workflow graph has no terminal nodes");
         }
         
-        // 检查是否有孤立节点
+        // 收集所有被 LOOP 节点作为循环体引用的节点 ID（它们是 LOOP 内部节点，不参与主 DAG 边）
+        Set<String> loopBodyNodeIds = nodes.values().stream()
+                .filter(n -> n.getNodeType() == WorkflowNode.NodeType.LOOP && n.getLoopBodyNodeId() != null)
+                .map(WorkflowNode::getLoopBodyNodeId)
+                .collect(Collectors.toSet());
+
+        // 检查是否有孤立节点（排除被 LOOP 引用的循环体节点）
         for (WorkflowNode node : nodes.values()) {
+            if (loopBodyNodeIds.contains(node.getNodeId())) {
+                continue; // 循环体节点由 LOOP 内部调度，不参与主 DAG，跳过孤立检测
+            }
             if (node.getPredecessors().isEmpty() && node.getSuccessors().isEmpty() && nodes.size() > 1) {
                 throw new IllegalStateException("Workflow graph has isolated node: " + node.getName());
             }

@@ -130,6 +130,9 @@ public class AuctionFramework<T> extends MultiAgentFramework {
         graph.addNode(roundNode);
         graph.addNode(resultNode);
 
+        // 添加边：LOOP -> 循环体节点（避免 auction_round 被判定为孤立节点）
+        graph.addEdge(loopNode.getNodeId(), roundNode.getNodeId());
+
         // 添加边：LOOP 结束后执行结果节点
         graph.addEdge(loopNode.getNodeId(), resultNode.getNodeId());
 

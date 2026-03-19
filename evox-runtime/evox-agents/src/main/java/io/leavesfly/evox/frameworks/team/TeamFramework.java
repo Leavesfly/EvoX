@@ -166,6 +166,10 @@ public class TeamFramework<T> extends MultiAgentFramework {
         );
         graph.addNode(aggregateNode);
 
+        // 将每个成员节点连接到并行协调节点，再连接到聚合节点
+        for (String memberNodeId : memberNodeIds) {
+            graph.addEdge(memberNodeId, parallelNode.getNodeId());
+        }
         graph.addEdge(parallelNode.getNodeId(), aggregateNode.getNodeId());
     }
 
@@ -257,6 +261,10 @@ public class TeamFramework<T> extends MultiAgentFramework {
         );
         graph.addNode(aggregateNode);
 
+        // 将每个成员节点连接到并行协调节点，再连接到聚合节点
+        for (String memberNodeId : memberNodeIds) {
+            graph.addEdge(memberNodeId, parallelNode.getNodeId());
+        }
         graph.addEdge(parallelNode.getNodeId(), aggregateNode.getNodeId());
     }
 
@@ -294,24 +302,42 @@ public class TeamFramework<T> extends MultiAgentFramework {
             );
             graph.addNode(subordinateNode);
             subordinateNodeIds.add(subordinateNode.getNodeId());
+            
+            // 将 subordinate 节点连接到 leader_plan，形成依赖关系
+            graph.addEdge(leaderPlanNode.getNodeId(), subordinateNode.getNodeId());
         }
 
-        WorkflowNode parallelNode = createParallelNode(
-            "parallel_execution",
-            WorkflowNode.ParallelStrategy.ALL
-        );
-        parallelNode.setParallelNodes(subordinateNodeIds);
-        graph.addNode(parallelNode);
+        // 如果有下属节点，创建并行执行节点和聚合节点
+        if (!subordinateNodeIds.isEmpty()) {
+            WorkflowNode parallelNode = createParallelNode(
+                "parallel_execution",
+                WorkflowNode.ParallelStrategy.ALL
+            );
+            parallelNode.setParallelNodes(subordinateNodeIds);
+            graph.addNode(parallelNode);
 
-        WorkflowNode aggregateNode = createCollectNode(
-            "aggregate",
-            "TeamAggregateHandler",
-            Map.of()
-        );
-        graph.addNode(aggregateNode);
+            WorkflowNode aggregateNode = createCollectNode(
+                "aggregate",
+                "TeamAggregateHandler",
+                Map.of()
+            );
+            graph.addNode(aggregateNode);
 
-        graph.addEdge(leaderPlanNode.getNodeId(), parallelNode.getNodeId());
-        graph.addEdge(parallelNode.getNodeId(), aggregateNode.getNodeId());
+            // 连接所有下属节点到并行节点
+            for (String subordinateNodeId : subordinateNodeIds) {
+                graph.addEdge(subordinateNodeId, parallelNode.getNodeId());
+            }
+            graph.addEdge(parallelNode.getNodeId(), aggregateNode.getNodeId());
+        } else {
+            // 如果没有下属节点，只有 leader，创建一个简单的聚合节点
+            WorkflowNode aggregateNode = createCollectNode(
+                "aggregate",
+                "TeamAggregateHandler",
+                Map.of()
+            );
+            graph.addNode(aggregateNode);
+            graph.addEdge(leaderPlanNode.getNodeId(), aggregateNode.getNodeId());
+        }
     }
 
     @Override
@@ -347,10 +373,10 @@ public class TeamFramework<T> extends MultiAgentFramework {
             Map<String, Object> inputs = new HashMap<>();
             inputs.put("task", task);
             inputs.put("team_members", members);
-            inputs.put("team_config", config);
-            inputs.put("execution_history", executionHistory);
+            inputs.put("team_config", config != null ? config : TeamConfig.builder().build());
+            inputs.put("execution_history", executionHistory != null ? executionHistory : new ArrayList<>());
             inputs.put("member_results", new ArrayList<>());
-            inputs.put("previous_result", null);
+            inputs.put("previous_result", "");  // ConcurrentHashMap 不允许 null 值，使用空字符串代替
             inputs.put("collaboration_converged", false);
             inputs.put("round_count", 0);
             inputs.put("round_results", new ArrayList<>());

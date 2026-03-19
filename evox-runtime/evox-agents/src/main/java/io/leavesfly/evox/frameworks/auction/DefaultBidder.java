@@ -29,13 +29,11 @@ public class DefaultBidder<T> extends Agent implements Bidder<T> {
     /**
      * 竞价者对物品的估值
      */
-    @Builder.Default
     private double valuation = 0.0;
 
     /**
      * 竞价者的预算限制
      */
-    @Builder.Default
     private double budget = Double.MAX_VALUE;
 
     @Override

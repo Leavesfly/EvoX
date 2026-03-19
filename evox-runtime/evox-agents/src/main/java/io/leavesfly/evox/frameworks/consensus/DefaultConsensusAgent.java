@@ -27,7 +27,6 @@ public class DefaultConsensusAgent<T> extends Agent implements ConsensusFramewor
     /**
      * 智能体权重
      */
-    @Builder.Default
     private double weight = 1.0;
 
     @Override
@@ -66,8 +65,11 @@ public class DefaultConsensusAgent<T> extends Agent implements ConsensusFramewor
         // 4. 输出引导
         sb.append("\n\n请直接输出你的提议内容：");
 
-        String response = getLlm().generate(sb.toString());
-        log.debug("Consensus agent [{}] proposed: {}", getName(), response);
+        String prompt = sb.toString();
+        log.info("=== [{}] LLM 调用 ===\n{}", getName(), prompt);
+
+        String response = getLlm().generate(prompt);
+        log.info("=== [{}] LLM 回复 ===\n{}", getName(), response);
 
         // 强制转换类型 (通常 T 为 String)
         return (T) response;

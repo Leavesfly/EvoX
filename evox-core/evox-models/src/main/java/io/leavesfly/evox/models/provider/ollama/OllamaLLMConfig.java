@@ -5,6 +5,8 @@ import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.experimental.SuperBuilder;
 
+import java.time.Duration;
+
 /**
  * Ollama LLM 配置
  * 用于连接本地或远程 Ollama 服务
@@ -30,6 +32,8 @@ public class OllamaLLMConfig extends LLMConfig {
         setMaxTokens(5000);
         // Ollama 本地服务无需 API Key
         setApiKey("ollama");
+        // 本地模型推理较慢，设置更长的超时时间
+        setTimeout(Duration.ofSeconds(300));
     }
 
     /**

@@ -3,7 +3,6 @@ package io.leavesfly.evox.frameworks.team;
 import io.leavesfly.evox.agents.base.Agent;
 import io.leavesfly.evox.core.message.Message;
 import io.leavesfly.evox.core.message.MessageType;
-import lombok.Builder;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.experimental.SuperBuilder;
@@ -31,7 +30,6 @@ public class DefaultTeamMember extends Agent implements TeamMember<String> {
     /**
      * 成员技能列表
      */
-    @Builder.Default
     private List<String> skills = List.of();
 
     @Override
@@ -55,7 +53,7 @@ public class DefaultTeamMember extends Agent implements TeamMember<String> {
               .append("\n\n");
         }
         sb.append(String.format("你的当前团队职责是：%s\n", role.name()));
-        if (!skills.isEmpty()) {
+        if (skills != null && !skills.isEmpty()) {
             sb.append(String.format("你的专业技能包括：%s\n", String.join(", ", skills)));
         }
         sb.append("\n");
@@ -94,8 +92,20 @@ public class DefaultTeamMember extends Agent implements TeamMember<String> {
         String prompt = sb.toString();
         log.debug("Team member [{}] is executing task...", getName());
 
+        System.out.println(String.format("\n>>> [%s] 发送给 LLM 的 Prompt:", getName()));
+        System.out.println("----------------------------------------");
+        System.out.println(prompt);
+        System.out.println("----------------------------------------");
+
         // 使用关联的 LLM 生成回答
-        return getLlm().generate(prompt);
+        String response = getLlm().generate(prompt);
+
+        System.out.println(String.format("\n<<< [%s] LLM 返回结果:", getName()));
+        System.out.println("----------------------------------------");
+        System.out.println(response);
+        System.out.println("----------------------------------------");
+
+        return response;
     }
 
     @Override

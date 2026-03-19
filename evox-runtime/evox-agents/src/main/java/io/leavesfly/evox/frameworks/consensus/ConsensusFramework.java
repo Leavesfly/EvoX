@@ -122,7 +122,8 @@ public class ConsensusFramework<T> extends MultiAgentFramework {
         WorkflowNode fallbackNode = createCollectNode("consensus_fallback", "consensus_fallback", null);
         graph.addNode(fallbackNode);
 
-        // 4. 连接边：LOOP → fallback
+        // 4. 连接边：LOOP → fallback（循环结束后的回退处理）
+        // 注意：roundNode 是 LOOP 的内部循环体，通过 loopBodyNodeId 引用，不加入主 DAG 边
         graph.addEdge(loopNode.getNodeId(), fallbackNode.getNodeId());
 
         log.info("Consensus workflow graph built with {} nodes", graph.getNodeCount());
