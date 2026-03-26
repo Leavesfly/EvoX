@@ -386,12 +386,12 @@ public class TeamFramework<T> extends MultiAgentFramework {
             String rawResult = executeWorkflow(task, inputs);
 
             // 从 workflow graph 节点结果中提取 TeamResult
-            @SuppressWarnings("unchecked")
             TeamResult<T> result = null;
             if (workflow != null && workflow.getGraph() != null) {
                 for (WorkflowNode node : workflow.getGraph().getNodes().values()) {
-                    if (node.getResult() instanceof TeamResult) {
-                        result = (TeamResult<T>) node.getResult();
+                    Object nodeResult = node.getResult();
+                    if (nodeResult instanceof TeamResult) {
+                        result = (TeamResult<T>) nodeResult;
                         break;
                     }
                 }
@@ -644,8 +644,9 @@ public class TeamFramework<T> extends MultiAgentFramework {
      */
     @SuppressWarnings("unchecked")
     private T aggregateResults(List<T> results, List<TaskExecution<T>> executions) {
-        if (config.getAggregationStrategy() != null) {
-            return ((AggregationStrategy<T>) config.getAggregationStrategy()).aggregate(results, executions);
+        Object strategy = config.getAggregationStrategy();
+        if (strategy instanceof AggregationStrategy) {
+            return ((AggregationStrategy<T>) strategy).aggregate(results, executions);
         }
 
         // 默认返回第一个非空结果
@@ -665,8 +666,9 @@ public class TeamFramework<T> extends MultiAgentFramework {
      */
     @SuppressWarnings("unchecked")
     private T selectBestResult(List<T> proposals, List<TaskExecution<T>> executions) {
-        if (config.getSelectionStrategy() != null) {
-            return ((SelectionStrategy<T>) config.getSelectionStrategy()).select(proposals, executions);
+        Object strategy = config.getSelectionStrategy();
+        if (strategy instanceof SelectionStrategy) {
+            return ((SelectionStrategy<T>) strategy).select(proposals, executions);
         }
 
         // 默认返回第一个
@@ -991,7 +993,11 @@ public class TeamFramework<T> extends MultiAgentFramework {
      */
     @SuppressWarnings("unchecked")
     public <V> V getContext(String key) {
-        return (V) teamContext.get(key);
+        Object value = teamContext.get(key);
+        if (value != null) {
+            return (V) value;
+        }
+        return null;
     }
 
     /**

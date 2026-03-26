@@ -4,6 +4,7 @@ import io.leavesfly.evox.core.evaluation.EvaluationResult;
 import io.leavesfly.evox.evaluation.Evaluator;
 import io.leavesfly.evox.evaluation.dataset.EvaluationDataset;
 import io.leavesfly.evox.evaluation.workflow.WorkflowEvaluator;
+import io.leavesfly.evox.exception.EvaluationException;
 import lombok.extern.slf4j.Slf4j;
 
 import java.util.*;
@@ -118,8 +119,11 @@ public class EvaluationPipeline {
                     result.getMetrics().forEach((key, value) ->
                             combinedMetrics.put(evaluatorName + "." + key, value));
                 }
+            } catch (EvaluationException e) {
+                log.warn("Evaluator '{}' failed: {}", evaluatorName, e.getMessage(), e);
+                combinedMetrics.put(evaluatorName + ".error", 1.0);
             } catch (Exception e) {
-                log.warn("Evaluator '{}' failed: {}", evaluatorName, e.getMessage());
+                log.warn("Evaluator '{}' failed: {}", evaluatorName, e.getMessage(), e);
                 combinedMetrics.put(evaluatorName + ".error", 1.0);
             }
         }
@@ -193,9 +197,12 @@ public class EvaluationPipeline {
                         result.getMetrics().forEach((key, value) ->
                                 actionMetrics.put(evaluatorName + "." + key, value));
                     }
+                } catch (EvaluationException e) {
+                    log.warn("Evaluator '{}' failed for action '{}': {}",
+                            evaluatorName, actionName, e.getMessage(), e);
                 } catch (Exception e) {
                     log.warn("Evaluator '{}' failed for action '{}': {}",
-                            evaluatorName, actionName, e.getMessage());
+                            evaluatorName, actionName, e.getMessage(), e);
                 }
             }
 
@@ -256,8 +263,11 @@ public class EvaluationPipeline {
         for (int i = 0; i < dataset.size(); i++) {
             try {
                 predictions[i] = executor.apply(dataset.getInput(i));
+            } catch (EvaluationException e) {
+                log.warn("Workflow execution failed for sample {}: {}", i, e.getMessage(), e);
+                predictions[i] = "";
             } catch (Exception e) {
-                log.warn("Workflow execution failed for sample {}: {}", i, e.getMessage());
+                log.warn("Workflow execution failed for sample {}: {}", i, e.getMessage(), e);
                 predictions[i] = "";
             }
         }

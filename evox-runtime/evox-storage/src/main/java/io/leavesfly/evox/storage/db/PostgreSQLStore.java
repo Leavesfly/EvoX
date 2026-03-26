@@ -152,11 +152,51 @@ public class PostgreSQLStore implements BaseStorage {
     public void close() {
         if (connection != null) {
             try {
-                connection.close();
-                log.info("Closed PostgreSQL connection");
+                // 检查连接是否仍然有效
+                if (!connection.isClosed()) {
+                    connection.close();
+                    log.info("Closed PostgreSQL connection");
+                }
             } catch (SQLException e) {
                 log.error("Error closing connection", e);
+            } finally {
+                connection = null;
+                initialized = false;
             }
         }
+    }
+    
+    /**
+     * 检查连接是否有效
+     */
+    public boolean isConnectionValid() {
+        if (connection == null) {
+            return false;
+        }
+        try {
+            return !connection.isClosed() && connection.isValid(5);
+        } catch (SQLException e) {
+            log.warn("Error checking connection validity", e);
+            return false;
+        }
+    }
+    
+    /**
+     * 重新连接（如果连接已断开）
+     */
+    public void reconnect() throws SQLException {
+        close();
+        connect();
+        initialized = true;
+    }
+    
+    /**
+     * 获取连接（用于高级操作）
+     */
+    public Connection getConnection() {
+        if (!initialized || !isConnectionValid()) {
+            initialize();
+        }
+        return connection;
     }
 }

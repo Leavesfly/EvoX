@@ -107,7 +107,7 @@ public class SkillLoader {
                 // JAR 环境：通过 classpath 资源索引加载
                 loadFromClasspathIndex(classLoader, resourcePrefix, definitions);
             }
-        } catch (Exception e) {
+        } catch (IOException | java.net.URISyntaxException e) {
             log.error("Failed to load skills from classpath: {}", resourcePrefix, e);
         }
 
@@ -278,7 +278,7 @@ public class SkillLoader {
                     .build();
 
         } catch (Exception e) {
-            log.error("Failed to parse YAML frontmatter in SKILL.md", e);
+            log.error("Failed to parse YAML frontmatter in SKILL.md: {}", e.getMessage(), e);
             // 回退：整个内容作为 prompt
             return SkillDefinitionFile.builder()
                     .name(fallbackName)

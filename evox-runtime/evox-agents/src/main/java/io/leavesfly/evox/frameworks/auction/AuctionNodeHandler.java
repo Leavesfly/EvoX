@@ -206,7 +206,10 @@ public class AuctionNodeHandler {
         @SuppressWarnings("unchecked")
         private <V> V getOrDefault(WorkflowContext context, String key, V defaultValue) {
             Object value = context.getExecutionData(key);
-            return value != null ? (V) value : defaultValue;
+            if (value != null && defaultValue != null && defaultValue.getClass().isInstance(value)) {
+                return (V) value;
+            }
+            return defaultValue;
         }
         
         /**

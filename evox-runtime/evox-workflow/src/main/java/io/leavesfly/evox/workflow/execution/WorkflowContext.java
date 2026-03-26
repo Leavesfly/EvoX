@@ -6,6 +6,7 @@ import lombok.extern.slf4j.Slf4j;
 
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CopyOnWriteArrayList;
 
 /**
  * 工作流执行上下文 - 存储工作流执行过程中的状态和数据
@@ -64,8 +65,8 @@ public class WorkflowContext {
         this.goal = goal;
         this.initialInputs = initialInputs != null ? new HashMap<>(initialInputs) : new HashMap<>();
         this.executionData = new ConcurrentHashMap<>();
-        this.messageHistory = Collections.synchronizedList(new ArrayList<>());
-        this.taskExecutionHistory = Collections.synchronizedList(new ArrayList<>());
+        this.messageHistory = new CopyOnWriteArrayList<>();
+        this.taskExecutionHistory = new CopyOnWriteArrayList<>();
         this.state = ExecutionState.INITIALIZED;
         this.currentStep = 0;
         

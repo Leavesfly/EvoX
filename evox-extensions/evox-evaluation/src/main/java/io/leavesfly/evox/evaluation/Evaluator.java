@@ -4,6 +4,7 @@ import io.leavesfly.evox.core.evaluation.IEvaluator;
 import io.leavesfly.evox.core.evaluation.EvaluationResult;
 import io.leavesfly.evox.core.module.BaseModule;
 import io.leavesfly.evox.evaluation.metrics.EvaluationMetric;
+import io.leavesfly.evox.exception.EvaluationException;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.experimental.SuperBuilder;
@@ -89,8 +90,11 @@ public abstract class Evaluator extends BaseModule implements IEvaluator {
             try {
                 double score = metric.compute(prediction, label);
                 metricScores.put(metric.getName(), score);
+            } catch (EvaluationException e) {
+                log.warn("Failed to compute metric '{}': {}", metric.getName(), e.getMessage(), e);
+                metricScores.put(metric.getName(), 0.0);
             } catch (Exception e) {
-                log.warn("Failed to compute metric '{}': {}", metric.getName(), e.getMessage());
+                log.warn("Failed to compute metric '{}': {}", metric.getName(), e.getMessage(), e);
                 metricScores.put(metric.getName(), 0.0);
             }
         }

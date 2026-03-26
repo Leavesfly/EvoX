@@ -10,6 +10,8 @@ import io.leavesfly.evox.core.llm.ILLM;
 import io.leavesfly.evox.core.llm.LLMConfig;
 import io.leavesfly.evox.core.message.Message;
 import io.leavesfly.evox.core.message.MessageType;
+import io.leavesfly.evox.exception.AgentException;
+import io.leavesfly.evox.exception.ToolException;
 import io.leavesfly.evox.tools.agent.AgentTool;
 import io.leavesfly.evox.tools.base.BaseTool;
 import lombok.Data;
@@ -273,8 +275,14 @@ public class ReActAgent extends Agent {
                     .messageType(output.isSuccess() ? MessageType.RESPONSE : MessageType.ERROR)
                     .content(output.getData())
                     .build();
+        } catch (AgentException | ToolException e) {
+            log.error("Failed to execute ReAct action: {}", e.getMessage(), e);
+            return Message.builder()
+                    .messageType(MessageType.ERROR)
+                    .content("Execution failed: " + e.getMessage())
+                    .build();
         } catch (Exception e) {
-            log.error("Failed to execute ReAct action", e);
+            log.error("Unexpected error in ReAct action execution: {}", e.getMessage(), e);
             return Message.builder()
                     .messageType(MessageType.ERROR)
                     .content("Execution failed: " + e.getMessage())
@@ -350,8 +358,11 @@ public class ReActAgent extends Agent {
                 
                 // 达到最大迭代次数
                 return SimpleActionOutput.failure("Max iterations reached without final answer");
+            } catch (AgentException | ToolException e) {
+                log.error("ReActAction execution failed: {}", e.getMessage(), e);
+                return SimpleActionOutput.failure("Execution failed: " + e.getMessage());
             } catch (Exception e) {
-                log.error("ReActAction execution failed", e);
+                log.error("Unexpected error in ReActAction execution: {}", e.getMessage(), e);
                 return SimpleActionOutput.failure("Execution failed: " + e.getMessage());
             }
         }
@@ -453,7 +464,11 @@ public class ReActAgent extends Agent {
                 return result != null && result.isSuccess()
                         ? (result.getData() != null ? result.getData().toString() : "No result")
                         : "Error: " + (result != null ? result.getError() : "Unknown error");
+            } catch (ToolException e) {
+                log.error("Tool execution error: {}", e.getMessage(), e);
+                return "Error executing tool: " + e.getMessage();
             } catch (Exception e) {
+                log.error("Unexpected error executing tool: {}", e.getMessage(), e);
                 return "Error executing tool: " + e.getMessage();
             }
         }

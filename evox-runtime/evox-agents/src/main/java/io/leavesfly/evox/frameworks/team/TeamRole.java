@@ -34,7 +34,7 @@ public enum TeamRole {
     /**
      * 审核者
      */
-    REVIEWER(3),
+    REVIEWER(2),
     
     /**
      * 普通成员

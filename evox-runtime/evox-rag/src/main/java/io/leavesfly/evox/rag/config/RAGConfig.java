@@ -17,6 +17,38 @@ import lombok.AllArgsConstructor;
 @AllArgsConstructor
 public class RAGConfig {
 
+    // ========== 默认常量定义 ==========
+    // Embedding 默认值
+    public static final String DEFAULT_EMBEDDING_MODEL = "text-embedding-ada-002";
+    public static final String DEFAULT_EMBEDDING_PROVIDER = "openai";
+    public static final int DEFAULT_EMBEDDING_DIMENSION = 1536;
+    public static final int DEFAULT_EMBEDDING_BATCH_SIZE = 100;
+
+    // Chunker 默认值
+    public static final String DEFAULT_CHUNKER_STRATEGY = "fixed";
+    public static final int DEFAULT_CHUNK_SIZE = 512;
+    public static final int DEFAULT_CHUNK_OVERLAP = 50;
+    public static final String DEFAULT_CHUNK_SEPARATOR = "\n\n";
+
+    // Retriever 默认值
+    public static final String DEFAULT_RETRIEVAL_TYPE = "vector";
+    public static final int DEFAULT_TOP_K = 5;
+    public static final double DEFAULT_SIMILARITY_THRESHOLD = 0.7;
+    public static final String DEFAULT_VECTOR_STORE_TYPE = "faiss";
+
+    // Reranker 默认值
+    public static final String DEFAULT_RERANKER_TYPE = "crossencoder";
+    public static final String DEFAULT_RERANKER_MODEL = "cross-encoder/ms-marco-MiniLM-L-12-v2";
+    public static final double DEFAULT_RERANKER_SCORE_THRESHOLD = 0.0;
+
+    // Reader 默认值
+    public static final String DEFAULT_READER_TYPE = "txt";
+
+    // Generator 默认值
+    public static final String DEFAULT_GENERATOR_MODEL = "gpt-4";
+    public static final float DEFAULT_GENERATOR_TEMPERATURE = 0.7f;
+    public static final int DEFAULT_GENERATOR_MAX_TOKENS = 1000;
+
     /**
      * Embedding配置
      */
@@ -27,22 +59,22 @@ public class RAGConfig {
     public static class EmbeddingConfig {
         /** Embedding模型名称 */
         @Builder.Default
-        private String modelName = "text-embedding-ada-002";
-        
+        private String modelName = DEFAULT_EMBEDDING_MODEL;
+
         /** API提供商 (openai, huggingface, local) */
         @Builder.Default
-        private String provider = "openai";
-        
+        private String provider = DEFAULT_EMBEDDING_PROVIDER;
+
         /** API密钥 */
         private String apiKey;
-        
+
         /** 模型维度 */
         @Builder.Default
-        private Integer dimension = 1536;
-        
+        private Integer dimension = DEFAULT_EMBEDDING_DIMENSION;
+
         /** 批处理大小 */
         @Builder.Default
-        private Integer batchSize = 100;
+        private Integer batchSize = DEFAULT_EMBEDDING_BATCH_SIZE;
     }
 
     /**
@@ -55,19 +87,19 @@ public class RAGConfig {
     public static class ChunkerConfig {
         /** 分块策略 (fixed, sentence, semantic) */
         @Builder.Default
-        private String strategy = "fixed";
-        
+        private String strategy = DEFAULT_CHUNKER_STRATEGY;
+
         /** 块大小 */
         @Builder.Default
-        private Integer chunkSize = 512;
-        
+        private Integer chunkSize = DEFAULT_CHUNK_SIZE;
+
         /** 重叠大小 */
         @Builder.Default
-        private Integer chunkOverlap = 50;
-        
+        private Integer chunkOverlap = DEFAULT_CHUNK_OVERLAP;
+
         /** 分隔符 */
         @Builder.Default
-        private String separator = "\n\n";
+        private String separator = DEFAULT_CHUNK_SEPARATOR;
     }
 
     /**
@@ -80,19 +112,19 @@ public class RAGConfig {
     public static class RetrieverConfig {
         /** 检索类型 (vector, keyword, hybrid) */
         @Builder.Default
-        private String retrievalType = "vector";
-        
+        private String retrievalType = DEFAULT_RETRIEVAL_TYPE;
+
         /** 返回结果数量 */
         @Builder.Default
-        private Integer topK = 5;
-        
+        private Integer topK = DEFAULT_TOP_K;
+
         /** 相似度阈值 */
         @Builder.Default
-        private Double similarityThreshold = 0.7;
+        private Double similarityThreshold = DEFAULT_SIMILARITY_THRESHOLD;
         
         /** 向量存储类型 (faiss, chroma, qdrant) */
         @Builder.Default
-        private String vectorStoreType = "faiss";
+        private String vectorStoreType = DEFAULT_VECTOR_STORE_TYPE;
         
         /** 是否启用重排序 */
         @Builder.Default
@@ -112,15 +144,15 @@ public class RAGConfig {
     public static class RerankerConfig {
         /** 重排序器类型 (crossencoder, llm) */
         @Builder.Default
-        private String type = "crossencoder";
-        
+        private String type = DEFAULT_RERANKER_TYPE;
+
         /** 重排序模型名称 */
         @Builder.Default
-        private String modelName = "cross-encoder/ms-marco-MiniLM-L-12-v2";
-        
+        private String modelName = DEFAULT_RERANKER_MODEL;
+
         /** 分数阈值 */
         @Builder.Default
-        private Double scoreThreshold = 0.0;
+        private Double scoreThreshold = DEFAULT_RERANKER_SCORE_THRESHOLD;
         
         /** 重排序后返回的Top K */
         private Integer topK;
@@ -139,7 +171,7 @@ public class RAGConfig {
     public static class ReaderConfig {
         /** 文档读取器类型 (pdf, docx, txt, html) */
         @Builder.Default
-        private String readerType = "txt";
+        private String readerType = DEFAULT_READER_TYPE;
         
         /** 是否提取元数据 */
         @Builder.Default
@@ -160,15 +192,15 @@ public class RAGConfig {
     public static class GeneratorConfig {
         /** LLM模型名称 */
         @Builder.Default
-        private String modelName = "gpt-4";
-        
+        private String modelName = DEFAULT_GENERATOR_MODEL;
+
         /** 温度参数 */
         @Builder.Default
-        private Float temperature = 0.7f;
-        
+        private Float temperature = DEFAULT_GENERATOR_TEMPERATURE;
+
         /** 最大生成token数 */
         @Builder.Default
-        private Integer maxTokens = 1000;
+        private Integer maxTokens = DEFAULT_GENERATOR_MAX_TOKENS;
         
         /** 是否流式输出 */
         @Builder.Default

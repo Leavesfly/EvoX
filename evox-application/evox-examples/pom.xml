@@ -23,63 +23,53 @@
         <dependency>
             <groupId>io.leavesfly.evox</groupId>
             <artifactId>evox-core</artifactId>
-            <version>${project.version}</version>
         </dependency>
 
         <dependency>
             <groupId>io.leavesfly.evox</groupId>
             <artifactId>evox-models</artifactId>
-            <version>${project.version}</version>
         </dependency>
 
         <dependency>
             <groupId>io.leavesfly.evox</groupId>
             <artifactId>evox-agents</artifactId>
-            <version>${project.version}</version>
         </dependency>
 
         <dependency>
             <groupId>io.leavesfly.evox</groupId>
             <artifactId>evox-workflow</artifactId>
-            <version>${project.version}</version>
         </dependency>
 
         <dependency>
             <groupId>io.leavesfly.evox</groupId>
             <artifactId>evox-memory</artifactId>
-            <version>${project.version}</version>
         </dependency>
 
         <dependency>
             <groupId>io.leavesfly.evox</groupId>
             <artifactId>evox-tools</artifactId>
-            <version>${project.version}</version>
         </dependency>
 
         <dependency>
             <groupId>io.leavesfly.evox</groupId>
             <artifactId>evox-rag</artifactId>
-            <version>${project.version}</version>
         </dependency>
 
 
         <dependency>
             <groupId>io.leavesfly.evox</groupId>
             <artifactId>evox-benchmark</artifactId>
-            <version>${project.version}</version>
         </dependency>
 
 
         <dependency>
             <groupId>io.leavesfly.evox</groupId>
             <artifactId>evox-optimizers</artifactId>
-            <version>${project.version}</version>
         </dependency>
 
         <dependency>
             <groupId>io.leavesfly.evox</groupId>
             <artifactId>evox-hitl</artifactId>
-            <version>${project.version}</version>
         </dependency>
 
 

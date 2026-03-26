@@ -15,6 +15,7 @@ import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import reactor.core.publisher.Mono;
 
+import java.time.Duration;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
@@ -127,7 +128,8 @@ public class Workflow extends BaseModule {
      */
     public String execute(Map<String, Object> inputs) {
         try {
-            String result = executeAsync(inputs).block();
+            // 添加 30 分钟超时避免无限阻塞
+            String result = executeAsync(inputs).block(Duration.ofMinutes(30));
             log.info("Workflow.execute() result: {}", result);
             return result;
         } catch (Exception e) {

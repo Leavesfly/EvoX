@@ -42,11 +42,9 @@ public class TeamNodeHandler {
                 log.debug("MemberExecuteHandler executing...");
 
                 String task = (String) context.getExecutionData(TASK_KEY);
-                @SuppressWarnings("unchecked")
-                List<TeamMember<Object>> members = (List<TeamMember<Object>>) context.getExecutionData(MEMBERS_KEY);
-                @SuppressWarnings("unchecked")
-                List<TaskExecution<Object>> executionHistory = (List<TaskExecution<Object>>) context.getExecutionData(EXECUTION_HISTORY_KEY);
-                
+                List<TeamMember<Object>> members = getListFromContext(context, MEMBERS_KEY);
+                List<TaskExecution<Object>> executionHistory = getListFromContext(context, EXECUTION_HISTORY_KEY);
+
                 Map<String, Object> handlerConfig = node.getHandlerConfig();
                 int memberIndex = (Integer) handlerConfig.get("memberIndex");
 
@@ -69,8 +67,7 @@ public class TeamNodeHandler {
                 );
                 executionHistory.add(execution);
 
-                @SuppressWarnings("unchecked")
-                List<Object> memberResults = (List<Object>) context.getExecutionData(MEMBER_RESULTS_KEY);
+                List<Object> memberResults = getListFromContext(context, MEMBER_RESULTS_KEY);
                 memberResults.add(result);
 
                 context.updateExecutionData(PREVIOUS_RESULT_KEY, result);
@@ -98,16 +95,12 @@ public class TeamNodeHandler {
             return Mono.fromCallable(() -> {
                 log.debug("TeamAggregateHandler executing...");
 
-                @SuppressWarnings("unchecked")
-                List<TeamMember<Object>> members = (List<TeamMember<Object>>) context.getExecutionData(MEMBERS_KEY);
-                @SuppressWarnings("unchecked")
-                List<TaskExecution<Object>> executionHistory = (List<TaskExecution<Object>>) context.getExecutionData(EXECUTION_HISTORY_KEY);
-                @SuppressWarnings("unchecked")
+                List<TeamMember<Object>> members = getListFromContext(context, MEMBERS_KEY);
+                List<TaskExecution<Object>> executionHistory = getListFromContext(context, EXECUTION_HISTORY_KEY);
                 TeamConfig config = (TeamConfig) context.getExecutionData(CONFIG_KEY);
                 String mode = (String) context.getExecutionData(MODE_KEY);
 
-                @SuppressWarnings("unchecked")
-                List<Object> memberResults = (List<Object>) context.getExecutionData(MEMBER_RESULTS_KEY);
+                List<Object> memberResults = getListFromContext(context, MEMBER_RESULTS_KEY);
 
                 Object finalResult;
                 if ("COMPETITIVE".equals(mode)) {
@@ -136,23 +129,23 @@ public class TeamNodeHandler {
 
         @SuppressWarnings("unchecked")
         private Object aggregateResults(List<Object> results, List<TaskExecution<Object>> executions, TeamConfig config) {
-            if (config.getAggregationStrategy() != null) {
-                return ((TeamFramework.AggregationStrategy<Object>) config.getAggregationStrategy())
-                    .aggregate(results, executions);
+            Object strategy = config.getAggregationStrategy();
+            if (strategy instanceof TeamFramework.AggregationStrategy) {
+                return ((TeamFramework.AggregationStrategy<Object>) strategy).aggregate(results, executions);
             }
             return results.stream().filter(Objects::nonNull).findFirst().orElse(null);
         }
 
         @SuppressWarnings("unchecked")
         private Object selectBestResult(List<Object> proposals, List<TaskExecution<Object>> executions, TeamConfig config) {
-            if (config.getSelectionStrategy() != null) {
-                return ((TeamFramework.SelectionStrategy<Object>) config.getSelectionStrategy())
-                    .select(proposals, executions);
+            Object strategy = config.getSelectionStrategy();
+            if (strategy instanceof TeamFramework.SelectionStrategy) {
+                return ((TeamFramework.SelectionStrategy<Object>) strategy).select(proposals, executions);
             }
             return proposals.isEmpty() ? null : proposals.get(0);
         }
 
-        private Map<String, Object> buildMetadata(String modeUsed, List<TeamMember<Object>> members, 
+        private Map<String, Object> buildMetadata(String modeUsed, List<TeamMember<Object>> members,
                 List<TaskExecution<Object>> executionHistory) {
             return Map.of(
                 "mode", modeUsed,
@@ -160,6 +153,18 @@ public class TeamNodeHandler {
                 "totalExecutions", executionHistory.size()
             );
         }
+    }
+
+    /**
+     * 从上下文中获取List类型的数据
+     */
+    @SuppressWarnings("unchecked")
+    private static <T> List<T> getListFromContext(WorkflowContext context, String key) {
+        Object value = context.getExecutionData(key);
+        if (value instanceof List) {
+            return (List<T>) value;
+        }
+        return new java.util.ArrayList<>();
     }
 
     /**
@@ -174,15 +179,11 @@ public class TeamNodeHandler {
                 log.debug("TeamCollaborativeRoundHandler executing...");
 
                 String task = (String) context.getExecutionData(TASK_KEY);
-                @SuppressWarnings("unchecked")
-                List<TeamMember<Object>> members = (List<TeamMember<Object>>) context.getExecutionData(MEMBERS_KEY);
-                @SuppressWarnings("unchecked")
-                List<TaskExecution<Object>> executionHistory = (List<TaskExecution<Object>>) context.getExecutionData(EXECUTION_HISTORY_KEY);
-                @SuppressWarnings("unchecked")
+                List<TeamMember<Object>> members = getListFromContext(context, MEMBERS_KEY);
+                List<TaskExecution<Object>> executionHistory = getListFromContext(context, EXECUTION_HISTORY_KEY);
                 TeamConfig config = (TeamConfig) context.getExecutionData(CONFIG_KEY);
 
-                @SuppressWarnings("unchecked")
-                List<Object> roundResults = (List<Object>) context.getExecutionData(ROUND_RESULTS_KEY);
+                List<Object> roundResults = getListFromContext(context, ROUND_RESULTS_KEY);
                 roundResults.clear();
 
                 for (TeamMember<Object> member : members) {
@@ -203,8 +204,7 @@ public class TeamNodeHandler {
 
                 Object discussionResult = collaborativeDiscuss(roundResults, executionHistory, config);
 
-                @SuppressWarnings("unchecked")
-                List<Object> memberResults = (List<Object>) context.getExecutionData(MEMBER_RESULTS_KEY);
+                List<Object> memberResults = getListFromContext(context, MEMBER_RESULTS_KEY);
                 memberResults.add(discussionResult);
 
                 int roundCount = (Integer) context.getExecutionData(ROUND_COUNT_KEY);
@@ -231,9 +231,9 @@ public class TeamNodeHandler {
 
         @SuppressWarnings("unchecked")
         private Object collaborativeDiscuss(List<Object> proposals, List<TaskExecution<Object>> executions, TeamConfig config) {
-            if (config.getAggregationStrategy() != null) {
-                return ((TeamFramework.AggregationStrategy<Object>) config.getAggregationStrategy())
-                    .aggregate(proposals, executions);
+            Object strategy = config.getAggregationStrategy();
+            if (strategy instanceof TeamFramework.AggregationStrategy) {
+                return ((TeamFramework.AggregationStrategy<Object>) strategy).aggregate(proposals, executions);
             }
             return proposals.stream().filter(Objects::nonNull).findFirst().orElse(null);
         }

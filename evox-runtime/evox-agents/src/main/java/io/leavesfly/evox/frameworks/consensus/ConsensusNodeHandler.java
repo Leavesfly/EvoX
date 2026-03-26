@@ -58,8 +58,11 @@ public class ConsensusNodeHandler {
             context.updateExecutionData("current_round", currentRound);
 
             String question = (String) context.getExecutionData("question");
-            @SuppressWarnings("unchecked")
-            List<ConsensusRecord<T>> history = (List<ConsensusRecord<T>>) context.getExecutionData("history");
+            List<ConsensusRecord<T>> history = null;
+            Object historyObj = context.getExecutionData("history");
+            if (historyObj instanceof List) {
+                history = (List<ConsensusRecord<T>>) historyObj;
+            }
             if (history == null) {
                 history = new ArrayList<>();
                 context.updateExecutionData("history", history);
@@ -173,8 +176,11 @@ public class ConsensusNodeHandler {
                 return Mono.just("fallback_skipped");
             }
 
-            @SuppressWarnings("unchecked")
-            List<ConsensusRecord<T>> history = (List<ConsensusRecord<T>>) context.getExecutionData("history");
+            List<ConsensusRecord<T>> history = null;
+            Object historyObj = context.getExecutionData("history");
+            if (historyObj instanceof List) {
+                history = (List<ConsensusRecord<T>>) historyObj;
+            }
             Integer totalRounds = (Integer) context.getExecutionData("current_round");
 
             log.warn("Consensus not reached after {} rounds, applying fallback strategy", totalRounds);

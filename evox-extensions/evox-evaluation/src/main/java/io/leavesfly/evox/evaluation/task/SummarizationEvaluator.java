@@ -2,9 +2,11 @@ package io.leavesfly.evox.evaluation.task;
 
 import io.leavesfly.evox.core.evaluation.EvaluationResult;
 import io.leavesfly.evox.evaluation.Evaluator;
+import io.leavesfly.evox.exception.EvaluationException;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.experimental.SuperBuilder;
+import lombok.extern.slf4j.Slf4j;
 
 import java.util.*;
 import java.util.stream.Collectors;
@@ -15,6 +17,7 @@ import java.util.stream.Collectors;
  *
  * @author EvoX Team
  */
+@Slf4j
 @Data
 @SuperBuilder
 @EqualsAndHashCode(callSuper = true)
@@ -93,8 +96,12 @@ public class SummarizationEvaluator extends Evaluator {
             metrics.put("coherence", assessCoherence(summary));
 
             return EvaluationResult.success(metrics);
-        } catch (Exception e) {
+        } catch (EvaluationException e) {
+            log.error("Summarization evaluation failed", e);
             return EvaluationResult.failure("摘要评估失败: " + e.getMessage());
+        } catch (Exception e) {
+            log.error("摘要评估失败: {}", e.getMessage(), e);
+            throw EvaluationException.evaluationError("SummarizationEvaluator", e.getMessage(), e);
         }
     }
 

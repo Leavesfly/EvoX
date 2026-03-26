@@ -28,8 +28,12 @@ public class OpenAiCompatibleClient {
     private static final String SSE_DATA_PREFIX = "data: ";
     private static final String SSE_DONE_MARKER = "[DONE]";
 
+    /**
+     * 共享的 ObjectMapper 实例（线程安全，读取操作可安全共享）
+     */
+    private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
+
     private final WebClient webClient;
-    private final ObjectMapper objectMapper;
     private final Duration timeout;
 
     /**
@@ -40,7 +44,6 @@ public class OpenAiCompatibleClient {
      * @param timeout 请求超时时间
      */
     public OpenAiCompatibleClient(String baseUrl, String apiKey, Duration timeout) {
-        this.objectMapper = new ObjectMapper();
         this.timeout = timeout != null ? timeout : Duration.ofSeconds(60);
 
         WebClient.Builder builder = WebClient.builder()
@@ -240,7 +243,7 @@ public class OpenAiCompatibleClient {
 
     private String parseStreamChunkContent(String jsonData) {
         try {
-            ChatCompletionResponse chunk = objectMapper.readValue(jsonData, ChatCompletionResponse.class);
+            ChatCompletionResponse chunk = OBJECT_MAPPER.readValue(jsonData, ChatCompletionResponse.class);
             if (chunk.getChoices() != null && !chunk.getChoices().isEmpty()) {
                 ChatCompletionResponse.Delta delta = chunk.getChoices().get(0).getDelta();
                 if (delta != null && delta.getContent() != null) {
@@ -255,7 +258,7 @@ public class OpenAiCompatibleClient {
 
     private ChatCompletionResponse parseStreamChunk(String jsonData) {
         try {
-            return objectMapper.readValue(jsonData, ChatCompletionResponse.class);
+            return OBJECT_MAPPER.readValue(jsonData, ChatCompletionResponse.class);
         } catch (JsonProcessingException e) {
             log.debug("Failed to parse SSE chunk: {}", jsonData, e);
             return null;

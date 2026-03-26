@@ -1,5 +1,6 @@
 package io.leavesfly.evox.optimizers.evaluators.metrics;
 
+import io.leavesfly.evox.evaluation.metrics.EvaluationMetric;
 import lombok.extern.slf4j.Slf4j;
 
 import java.util.*;

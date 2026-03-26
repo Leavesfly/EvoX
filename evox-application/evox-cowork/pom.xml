@@ -18,6 +18,10 @@
     <name>EvoX Cowork</name>
     <description>Cowork - Agentic knowledge work assistant built on EvoX framework, bringing Claude Code's agentic architecture to desktop for non-coding tasks</description>
 
+    <properties>
+        <javafx.version>21.0.2</javafx.version>
+    </properties>
+
     <dependencies>
         <!-- EvoX Core Modules -->
         <dependency>
@@ -88,19 +92,19 @@
         <dependency>
             <groupId>org.openjfx</groupId>
             <artifactId>javafx-controls</artifactId>
-            <version>21.0.2</version>
+            <version>${javafx.version}</version>
         </dependency>
 
         <dependency>
             <groupId>org.openjfx</groupId>
             <artifactId>javafx-fxml</artifactId>
-            <version>21.0.2</version>
+            <version>${javafx.version}</version>
         </dependency>
 
         <dependency>
             <groupId>org.openjfx</groupId>
             <artifactId>javafx-web</artifactId>
-            <version>21.0.2</version>
+            <version>${javafx.version}</version>
         </dependency>
 
         <!-- Jackson -->

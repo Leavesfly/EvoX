@@ -33,13 +33,16 @@ import java.util.Map;
 @Slf4j
 public class AnthropicLLM implements LLMProvider {
 
+    /**
+     * 共享的 ObjectMapper 实例（线程安全，读取操作可安全共享）
+     */
+    private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
+
     private final AnthropicLLMConfig config;
     private final WebClient webClient;
-    private final ObjectMapper objectMapper;
 
     public AnthropicLLM(AnthropicLLMConfig config) {
         this.config = config;
-        this.objectMapper = new ObjectMapper();
 
         String baseUrl = config.getBaseUrl() != null ? config.getBaseUrl() : "https://api.anthropic.com";
         Duration timeout = config.getTimeout() != null ? config.getTimeout() : Duration.ofSeconds(60);
@@ -373,7 +376,7 @@ public class AnthropicLLM implements LLMProvider {
 
     private String extractTextContent(String response) {
         try {
-            JsonNode root = objectMapper.readTree(response);
+            JsonNode root = OBJECT_MAPPER.readTree(response);
             JsonNode contentArray = root.get("content");
             if (contentArray != null && contentArray.isArray()) {
                 StringBuilder textBuilder = new StringBuilder();
@@ -397,7 +400,7 @@ public class AnthropicLLM implements LLMProvider {
 
     private Flux<ChatCompletionResponse> parseStreamEventRaw(String event) {
         try {
-            JsonNode root = objectMapper.readTree(event);
+            JsonNode root = OBJECT_MAPPER.readTree(event);
             if (root.has("type") && "content_block_delta".equals(root.get("type").asText())) {
                 JsonNode delta = root.get("delta");
                 if (delta != null && delta.has("text")) {
@@ -424,7 +427,7 @@ public class AnthropicLLM implements LLMProvider {
     private List<String> extractStreamTexts(String event) {
         List<String> texts = new ArrayList<>();
         try {
-            JsonNode root = objectMapper.readTree(event);
+            JsonNode root = OBJECT_MAPPER.readTree(event);
             if (root.has("type") && "content_block_delta".equals(root.get("type").asText())) {
                 JsonNode delta = root.get("delta");
                 if (delta != null && delta.has("text")) {
@@ -439,7 +442,7 @@ public class AnthropicLLM implements LLMProvider {
 
     private Map<String, Object> parseToolResponse(String response) {
         try {
-            JsonNode root = objectMapper.readTree(response);
+            JsonNode root = OBJECT_MAPPER.readTree(response);
             JsonNode contentArray = root.get("content");
 
             StringBuilder textBuilder = new StringBuilder();
@@ -479,7 +482,7 @@ public class AnthropicLLM implements LLMProvider {
 
     private ChatCompletionResult parseToolResult(String response) {
         try {
-            JsonNode root = objectMapper.readTree(response);
+            JsonNode root = OBJECT_MAPPER.readTree(response);
             JsonNode contentArray = root.get("content");
 
             StringBuilder textBuilder = new StringBuilder();

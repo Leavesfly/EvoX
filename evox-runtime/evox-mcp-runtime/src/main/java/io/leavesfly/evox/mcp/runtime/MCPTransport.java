@@ -371,7 +371,7 @@ public interface MCPTransport {
     /**
      * SSE (Server-Sent Events) 传输实现
      * 使用HTTP SSE协议与服务器通信
-     * 
+     *
      * SSE特点:
      * - 客户端通过GET连接订阅事件流
      * - 服务器通过该连接推送事件
@@ -380,6 +380,9 @@ public interface MCPTransport {
     @Slf4j
     @Data
     class SSETransport implements MCPTransport {
+
+        /** 默认连接超时时间（秒） */
+        private static final int DEFAULT_CONNECT_TIMEOUT_SECONDS = 30;
 
         private final String sseEndpoint;      // SSE事件流端点
         private final String messageEndpoint;  // 消息发送端点
@@ -413,7 +416,7 @@ public interface MCPTransport {
         public void start() throws MCPException {
             try {
                 httpClient = HttpClient.newBuilder()
-                        .connectTimeout(Duration.ofSeconds(30))
+                        .connectTimeout(Duration.ofSeconds(DEFAULT_CONNECT_TIMEOUT_SECONDS))
                         .build();
 
                 connected = true;
@@ -687,6 +690,9 @@ public interface MCPTransport {
     @Data
     class HttpTransport implements MCPTransport {
 
+        /** 默认连接超时时间（秒） */
+        private static final int DEFAULT_CONNECT_TIMEOUT_SECONDS = 30;
+
         private final String endpoint;
         private final Map<String, String> headers;
 
@@ -707,7 +713,7 @@ public interface MCPTransport {
         @Override
         public void start() throws MCPException {
             httpClient = HttpClient.newBuilder()
-                    .connectTimeout(Duration.ofSeconds(30))
+                    .connectTimeout(Duration.ofSeconds(DEFAULT_CONNECT_TIMEOUT_SECONDS))
                     .build();
             connected = true;
             log.info("HTTP传输已启动: {}", endpoint);

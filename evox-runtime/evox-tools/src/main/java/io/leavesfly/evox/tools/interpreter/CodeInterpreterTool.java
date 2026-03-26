@@ -1,5 +1,6 @@
 package io.leavesfly.evox.tools.interpreter;
 
+import io.leavesfly.evox.exception.ToolException;
 import io.leavesfly.evox.tools.base.BaseTool;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
@@ -65,9 +66,12 @@ public class CodeInterpreterTool extends BaseTool {
             initializeScriptEngine();
             initializeAllowedPackages();
             log.info("Code interpreter initialized for language: {}", this.language);
+        } catch (ToolException e) {
+            log.error("Failed to initialize code interpreter: {}", e.getMessage(), e);
+            throw e;
         } catch (Exception e) {
-            log.error("Failed to initialize code interpreter: {}", e.getMessage());
-            throw new RuntimeException("Code interpreter initialization failed", e);
+            log.error("Failed to initialize code interpreter: {}", e.getMessage(), e);
+            throw ToolException.configurationError("code_interpreter", "Initialization failed: " + e.getMessage(), e);
         }
     }
 
@@ -143,8 +147,11 @@ public class CodeInterpreterTool extends BaseTool {
             // 执行代码
             return executeCode(code, executionLanguage);
             
+        } catch (ToolException e) {
+            log.error("Code execution failed: {}", e.getMessage(), e);
+            return ToolResult.failure("Execution error: " + e.getMessage());
         } catch (Exception e) {
-            log.error("Code execution failed: {}", e.getMessage());
+            log.error("Code execution failed: {}", e.getMessage(), e);
             return ToolResult.failure("Execution error: " + e.getMessage());
         }
     }
@@ -232,8 +239,11 @@ public class CodeInterpreterTool extends BaseTool {
             future.cancel(true);
             log.error("Code execution timeout after {} ms", executionTimeoutMs);
             return ToolResult.failure("Execution timeout");
+        } catch (ToolException e) {
+            log.error("Code execution failed: {}", e.getMessage(), e);
+            return ToolResult.failure("Execution failed: " + e.getMessage());
         } catch (Exception e) {
-            log.error("Code execution failed: {}", e.getMessage());
+            log.error("Code execution failed: {}", e.getMessage(), e);
             return ToolResult.failure("Execution failed: " + e.getMessage());
         } finally {
             executor.shutdownNow();
@@ -288,8 +298,11 @@ public class CodeInterpreterTool extends BaseTool {
                 return ToolResult.failure("Python execution failed with exit code: " + exitCode);
             }
             
+        } catch (ToolException e) {
+            log.error("Python external execution failed: {}", e.getMessage(), e);
+            return ToolResult.failure("Python execution error: " + e.getMessage());
         } catch (Exception e) {
-            log.error("Python external execution failed: {}", e.getMessage());
+            log.error("Python external execution failed: {}", e.getMessage(), e);
             return ToolResult.failure("Python execution error: " + e.getMessage());
         }
     }

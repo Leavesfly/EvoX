@@ -41,6 +41,8 @@ public class ClaudeCodeRepl {
     private volatile boolean running;
     /** JLine Terminal 引用，用于审批输入（避免 Scanner/JLine stdin 冲突） */
     private volatile Terminal terminal;
+    /** 审批输入用的 BufferedReader（复用，避免重复创建） */
+    private volatile BufferedReader approvalReader;
     /** 会话首次创建时间（避免每次保存时覆盖） */
     private Instant sessionCreatedAt;
 
@@ -84,6 +86,8 @@ public class ClaudeCodeRepl {
                 .build()) {
 
             this.terminal = jlineTerminal;
+            // 初始化审批输入的 reader（复用，由 Terminal 管理生命周期）
+            this.approvalReader = new BufferedReader(new InputStreamReader(jlineTerminal.input()));
 
             LineReader lineReader = LineReaderBuilder.builder()
                     .terminal(jlineTerminal)
@@ -412,12 +416,15 @@ public class ClaudeCodeRepl {
 
         try {
             String response;
-            if (terminal != null) {
-                // 使用 JLine Terminal 的 reader 读取，避免与 LineReader 的 stdin 冲突
-                BufferedReader terminalReader = new BufferedReader(new InputStreamReader(terminal.input()));
-                response = terminalReader.readLine();
+            if (approvalReader != null) {
+                // 使用复用的 reader（由 Terminal 管理生命周期）
+                response = approvalReader.readLine();
+            } else if (terminal != null) {
+                // 兼容：如果 approvalReader 未初始化，创建临时 reader（不关闭，由 Terminal 管理）
+                BufferedReader tempReader = new BufferedReader(new InputStreamReader(terminal.input()));
+                response = tempReader.readLine();
             } else {
-                // 降级模式下使用标准输入
+                // 降级模式下使用标准输入（不关闭 System.in）
                 BufferedReader stdinReader = new BufferedReader(new InputStreamReader(System.in));
                 response = stdinReader.readLine();
             }

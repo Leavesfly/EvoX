@@ -1,5 +1,6 @@
 package io.leavesfly.evox.storage.db;
 
+import io.leavesfly.evox.exception.StorageException;
 import io.leavesfly.evox.storage.base.BaseStorage;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
@@ -37,9 +38,12 @@ public class SQLiteStore implements BaseStorage {
             connection = DriverManager.getConnection(url);
             initialized = true;
             log.info("SQLite store initialized: {}", dbPath);
-        } catch (Exception e) {
+        } catch (SQLException e) {
             log.error("Failed to initialize SQLite store", e);
-            throw new RuntimeException("SQLite initialization failed", e);
+            throw StorageException.connectionError(e.getMessage(), e);
+        } catch (ClassNotFoundException e) {
+            log.error("SQLite JDBC driver not found", e);
+            throw StorageException.connectionError("SQLite JDBC driver not found", e);
         }
     }
 
@@ -47,14 +51,41 @@ public class SQLiteStore implements BaseStorage {
     public void close() {
         if (connection != null) {
             try {
-                connection.close();
-                connection = null;
-                initialized = false;
-                log.info("SQLite store closed");
+                // 检查连接是否仍然有效
+                if (!connection.isClosed()) {
+                    connection.close();
+                    log.info("SQLite store closed");
+                }
             } catch (SQLException e) {
                 log.error("Error closing SQLite connection", e);
+            } finally {
+                connection = null;
+                initialized = false;
             }
         }
+    }
+    
+    /**
+     * 检查连接是否有效
+     */
+    public boolean isConnectionValid() {
+        if (connection == null) {
+            return false;
+        }
+        try {
+            return !connection.isClosed() && connection.isValid(5);
+        } catch (SQLException e) {
+            log.warn("Error checking connection validity", e);
+            return false;
+        }
+    }
+    
+    /**
+     * 重新连接（如果连接已断开）
+     */
+    public void reconnect() throws SQLException {
+        close();
+        initialize();
     }
 
     @Override
@@ -207,7 +238,7 @@ public class SQLiteStore implements BaseStorage {
      * 获取连接（用于高级操作）
      */
     public Connection getConnection() {
-        if (!initialized) {
+        if (!initialized || !isConnectionValid()) {
             initialize();
         }
         return connection;

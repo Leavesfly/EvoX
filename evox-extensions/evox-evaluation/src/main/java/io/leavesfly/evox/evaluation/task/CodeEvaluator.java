@@ -2,9 +2,11 @@ package io.leavesfly.evox.evaluation.task;
 
 import io.leavesfly.evox.core.evaluation.EvaluationResult;
 import io.leavesfly.evox.evaluation.Evaluator;
+import io.leavesfly.evox.exception.EvaluationException;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.experimental.SuperBuilder;
+import lombok.extern.slf4j.Slf4j;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -15,6 +17,7 @@ import java.util.Map;
  *
  * @author EvoX Team
  */
+@Slf4j
 @Data
 @SuperBuilder
 @EqualsAndHashCode(callSuper = true)
@@ -67,8 +70,12 @@ public class CodeEvaluator extends Evaluator {
             }
 
             return EvaluationResult.success(metrics);
-        } catch (Exception e) {
+        } catch (EvaluationException e) {
+            log.error("Code evaluation failed", e);
             return EvaluationResult.failure("代码评估失败: " + e.getMessage());
+        } catch (Exception e) {
+            log.error("代码评估失败: {}", e.getMessage(), e);
+            throw EvaluationException.evaluationError("CodeEvaluator", e.getMessage(), e);
         }
     }
 

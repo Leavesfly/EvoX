@@ -4,6 +4,8 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.HashMap;
 import java.util.List;
@@ -17,6 +19,8 @@ import java.util.UUID;
  * @author EvoX Team
  */
 public class MCPServer {
+
+    private static final Logger log = LoggerFactory.getLogger(MCPServer.class);
 
     private final String name;
     private final String version;
@@ -95,6 +99,7 @@ public class MCPServer {
                     .isError(false)
                     .build();
         } catch (Exception e) {
+            log.error("Tool execution error for tool '{}': {}", name, e.getMessage(), e);
             return MCPProtocol.ToolCallResult.builder()
                     .content(List.of(
                             MCPProtocol.Content.builder()

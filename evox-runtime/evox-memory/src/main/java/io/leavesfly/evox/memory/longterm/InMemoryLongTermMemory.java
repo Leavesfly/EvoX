@@ -12,17 +12,35 @@ import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentLinkedDeque;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
 /**
  * 内存长期记忆实现 - 基于哈希去重的内存存储
  * 对应 Python 版本的 LongTermMemory 的简化版本（不依赖 RAG）
+ * 支持 LRU 淘汰策略，当超过最大容量时移除最旧的记录
  */
 @Slf4j
 @Data
 @NoArgsConstructor
 @EqualsAndHashCode(callSuper = true)
 public class InMemoryLongTermMemory extends BaseMemory {
+
+    /**
+     * 默认最大容量
+     */
+    public static final int DEFAULT_MAX_CAPACITY = 10000;
+
+    /**
+     * 哈希预览长度
+     */
+    private static final int HASH_PREVIEW_LENGTH = 8;
+
+    /**
+     * 最大容量限制
+     */
+    private int maxCapacity = DEFAULT_MAX_CAPACITY;
 
     /**
      * 记忆 ID 到消息的映射
@@ -38,6 +56,16 @@ public class InMemoryLongTermMemory extends BaseMemory {
      * 记忆 ID 到内容哈希的映射
      */
     private Map<String, String> memoryIdToContentHash;
+    
+    /**
+     * LRU 队列：记录访问顺序（最旧的在前，最新的在后）
+     */
+    private Deque<String> lruQueue;
+    
+    /**
+     * 当前记忆数量（用于快速检查容量）
+     */
+    private AtomicInteger currentSize;
 
     @Override
     public void initModule() {
@@ -50,6 +78,12 @@ public class InMemoryLongTermMemory extends BaseMemory {
         }
         if (memoryIdToContentHash == null) {
             memoryIdToContentHash = new ConcurrentHashMap<>();
+        }
+        if (lruQueue == null) {
+            lruQueue = new ConcurrentLinkedDeque<>();
+        }
+        if (currentSize == null) {
+            currentSize = new AtomicInteger(0);
         }
     }
 
@@ -100,25 +134,90 @@ public class InMemoryLongTermMemory extends BaseMemory {
         // 检查是否已存在
         if (contentHashToMemoryId.containsKey(contentHash)) {
             String existingId = contentHashToMemoryId.get(contentHash);
-            log.debug("Duplicate message found (hash: {}), returning existing ID: {}", 
-                    contentHash.substring(0, 8), existingId);
+            log.debug("Duplicate message found (hash: {}), returning existing ID: {}",
+                    contentHash.substring(0, HASH_PREVIEW_LENGTH), existingId);
+            // 更新 LRU 顺序：将已存在的条目移到队列尾部
+            updateLruOrder(existingId);
             return existingId;
         }
 
         // 生成新的记忆 ID
         String memoryId = UUID.randomUUID().toString();
 
+        // 检查容量并进行 LRU 淘汰
+        evictIfNecessary();
+
         // 存储映射关系
         memoryIdToMessage.put(memoryId, message);
         contentHashToMemoryId.put(contentHash, memoryId);
         memoryIdToContentHash.put(memoryId, contentHash);
+        
+        // 添加到 LRU 队列尾部
+        lruQueue.addLast(memoryId);
+        currentSize.incrementAndGet();
 
         // 添加到基础记忆
         super.addMessage(message);
 
-        log.debug("Added message to long-term memory: {} (hash: {})", 
-                memoryId, contentHash.substring(0, 8));
+        log.debug("Added message to long-term memory: {} (hash: {}, size: {}/{})",
+                memoryId, contentHash.substring(0, HASH_PREVIEW_LENGTH), currentSize.get(), maxCapacity);
         return memoryId;
+    }
+    
+    /**
+     * 如果超过最大容量，执行 LRU 淘汰
+     */
+    private void evictIfNecessary() {
+        while (currentSize.get() >= maxCapacity && !lruQueue.isEmpty()) {
+            String oldestId = lruQueue.pollFirst();
+            if (oldestId != null) {
+                // 删除最旧的记录
+                Message removed = memoryIdToMessage.remove(oldestId);
+                String contentHash = memoryIdToContentHash.remove(oldestId);
+                if (contentHash != null) {
+                    contentHashToMemoryId.remove(contentHash);
+                }
+                if (removed != null) {
+                    super.removeMessage(removed);
+                }
+                currentSize.decrementAndGet();
+                log.debug("LRU evicted memory: {}", oldestId);
+            }
+        }
+    }
+    
+    /**
+     * 更新 LRU 顺序（将条目移到队列尾部）
+     */
+    private void updateLruOrder(String memoryId) {
+        // 先从队列中移除，再添加到尾部
+        // 注意：ConcurrentLinkedDeque 的 remove 操作是 O(n) 的
+        // 对于高频访问场景可能需要优化，但这里优先保证正确性
+        if (lruQueue.remove(memoryId)) {
+            lruQueue.addLast(memoryId);
+        }
+    }
+    
+    /**
+     * 设置最大容量
+     *
+     * @param maxCapacity 最大容量，必须为正数
+     */
+    public void setMaxCapacity(int maxCapacity) {
+        if (maxCapacity <= 0) {
+            throw new IllegalArgumentException("Max capacity must be positive");
+        }
+        this.maxCapacity = maxCapacity;
+        // 如果当前容量超过新的最大容量，立即执行淘汰
+        evictIfNecessary();
+        log.info("Max capacity set to: {}", maxCapacity);
+    }
+    
+    /**
+     * 获取当前记忆数量
+     */
+    public int getCurrentSize() {
+        return currentSize != null ? currentSize.get() : 0;
     }
 
     /**
@@ -152,7 +251,12 @@ public class InMemoryLongTermMemory extends BaseMemory {
      * @return 消息，不存在则返回 null
      */
     public Message getByMemoryId(String memoryId) {
-        return memoryIdToMessage.get(memoryId);
+        Message message = memoryIdToMessage.get(memoryId);
+        if (message != null) {
+            // 更新 LRU 顺序
+            updateLruOrder(memoryId);
+        }
+        return message;
     }
 
     /**
@@ -303,6 +407,10 @@ public class InMemoryLongTermMemory extends BaseMemory {
         memoryIdToMessage.clear();
         contentHashToMemoryId.clear();
         memoryIdToContentHash.clear();
+        lruQueue.clear();
+        if (currentSize != null) {
+            currentSize.set(0);
+        }
         log.info("Long-term memory cleared");
     }
 

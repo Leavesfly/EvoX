@@ -2,9 +2,11 @@ package io.leavesfly.evox.evaluation.task;
 
 import io.leavesfly.evox.core.evaluation.EvaluationResult;
 import io.leavesfly.evox.evaluation.Evaluator;
+import io.leavesfly.evox.exception.EvaluationException;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.experimental.SuperBuilder;
+import lombok.extern.slf4j.Slf4j;
 
 import java.util.*;
 
@@ -14,6 +16,7 @@ import java.util.*;
  *
  * @author EvoX Team
  */
+@Slf4j
 @Data
 @SuperBuilder
 @EqualsAndHashCode(callSuper = true)
@@ -48,6 +51,38 @@ public class DialogueEvaluator extends Evaluator {
      * 对话历史上下文（可选）
      */
     private List<String> conversationHistory;
+
+    // ========== 评估权重常量 ==========
+    private static final double WEIGHT_RELEVANCE = 0.25;
+    private static final double WEIGHT_COHERENCE = 0.2;
+    private static final double WEIGHT_INFORMATIVENESS = 0.2;
+    private static final double WEIGHT_SAFETY = 0.2;
+    private static final double WEIGHT_HELPFULNESS = 0.15;
+
+    // ========== 评估阈值常量 ==========
+    private static final double OVERLAP_HIGH_THRESHOLD = 0.8;
+    private static final double OVERLAP_HIGH_PENALTY = 0.6;
+    private static final double OVERLAP_SCALE_FACTOR = 2.0;
+    private static final int MIN_SENTENCE_LENGTH = 3;
+    private static final double SHORT_SENTENCE_PENALTY = 0.1;
+    private static final int SENTENCE_START_LENGTH = 5;
+    private static final int SENTENCE_START_PREVIEW = 10;
+    private static final double DUPLICATE_START_PENALTY = 0.15;
+    private static final double BASE_INFORMATIVENESS_SCORE = 0.5;
+    private static final double LEXICAL_DIVERSITY_WEIGHT = 0.3;
+    private static final int MIN_WORD_COUNT = 10;
+    private static final double SHORT_RESPONSE_PENALTY = 0.2;
+    private static final int MAX_WORD_COUNT = 200;
+    private static final double LONG_RESPONSE_PENALTY = 0.1;
+    private static final int OPTIMAL_WORD_MIN = 20;
+    private static final int OPTIMAL_WORD_MAX = 100;
+    private static final double OPTIMAL_LENGTH_BONUS = 0.2;
+    private static final double NUMERIC_CONTENT_BONUS = 0.1;
+    private static final double HARMFUL_PATTERN_PENALTY = 0.3;
+    private static final double BASE_HELPFULNESS_SCORE = 0.5;
+    private static final double QUESTION_ANSWER_BONUS = 0.3;
+    private static final int MIN_ANSWER_LENGTH = 20;
+    private static final double ACTION_INDICATOR_BONUS = 0.05;
 
     public DialogueEvaluator() {
         super();
@@ -106,8 +141,12 @@ public class DialogueEvaluator extends Evaluator {
             metrics.put("word_count", (double) response.split("\\s+").length);
 
             return EvaluationResult.success(metrics);
-        } catch (Exception e) {
+        } catch (EvaluationException e) {
+            log.error("Dialogue evaluation failed", e);
             return EvaluationResult.failure("对话评估失败: " + e.getMessage());
+        } catch (Exception e) {
+            log.error("对话评估失败: {}", e.getMessage(), e);
+            throw EvaluationException.evaluationError("DialogueEvaluator", e.getMessage(), e);
         }
     }
 
@@ -141,11 +180,11 @@ public class DialogueEvaluator extends Evaluator {
         double overlapRatio = responseWords.isEmpty() ? 0.0 : (double) overlap / responseWords.size();
         
         // 相关性不应该太高（可能是复制）也不应该太低
-        if (overlapRatio > 0.8) {
-            return 0.6; // 可能过度重复
+        if (overlapRatio > OVERLAP_HIGH_THRESHOLD) {
+            return OVERLAP_HIGH_PENALTY; // 可能过度重复
         }
-        
-        return Math.min(1.0, overlapRatio * 2); // 缩放到合理范围
+
+        return Math.min(1.0, overlapRatio * OVERLAP_SCALE_FACTOR); // 缩放到合理范围
     }
 
     /**
@@ -168,8 +207,8 @@ public class DialogueEvaluator extends Evaluator {
         // 检查是否有不完整的句子
         for (String sentence : sentences) {
             String trimmed = sentence.trim();
-            if (trimmed.length() > 0 && trimmed.length() < 3) {
-                score -= 0.1;
+            if (trimmed.length() > 0 && trimmed.length() < MIN_SENTENCE_LENGTH) {
+                score -= SHORT_SENTENCE_PENALTY;
             }
         }
 
@@ -177,10 +216,10 @@ public class DialogueEvaluator extends Evaluator {
         Set<String> sentenceStarts = new HashSet<>();
         for (String sentence : sentences) {
             String trimmed = sentence.trim();
-            if (trimmed.length() > 5) {
-                String start = trimmed.substring(0, Math.min(10, trimmed.length()));
+            if (trimmed.length() > SENTENCE_START_LENGTH) {
+                String start = trimmed.substring(0, Math.min(SENTENCE_START_PREVIEW, trimmed.length()));
                 if (sentenceStarts.contains(start)) {
-                    score -= 0.15;
+                    score -= DUPLICATE_START_PENALTY;
                 }
                 sentenceStarts.add(start);
             }
@@ -198,27 +237,27 @@ public class DialogueEvaluator extends Evaluator {
             return 0.0;
         }
 
-        double score = 0.5; // 基础分
+        double score = BASE_INFORMATIVENESS_SCORE; // 基础分
 
         // 词汇多样性
         String[] words = tokenize(response);
         Set<String> uniqueWords = new HashSet<>(Arrays.asList(words));
         double lexicalDiversity = words.length > 0 ? (double) uniqueWords.size() / words.length : 0;
-        score += lexicalDiversity * 0.3;
+        score += lexicalDiversity * LEXICAL_DIVERSITY_WEIGHT;
 
         // 响应长度（适中最好）
         int wordCount = words.length;
-        if (wordCount < 10) {
-            score -= 0.2; // 太短
-        } else if (wordCount > 200) {
-            score -= 0.1; // 太长可能冗余
-        } else if (wordCount >= 20 && wordCount <= 100) {
-            score += 0.2; // 适中长度
+        if (wordCount < MIN_WORD_COUNT) {
+            score -= SHORT_RESPONSE_PENALTY; // 太短
+        } else if (wordCount > MAX_WORD_COUNT) {
+            score -= LONG_RESPONSE_PENALTY; // 太长可能冗余
+        } else if (wordCount >= OPTIMAL_WORD_MIN && wordCount <= OPTIMAL_WORD_MAX) {
+            score += OPTIMAL_LENGTH_BONUS; // 适中长度
         }
 
         // 检查是否包含具体信息（数字、专有名词等）
         if (response.matches(".*\\d+.*")) {
-            score += 0.1; // 包含数字通常意味着具体信息
+            score += NUMERIC_CONTENT_BONUS; // 包含数字通常意味着具体信息
         }
 
         return Math.max(0, Math.min(1.0, score));
@@ -244,7 +283,7 @@ public class DialogueEvaluator extends Evaluator {
 
         for (String pattern : harmfulPatterns) {
             if (lowerResponse.contains(pattern)) {
-                score -= 0.3;
+                score -= HARMFUL_PATTERN_PENALTY;
             }
         }
 
@@ -273,7 +312,7 @@ public class DialogueEvaluator extends Evaluator {
             return 0.0;
         }
 
-        double score = 0.5; // 基础分
+        double score = BASE_HELPFULNESS_SCORE; // 基础分
 
         // 检查是否直接回答问题
         if (context != null) {
@@ -281,13 +320,13 @@ public class DialogueEvaluator extends Evaluator {
                                  context.contains("吗") || context.contains("什么") ||
                                  context.contains("how") || context.contains("what") ||
                                  context.contains("why") || context.contains("when");
-            
+
             if (isQuestion) {
                 // 如果是问题，检查响应是否像是回答
                 boolean hasAnswer = !response.endsWith("?") && !response.endsWith("？") &&
-                                   response.length() > 20;
+                                   response.length() > MIN_ANSWER_LENGTH;
                 if (hasAnswer) {
-                    score += 0.3;
+                    score += QUESTION_ANSWER_BONUS;
                 }
             }
         }
@@ -301,7 +340,7 @@ public class DialogueEvaluator extends Evaluator {
         String lowerResponse = response.toLowerCase();
         for (String indicator : actionIndicators) {
             if (lowerResponse.contains(indicator)) {
-                score += 0.05;
+                score += ACTION_INDICATOR_BONUS;
             }
         }
 
@@ -317,11 +356,11 @@ public class DialogueEvaluator extends Evaluator {
 
         // 加权平均
         Map<String, Double> weights = Map.of(
-                "relevance", 0.25,
-                "coherence", 0.2,
-                "informativeness", 0.2,
-                "safety", 0.2,
-                "helpfulness", 0.15
+                "relevance", WEIGHT_RELEVANCE,
+                "coherence", WEIGHT_COHERENCE,
+                "informativeness", WEIGHT_INFORMATIVENESS,
+                "safety", WEIGHT_SAFETY,
+                "helpfulness", WEIGHT_HELPFULNESS
         );
 
         for (Map.Entry<String, Double> entry : metrics.entrySet()) {

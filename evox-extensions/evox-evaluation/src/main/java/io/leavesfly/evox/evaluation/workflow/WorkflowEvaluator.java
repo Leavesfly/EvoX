@@ -4,6 +4,7 @@ import io.leavesfly.evox.core.evaluation.EvaluationResult;
 import io.leavesfly.evox.evaluation.Evaluator;
 import io.leavesfly.evox.evaluation.dataset.EvaluationDataset;
 import io.leavesfly.evox.evaluation.metrics.EvaluationMetric;
+import io.leavesfly.evox.exception.EvaluationException;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.experimental.SuperBuilder;
@@ -114,8 +115,16 @@ public class WorkflowEvaluator extends Evaluator {
                 Map<String, Object> input = dataset.getInput(i);
                 predictions[i] = workflowExecutor.apply(input);
                 labels[i] = dataset.getLabel(i);
+            } catch (EvaluationException e) {
+                log.warn("Workflow execution failed for sample {}: {}", i, e.getMessage(), e);
+                executionFailures++;
+                if (!continueOnFailure) {
+                    throw e;
+                }
+                predictions[i] = "";
+                labels[i] = dataset.getLabel(i);
             } catch (Exception e) {
-                log.warn("Workflow execution failed for sample {}: {}", i, e.getMessage());
+                log.warn("Workflow execution failed for sample {}: {}", i, e.getMessage(), e);
                 executionFailures++;
                 if (!continueOnFailure) {
                     return EvaluationResult.failure(

@@ -28,7 +28,8 @@ public class FileSystemTool extends BaseTool {
         this.name = "file_system";
         this.description = "A tool for file system operations including read, write, append, delete, and list files";
         this.workingDirectory = System.getProperty("user.dir");
-        this.allowAbsolutePaths = true;
+        // Security: Default to false to prevent absolute path access by default
+        this.allowAbsolutePaths = false;
         this.allowedExtensions = Arrays.asList(".txt", ".md", ".json", ".xml", ".csv", ".log", ".java", ".py");
         
         // 初始化BaseTool的属性
@@ -220,6 +221,10 @@ public class FileSystemTool extends BaseTool {
         if (filePath == null || filePath.trim().isEmpty()) {
             throw new IOException("File path cannot be null");
         }
+        
+        // Security: Validate path to prevent path traversal attacks
+        validatePath(filePath);
+        
         Path path = Paths.get(filePath);
         if (!allowAbsolutePaths && path.isAbsolute()) {
             throw new IOException("Absolute paths not allowed");
@@ -227,7 +232,51 @@ public class FileSystemTool extends BaseTool {
         if (!path.isAbsolute()) {
             path = Paths.get(workingDirectory).resolve(path).normalize();
         }
+        
+        // Security: Ensure resolved path is still within working directory (prevent traversal)
+        validateResolvedPath(path);
+        
         return path;
+    }
+
+    /**
+     * Validate raw path string for obvious traversal attempts.
+     * This catches patterns like "../", "..\\", and encoded variants.
+     */
+    private void validatePath(String filePath) throws IOException {
+        String normalizedPath = filePath.trim();
+        
+        // Check for parent directory references
+        if (normalizedPath.contains("..") || normalizedPath.contains("~")) {
+            throw new IOException("Path traversal detected: parent directory reference not allowed");
+        }
+        
+        // Check for URL-encoded traversal attempts
+        String decodedPath = normalizedPath
+                .replace("%2e", ".")
+                .replace("%2E", ".")
+                .replace("%2f", "/")
+                .replace("%2F", "/")
+                .replace("%5c", "\\")
+                .replace("%5C", "\\");
+        
+        if (decodedPath.contains("..")) {
+            throw new IOException("Path traversal detected: encoded parent directory reference not allowed");
+        }
+    }
+
+    /**
+     * Validate resolved path is within the allowed working directory.
+     * This prevents path traversal after normalization.
+     */
+    private void validateResolvedPath(Path resolvedPath) throws IOException {
+        Path normalizedWorkDir = Paths.get(workingDirectory).normalize().toAbsolutePath();
+        Path normalizedTarget = resolvedPath.normalize().toAbsolutePath();
+        
+        // Check if the resolved path starts with the working directory
+        if (!normalizedTarget.startsWith(normalizedWorkDir)) {
+            throw new IOException("Path traversal detected: resolved path escapes working directory");
+        }
     }
 
     private ToolResult error(String message) {

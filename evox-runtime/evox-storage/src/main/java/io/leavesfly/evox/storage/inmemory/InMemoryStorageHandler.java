@@ -78,10 +78,8 @@ public class InMemoryStorageHandler implements StorageHandler {
             return Collections.emptyMap();
         }
 
-        // 返回深拷贝
-        Map<String, Map<String, Object>> result = new HashMap<>();
-        tableData.forEach((id, data) -> result.put(id, new HashMap<>(data)));
-        return result;
+        // 返回不可变视图，防止外部修改内部数据
+        return Collections.unmodifiableMap(tableData);
     }
 
     @Override

@@ -1,55 +1,53 @@
 package io.leavesfly.evox.mcp;
 
+import io.leavesfly.evox.exception.EvoXException;
+
 /**
  * MCP异常
  * 统一的MCP错误处理
  *
  * @author EvoX Team
  */
-public class MCPException extends RuntimeException {
-
-    /**
-     * 错误码
-     */
-    private final int errorCode;
+public class MCPException extends EvoXException {
 
     /**
      * 错误数据
      */
     private final Object errorData;
 
-    public MCPException(int errorCode, String message) {
+    public MCPException(String message) {
         super(message);
-        this.errorCode = errorCode;
+        this.errorData = null;
+    }
+
+    public MCPException(String message, Throwable cause) {
+        super(message, cause);
+        this.errorData = null;
+    }
+
+    public MCPException(int errorCode, String message) {
+        super(errorCode, message);
         this.errorData = null;
     }
 
     public MCPException(int errorCode, String message, Throwable cause) {
-        super(message, cause);
-        this.errorCode = errorCode;
+        super(errorCode, message, cause);
         this.errorData = null;
     }
 
     public MCPException(int errorCode, String message, Object errorData) {
-        super(message);
-        this.errorCode = errorCode;
+        super(errorCode, message);
         this.errorData = errorData;
     }
 
     public MCPException(int errorCode, String message, Object errorData, Throwable cause) {
-        super(message, cause);
-        this.errorCode = errorCode;
+        super(errorCode, message, cause);
         this.errorData = errorData;
     }
 
     public MCPException(MCPProtocol.Error error) {
-        super(error.getMessage());
-        this.errorCode = error.getCode();
+        super(error.getCode(), error.getMessage());
         this.errorData = error.getData();
-    }
-
-    public int getErrorCode() {
-        return errorCode;
     }
 
     public Object getErrorData() {
@@ -61,7 +59,7 @@ public class MCPException extends RuntimeException {
      */
     public MCPProtocol.Error toProtocolError() {
         return MCPProtocol.Error.builder()
-                .code(errorCode)
+                .code(getErrorCode())
                 .message(getMessage())
                 .data(errorData)
                 .build();
@@ -183,6 +181,6 @@ public class MCPException extends RuntimeException {
 
     @Override
     public String toString() {
-        return String.format("MCPException[code=%d, message=%s]", errorCode, getMessage());
+        return String.format("MCPException[code=%d, message=%s]", getErrorCode(), getMessage());
     }
 }

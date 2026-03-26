@@ -38,6 +38,10 @@
             <groupId>io.leavesfly.evox</groupId>
             <artifactId>evox-memory</artifactId>
         </dependency>
+        <dependency>
+            <groupId>io.leavesfly.evox</groupId>
+            <artifactId>evox-evaluation</artifactId>
+        </dependency>
 
         <!-- Spring Boot -->
         <dependency>

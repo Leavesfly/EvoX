@@ -92,18 +92,14 @@ public class DefaultTeamMember extends Agent implements TeamMember<String> {
         String prompt = sb.toString();
         log.debug("Team member [{}] is executing task...", getName());
 
-        System.out.println(String.format("\n>>> [%s] 发送给 LLM 的 Prompt:", getName()));
-        System.out.println("----------------------------------------");
-        System.out.println(prompt);
-        System.out.println("----------------------------------------");
+        log.debug("\n>>> [{}] 发送给 LLM 的 Prompt:\n----------------------------------------\n{}\n----------------------------------------",
+                getName(), prompt);
 
         // 使用关联的 LLM 生成回答
         String response = getLlm().generate(prompt);
 
-        System.out.println(String.format("\n<<< [%s] LLM 返回结果:", getName()));
-        System.out.println("----------------------------------------");
-        System.out.println(response);
-        System.out.println("----------------------------------------");
+        log.debug("\n<<< [{}] LLM 返回结果:\n----------------------------------------\n{}\n----------------------------------------",
+                getName(), response);
 
         return response;
     }

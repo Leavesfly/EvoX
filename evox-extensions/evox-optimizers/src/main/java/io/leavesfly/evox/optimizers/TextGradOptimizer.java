@@ -53,6 +53,14 @@ public class TextGradOptimizer extends AgentOptimizer {
      */
     private List<StepResult> history;
 
+    /**
+     * 性能阈值：低于此值时增加批次大小
+     */
+    private static final double PERFORMANCE_THRESHOLD = 0.5;
+
+    /**
+     * 优化提示词
+     */
     @Override
     public String optimizePrompt(String prompt, Map<String, Object> agentConfig, EvaluationFeedback feedback) {
         // 使用 TextGrad 的梯度下降方法优化 prompt
@@ -65,6 +73,9 @@ public class TextGradOptimizer extends AgentOptimizer {
         return prompt;
     }
 
+    /**
+     * 优化配置
+     */
     @Override
     public Map<String, Object> optimizeConfig(Map<String, Object> agentConfig, EvaluationFeedback feedback) {
         // TextGrad 主要优化 prompt，配置优化相对简单
@@ -72,7 +83,7 @@ public class TextGradOptimizer extends AgentOptimizer {
         Map<String, Object> optimizedConfig = new HashMap<>(agentConfig);
         
         double score = feedback.getPrimaryScore();
-        if (score < 0.5) {
+        if (score < PERFORMANCE_THRESHOLD) {
             // 性能较差时，增加批次大小
             optimizedConfig.put("batchSize", Math.max(1, (Integer) optimizedConfig.getOrDefault("batchSize", batchSize) + 1));
         }

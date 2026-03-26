@@ -9,6 +9,8 @@ import io.leavesfly.evox.core.message.Message;
 import io.leavesfly.evox.core.message.MessageType;
 import io.leavesfly.evox.core.llm.ILLM;
 import io.leavesfly.evox.core.llm.LLMConfig;
+import io.leavesfly.evox.exception.AgentException;
+import io.leavesfly.evox.exception.ToolException;
 import io.leavesfly.evox.tools.agent.AgentTool;
 import io.leavesfly.evox.tools.base.BaseTool;
 import lombok.Builder;
@@ -164,12 +166,15 @@ public class ToolAwareAgent extends Agent {
                     .content(resultBuilder.toString())
                     .build();
 
-        } catch (Exception e) {
+        } catch (AgentException | ToolException e) {
             log.error("Error in ToolAwareAgent execution: {}", e.getMessage(), e);
             return Message.builder()
                     .messageType(MessageType.RESPONSE)
                     .content("Error: " + e.getMessage())
                     .build();
+        } catch (Exception e) {
+            log.error("Unexpected error in ToolAwareAgent execution: {}", e.getMessage(), e);
+            throw AgentException.executionError(getName(), "Unexpected error: " + e.getMessage(), e);
         }
     }
 
@@ -266,12 +271,12 @@ public class ToolAwareAgent extends Agent {
                 String toolName = getStringValue(item, "tool", "name", "tool_name");
                 if (toolName == null) continue;
 
-                @SuppressWarnings("unchecked")
-                Map<String, Object> params = item.containsKey("parameters")
-                        ? (Map<String, Object>) item.get("parameters")
-                        : item.containsKey("arguments")
-                            ? (Map<String, Object>) item.get("arguments")
-                            : new HashMap<>();
+                Map<String, Object> params = new HashMap<>();
+                if (item.containsKey("parameters") && item.get("parameters") instanceof Map) {
+                    params = (Map<String, Object>) item.get("parameters");
+                } else if (item.containsKey("arguments") && item.get("arguments") instanceof Map) {
+                    params = (Map<String, Object>) item.get("arguments");
+                }
                 toolCalls.add(ToolCall.builder().toolName(toolName).parameters(params).build());
             }
         } catch (JsonProcessingException e) {
@@ -385,9 +390,12 @@ public class ToolAwareAgent extends Agent {
 
         try {
             return tool.execute(toolCall.getParameters());
-        } catch (Exception e) {
+        } catch (ToolException e) {
             log.error("Error executing tool {}: {}", toolCall.getToolName(), e.getMessage(), e);
             return BaseTool.ToolResult.failure("Tool execution error: " + e.getMessage());
+        } catch (Exception e) {
+            log.error("Unexpected error executing tool {}: {}", toolCall.getToolName(), e.getMessage(), e);
+            throw ToolException.executionError(toolCall.getToolName(), "Unexpected error: " + e.getMessage(), e);
         }
     }
 

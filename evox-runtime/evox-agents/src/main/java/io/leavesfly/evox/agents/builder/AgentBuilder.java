@@ -6,6 +6,7 @@ import io.leavesfly.evox.agents.specialized.ChatBotAgent;
 import io.leavesfly.evox.core.llm.ILLM;
 
 import io.leavesfly.evox.core.llm.LLMConfig;
+import io.leavesfly.evox.exception.AgentException;
 import io.leavesfly.evox.models.provider.openai.OpenAILLMConfig;
 import io.leavesfly.evox.models.config.LLMFactory;
 import io.leavesfly.evox.models.provider.openai.OpenAILLM;
@@ -98,8 +99,8 @@ public class AgentBuilder<T extends Agent> {
         return new AgentBuilder<>(() -> {
             try {
                 return agentClass.getDeclaredConstructor().newInstance();
-            } catch (Exception e) {
-                throw new RuntimeException("Failed to instantiate " + agentClass.getName() +
+            } catch (ReflectiveOperationException e) {
+                throw new AgentException("Failed to instantiate " + agentClass.getName() +
                         ". Ensure it has a no-arg constructor, or use custom(Supplier) instead.", e);
             }
         }, agentClass.getSimpleName());
@@ -275,6 +276,9 @@ public class AgentBuilder<T extends Agent> {
     @SuppressWarnings("unchecked")
     public T build() {
         try {
+            // 校验必填字段
+            validateRequiredFields();
+
             // 创建 Agent 实例
             T agent;
             if (agentTypeName.equals("ChatBotAgent")) {
@@ -316,8 +320,32 @@ public class AgentBuilder<T extends Agent> {
             
             return agent;
             
+        } catch (AgentException e) {
+            throw e;
         } catch (Exception e) {
-            throw new RuntimeException("Failed to build agent: " + agentTypeName, e);
+            throw new AgentException("Failed to build agent: " + agentTypeName, e);
+        }
+    }
+
+    /**
+     * 校验构建 Agent 所需的必填字段。
+     * <p>
+     * - ChatBotAgent: 必须配置 llm；<br>
+     * - name: 如果显式提供，则不能为空字符串。
+     * </p>
+     *
+     * @throws IllegalArgumentException 当必填字段缺失或非法时抛出
+     */
+    private void validateRequiredFields() {
+        // 显式设置了名称但为空
+        if (name != null && name.trim().isEmpty()) {
+            throw new IllegalArgumentException("Agent name must not be blank");
+        }
+
+        // ChatBotAgent 必须配置 LLM
+        if ("ChatBotAgent".equals(agentTypeName) && llm == null) {
+            throw new IllegalArgumentException(
+                "ChatBotAgent requires a non-null llm. Please configure it via withOpenAI(...), withLLM(...), withConfig(...), etc.");
         }
     }
 }

@@ -284,14 +284,15 @@ public class EvoPromptOptimizer extends AgentOptimizer {
     }
 
     /**
-     * 获取精英个体索引
+     * 获取精英个体索引（避免自动装箱）
      */
     private List<Integer> getEliteIndices(double[] scores) {
-        return IntStream.range(0, scores.length)
-                .boxed()
-                .sorted((i, j) -> Double.compare(scores[j], scores[i]))
-                .limit(eliteSize)
-                .collect(Collectors.toList());
+        Integer[] indices = new Integer[scores.length];
+        for (int i = 0; i < scores.length; i++) {
+            indices[i] = i;
+        }
+        Arrays.sort(indices, (a, b) -> Double.compare(scores[b], scores[a]));
+        return Arrays.stream(indices).limit(eliteSize).collect(Collectors.toList());
     }
 
     /**

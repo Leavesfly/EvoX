@@ -4,6 +4,7 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.leavesfly.evox.core.evaluation.EvaluationResult;
 import io.leavesfly.evox.evaluation.Evaluator;
+import io.leavesfly.evox.exception.EvaluationException;
 import io.leavesfly.evox.models.spi.LLMProvider;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
@@ -176,9 +177,12 @@ public class LLMJudgeEvaluator extends Evaluator {
             allMetrics.putAll(registeredScores);
 
             return EvaluationResult.success(allMetrics);
-        } catch (Exception e) {
+        } catch (EvaluationException e) {
             log.error("LLM judge evaluation failed: {}", e.getMessage(), e);
             return EvaluationResult.failure("LLM judge evaluation failed: " + e.getMessage());
+        } catch (Exception e) {
+            log.error("LLM judge evaluation failed: {}", e.getMessage(), e);
+            throw EvaluationException.evaluationError("LLMJudgeEvaluator", e.getMessage(), e);
         }
     }
 
@@ -279,6 +283,9 @@ public class LLMJudgeEvaluator extends Evaluator {
                     log.debug("Skipping non-numeric field '{}' in LLM response", key);
                 }
             }
+        } catch (EvaluationException e) {
+            log.warn("Failed to parse LLM response as JSON, falling back to regex: {}", e.getMessage());
+            metrics.putAll(parseWithRegex(response, prefix));
         } catch (Exception e) {
             log.warn("Failed to parse LLM response as JSON, falling back to regex: {}", e.getMessage());
             metrics.putAll(parseWithRegex(response, prefix));

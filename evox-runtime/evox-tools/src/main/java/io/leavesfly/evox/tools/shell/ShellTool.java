@@ -1,5 +1,6 @@
 package io.leavesfly.evox.tools.shell;
 
+import io.leavesfly.evox.exception.ToolException;
 import io.leavesfly.evox.tools.base.BaseTool;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
@@ -10,6 +11,7 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.*;
 import java.util.*;
 import java.util.concurrent.*;
+import java.util.regex.Pattern;
 
 /**
  * Shell 命令执行工具
@@ -27,6 +29,62 @@ public class ShellTool extends BaseTool {
     private boolean requireApproval;
     private Set<String> dangerousPatterns;
 
+    /**
+     * Compiled regex patterns for blocked commands (more secure than simple string matching)
+     */
+    private static final List<Pattern> BLOCKED_COMMAND_PATTERNS = Arrays.asList(
+            // Recursive delete root filesystem
+            Pattern.compile("rm\\s+(-[rf]+|--recursive|--force).*\\s+/(\\s|$)", Pattern.CASE_INSENSITIVE),
+            Pattern.compile("rm\\s+-rf\\s+/", Pattern.CASE_INSENSITIVE),
+            // Format filesystem
+            Pattern.compile("mkfs\\s+.*", Pattern.CASE_INSENSITIVE),
+            // Disk destroy with dd
+            Pattern.compile("dd\\s+.*if=/dev/zero.*of=/dev/", Pattern.CASE_INSENSITIVE),
+            Pattern.compile("dd\\s+.*of=/dev/.*if=/dev/zero", Pattern.CASE_INSENSITIVE),
+            // Fork bomb
+            Pattern.compile(":\\(\\)\\s*\\{\\s*:\\|:&\\s*\\};\\s*:", Pattern.CASE_INSENSITIVE),
+            // Wipe filesystem
+            Pattern.compile("wipefs\\s+.*", Pattern.CASE_INSENSITIVE),
+            // Block device manipulation
+            Pattern.compile("blockdev\\s+.*", Pattern.CASE_INSENSITIVE)
+    );
+
+    /**
+     * Compiled regex patterns for dangerous commands that require approval
+     */
+    private static final List<Pattern> DANGEROUS_COMMAND_PATTERNS = Arrays.asList(
+            // Sudo execution
+            Pattern.compile("\\bsudo\\b", Pattern.CASE_INSENSITIVE),
+            // Permission changes - world writable
+            Pattern.compile("chmod\\s+(-R\\s+)?777\\s+", Pattern.CASE_INSENSITIVE),
+            Pattern.compile("chmod\\s+(-R\\s+)?a\\+rwx\\s+", Pattern.CASE_INSENSITIVE),
+            // Ownership changes
+            Pattern.compile("\\bchown\\s+(-R\\s+)?", Pattern.CASE_INSENSITIVE),
+            // Force kill
+            Pattern.compile("kill\\s+(-9|-KILL)\\s+", Pattern.CASE_INSENSITIVE),
+            // System power control
+            Pattern.compile("\\b(shutdown|reboot|poweroff|halt)\\b(\\s|$)", Pattern.CASE_INSENSITIVE),
+            // Disk partitioning
+            Pattern.compile("\\b(fdisk|parted|gdisk)\\s+", Pattern.CASE_INSENSITIVE),
+            // Format command
+            Pattern.compile("\\bformat\\s+", Pattern.CASE_INSENSITIVE),
+            // Network configuration changes
+            Pattern.compile("\\bipconfig\\s+.*/release", Pattern.CASE_INSENSITIVE),
+            Pattern.compile("\\bifconfig\\s+.*down\\s*$", Pattern.CASE_INSENSITIVE),
+            // Init level changes
+            Pattern.compile("\\binit\\s+[06]\\b", Pattern.CASE_INSENSITIVE),
+            // Service management
+            Pattern.compile("\\b(systemctl|service)\\s+.*(stop|disable|restart)\\s+", Pattern.CASE_INSENSITIVE),
+            // User management
+            Pattern.compile("\\b(userdel|useradd|passwd)\\s+", Pattern.CASE_INSENSITIVE),
+            // iptables flush
+            Pattern.compile("iptables\\s+-F(\\s|$)", Pattern.CASE_INSENSITIVE),
+            // Curl/bash pipe to shell (common attack vector)
+            Pattern.compile("(curl|wget)\\s+.*\\|\\s*(bash|sh|zsh)", Pattern.CASE_INSENSITIVE),
+            // Environment variable manipulation
+            Pattern.compile("\\bexport\\s+(PATH|LD_LIBRARY_PATH|LD_PRELOAD)\\s*=", Pattern.CASE_INSENSITIVE)
+    );
+
     public ShellTool() {
         this(System.getProperty("user.dir"));
     }
@@ -42,11 +100,13 @@ public class ShellTool extends BaseTool {
                 + "Supports timeout control and dangerous command blocking.";
         this.workingDirectory = workingDirectory;
         this.timeoutSeconds = timeoutSeconds;
+        // Keep backward compatibility with string-based blockedCommands set
         this.blockedCommands = new HashSet<>(Arrays.asList(
                 "rm -rf /", "mkfs", "dd if=/dev/zero", ":(){ :|:& };:"
         ));
         this.environmentVariables = new HashMap<>();
         this.requireApproval = false;
+        // Keep backward compatibility with string-based dangerousPatterns set
         this.dangerousPatterns = new HashSet<>(Arrays.asList(
                 "sudo", "chmod 777", "chown", "kill -9",
                 "shutdown", "reboot", "format", "fdisk"
@@ -105,6 +165,10 @@ public class ShellTool extends BaseTool {
     }
 
     private ToolResult executeCommand(String command, String cwd, long timeout, Map<String, String> extraEnv) {
+        Process process = null;
+        InputStream stdoutStream = null;
+        InputStream stderrStream = null;
+        
         try {
             Path workDir = Paths.get(cwd);
             if (!Files.isDirectory(workDir)) {
@@ -130,15 +194,16 @@ public class ShellTool extends BaseTool {
 
             processBuilder.redirectErrorStream(false);
 
-            Process process = processBuilder.start();
+            process = processBuilder.start();
+            stdoutStream = process.getInputStream();
+            stderrStream = process.getErrorStream();
 
-            CompletableFuture<String> stdoutFuture = readStreamAsync(process.getInputStream());
-            CompletableFuture<String> stderrFuture = readStreamAsync(process.getErrorStream());
+            CompletableFuture<String> stdoutFuture = readStreamAsync(stdoutStream);
+            CompletableFuture<String> stderrFuture = readStreamAsync(stderrStream);
 
             boolean finished = process.waitFor(timeout, TimeUnit.SECONDS);
 
             if (!finished) {
-                process.destroyForcibly();
                 String partialStdout = stdoutFuture.getNow("");
                 return ToolResult.failure("Command timed out after " + timeout + " seconds. Partial output: " + partialStdout);
             }
@@ -163,13 +228,37 @@ public class ShellTool extends BaseTool {
 
         } catch (IOException e) {
             log.error("Error executing command: {}", command, e);
-            return ToolResult.failure("Failed to execute command: " + e.getMessage());
+            throw ToolException.executionError("shell", "Failed to execute command: " + e.getMessage(), e);
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
-            return ToolResult.failure("Command execution interrupted");
+            throw ToolException.executionError("shell", "Command execution interrupted", e);
+        } catch (ExecutionException | TimeoutException e) {
+            log.error("Error reading command output: {}", command, e);
+            throw ToolException.executionError("shell", "Error reading command output: " + e.getMessage(), e);
         } catch (Exception e) {
             log.error("Unexpected error executing command: {}", command, e);
-            return ToolResult.failure("Unexpected error: " + e.getMessage());
+            throw ToolException.executionError("shell", "Unexpected error: " + e.getMessage(), e);
+        } finally {
+            // 确保关闭所有流
+            closeQuietly(stdoutStream);
+            closeQuietly(stderrStream);
+            // 确保销毁进程
+            if (process != null && process.isAlive()) {
+                process.destroyForcibly();
+            }
+        }
+    }
+    
+    /**
+     * 安静关闭流，忽略异常
+     */
+    private void closeQuietly(InputStream stream) {
+        if (stream != null) {
+            try {
+                stream.close();
+            } catch (IOException e) {
+                log.debug("Error closing stream", e);
+            }
         }
     }
 
@@ -189,8 +278,21 @@ public class ShellTool extends BaseTool {
         });
     }
 
+    /**
+     * Check if command matches blocked patterns using regex.
+     * Uses compiled patterns for better security and performance.
+     */
     private boolean isBlockedCommand(String command) {
         String normalizedCommand = command.trim().toLowerCase();
+        
+        // Use regex pattern matching for enhanced security
+        for (Pattern pattern : BLOCKED_COMMAND_PATTERNS) {
+            if (pattern.matcher(normalizedCommand).find()) {
+                return true;
+            }
+        }
+        
+        // Fallback to string-based check for backward compatibility
         for (String blocked : blockedCommands) {
             if (normalizedCommand.contains(blocked.toLowerCase())) {
                 return true;
@@ -227,8 +329,21 @@ public class ShellTool extends BaseTool {
         dangerousPatterns.add(pattern);
     }
 
+    /**
+     * Check if command matches dangerous patterns using regex.
+     * Uses compiled patterns for better security and performance.
+     */
     private boolean isDangerousCommand(String command) {
         String normalizedCommand = command.trim().toLowerCase();
+        
+        // Use regex pattern matching for enhanced security
+        for (Pattern pattern : DANGEROUS_COMMAND_PATTERNS) {
+            if (pattern.matcher(normalizedCommand).find()) {
+                return true;
+            }
+        }
+        
+        // Fallback to string-based check for backward compatibility
         for (String pattern : dangerousPatterns) {
             if (normalizedCommand.contains(pattern.toLowerCase())) {
                 return true;

@@ -1,11 +1,13 @@
 package io.leavesfly.evox.storage.vector;
 
+import io.leavesfly.evox.exception.StorageException;
 import lombok.extern.slf4j.Slf4j;
 
 import java.io.*;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.nio.file.StandardCopyOption;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
@@ -43,23 +45,6 @@ public class PersistentVectorStore implements VectorStore {
      * 自动保存路径（可选）
      */
     private String autoSavePath;
-
-    /**
-     * 向量条目（可序列化）
-     */
-    private static class VectorEntry implements Serializable {
-        private static final long serialVersionUID = 1L;
-        
-        String id;
-        float[] vector;
-        Map<String, Object> metadata;
-
-        VectorEntry(String id, float[] vector, Map<String, Object> metadata) {
-            this.id = id;
-            this.vector = vector;
-            this.metadata = metadata != null ? new HashMap<>(metadata) : new HashMap<>();
-        }
-    }
 
     /**
      * 存储数据容器（用于序列化）
@@ -107,6 +92,8 @@ public class PersistentVectorStore implements VectorStore {
                 try {
                     load(autoSavePath);
                     log.info("从 {} 自动加载了向量存储", autoSavePath);
+                } catch (StorageException e) {
+                    log.warn("自动加载失败，使用空存储: {}", e.getMessage());
                 } catch (Exception e) {
                     log.warn("自动加载失败，使用空存储: {}", e.getMessage());
                 }
@@ -124,8 +111,10 @@ public class PersistentVectorStore implements VectorStore {
             try {
                 save(autoSavePath);
                 log.info("关闭时自动保存到 {}", autoSavePath);
+            } catch (StorageException e) {
+                log.error("自动保存失败: {}", e.getMessage(), e);
             } catch (Exception e) {
-                log.error("自动保存失败: {}", e.getMessage());
+                log.error("自动保存失败: {}", e.getMessage(), e);
             }
         }
         
@@ -193,10 +182,10 @@ public class PersistentVectorStore implements VectorStore {
         }
 
         return vectors.values().stream()
-            .filter(entry -> matchesFilter(entry.metadata, filter))
+            .filter(entry -> matchesFilter(entry.getMetadata(), filter))
             .map(entry -> {
-                float score = cosineSimilarity(queryVector, entry.vector);
-                return new SearchResult(entry.id, entry.vector, entry.metadata, score);
+                float score = cosineSimilarity(queryVector, entry.getVector());
+                return new SearchResult(entry.getId(), entry.getVector(), entry.getMetadata(), score);
             })
             .sorted((a, b) -> Float.compare(b.getScore(), a.getScore()))
             .limit(topK)
@@ -240,39 +229,68 @@ public class PersistentVectorStore implements VectorStore {
     @Override
     public void save(String path) {
         if (path == null || path.trim().isEmpty()) {
-            throw new IllegalArgumentException("保存路径不能为空");
+            throw StorageException.vectorStoreError("save", "保存路径不能为空");
         }
 
+        Path filePath = Paths.get(path);
+        Path tempFile = null;
+        
         try {
-            Path filePath = Paths.get(path);
-            
             // 创建父目录
             if (filePath.getParent() != null) {
                 Files.createDirectories(filePath.getParent());
             }
 
+            // 创建临时文件（与目标文件同目录，确保原子重命名可行）
+            tempFile = Files.createTempFile(filePath.getParent(), "vector-store-", ".tmp");
+
             // 创建存储数据
             StorageData data = new StorageData(dimension, vectors.values());
             
-            // 序列化保存
+            // 先序列化保存到临时文件
             try (ObjectOutputStream oos = new ObjectOutputStream(
-                    new BufferedOutputStream(new FileOutputStream(filePath.toFile())))) {
+                    new BufferedOutputStream(new FileOutputStream(tempFile.toFile())))) {
                 oos.writeObject(data);
             }
+            
+            // 原子重命名：临时文件 -> 目标文件
+            // ATOMIC_MOVE 确保操作是原子的，REPLACE_EXISTING 允许覆盖已存在的文件
+            Files.move(tempFile, filePath, StandardCopyOption.ATOMIC_MOVE, StandardCopyOption.REPLACE_EXISTING);
             
             modified = false;
             log.info("保存 {} 个向量到: {}", vectors.size(), path);
 
         } catch (IOException e) {
             log.error("保存向量存储失败: {}", e.getMessage(), e);
-            throw new RuntimeException("保存向量存储失败", e);
+            // 清理临时文件
+            if (tempFile != null) {
+                try {
+                    Files.deleteIfExists(tempFile);
+                } catch (IOException cleanupError) {
+                    log.warn("清理临时文件失败: {}", tempFile, cleanupError);
+                }
+            }
+            throw StorageException.vectorStoreError("save", "保存向量存储失败", e);
+        } catch (UnsupportedOperationException e) {
+            // ATOMIC_MOVE 在某些文件系统上可能不支持，降级为普通重命名
+            log.warn("文件系统不支持原子移动，使用普通重命名: {}", path);
+            try {
+                if (tempFile != null && Files.exists(tempFile)) {
+                    Files.move(tempFile, filePath, StandardCopyOption.REPLACE_EXISTING);
+                }
+                modified = false;
+                log.info("保存 {} 个向量到: {}", vectors.size(), path);
+            } catch (IOException fallbackError) {
+                log.error("降级保存也失败", fallbackError);
+                throw StorageException.vectorStoreError("save", "保存向量存储失败", fallbackError);
+            }
         }
     }
 
     @Override
     public void load(String path) {
         if (path == null || path.trim().isEmpty()) {
-            throw new IllegalArgumentException("加载路径不能为空");
+            throw StorageException.vectorStoreError("load", "加载路径不能为空");
         }
 
         Path filePath = Paths.get(path);
@@ -297,16 +315,19 @@ public class PersistentVectorStore implements VectorStore {
                 // 清空并加载
                 vectors.clear();
                 for (VectorEntry entry : data.entries) {
-                    vectors.put(entry.id, entry);
+                    vectors.put(entry.getId(), entry);
                 }
                 
                 modified = false;
                 log.info("从 {} 加载了 {} 个向量", path, vectors.size());
             }
 
+        } catch (StorageException e) {
+            log.error("加载向量存储失败: {}", e.getMessage(), e);
+            throw e;
         } catch (IOException | ClassNotFoundException e) {
             log.error("加载向量存储失败: {}", e.getMessage(), e);
-            throw new RuntimeException("加载向量存储失败", e);
+            throw StorageException.vectorStoreError("load", "加载向量存储失败", e);
         }
     }
 

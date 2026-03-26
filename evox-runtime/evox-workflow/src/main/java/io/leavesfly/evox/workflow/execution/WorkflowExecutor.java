@@ -4,6 +4,7 @@ import io.leavesfly.evox.core.agent.IAgent;
 import io.leavesfly.evox.core.agent.IAgentManager;
 import io.leavesfly.evox.core.message.Message;
 import io.leavesfly.evox.core.message.MessageType;
+import io.leavesfly.evox.exception.WorkflowException;
 import io.leavesfly.evox.workflow.base.Workflow;
 import io.leavesfly.evox.workflow.base.WorkflowNode;
 import io.leavesfly.evox.workflow.graph.WorkflowGraph;
@@ -17,6 +18,8 @@ import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 /**
  * 工作流执行器 - 负责执行工作流中的节点
@@ -29,6 +32,16 @@ public class WorkflowExecutor {
     private final IAgentManager agentManager;
     private WorkflowContext context;
     private final NodeHandlerRegistry handlerRegistry = new NodeHandlerRegistry();
+
+    private static final String CONTEXT_PREFIX = "context.";
+    private static final String OP_EQUALS = "==";
+    private static final String OP_NOT_EQUALS = "!=";
+    private static final String OP_GREATER_THAN = ">";
+    private static final String OP_LESS_THAN = "<";
+
+    private static final Pattern EQUALS_PATTERN = Pattern.compile("\\s*(.+?)\\s*==\\s*(.+)\\s*");
+    private static final Pattern GREATER_THAN_PATTERN = Pattern.compile("\\s*(.+?)\\s*>\\s*(.+)\\s*");
+    private static final Pattern LESS_THAN_PATTERN = Pattern.compile("\\s*(.+?)\\s*<\\s*(.+)\\s*");
 
     public WorkflowExecutor(Workflow workflow, IAgentManager agentManager) {
         this.workflow = workflow;
@@ -91,16 +104,19 @@ public class WorkflowExecutor {
 
                     stepCount++;
 
-                } catch (Exception e) {
+                } catch (WorkflowException e) {
                     log.error("Error executing workflow node", e);
                     return Mono.error(e);
+                } catch (Exception e) {
+                    log.error("Error executing workflow node", e);
+                    return Mono.error(new WorkflowException("Workflow node execution failed", e));
                 }
             }
 
             if (stepCount >= workflow.getMaxExecutionSteps()) {
                 String errorMsg = "Workflow execution exceeded maximum steps: " + workflow.getMaxExecutionSteps();
                 log.error(errorMsg);
-                return Mono.error(new RuntimeException(errorMsg));
+                return Mono.error(WorkflowException.executionError(workflow.getName(), errorMsg));
             }
 
             context.markCompleted();
@@ -179,9 +195,12 @@ public class WorkflowExecutor {
                         })
                         .then();
 
-            } catch (Exception e) {
+            } catch (WorkflowException e) {
                 log.error("Failed to execute node: {}", node.getName(), e);
                 return Mono.error(e);
+            } catch (Exception e) {
+                log.error("Failed to execute node: {}", node.getName(), e);
+                return Mono.error(WorkflowException.stepError(workflow.getName(), node.getName(), "Execution failed", e));
             }
         });
     }
@@ -267,14 +286,17 @@ public class WorkflowExecutor {
                             return result;
                         })
                         .onErrorResume(error -> {
-                            log.error("Action execution failed for node {}: {}", node.getName(), error.getMessage());
-                            return Mono.error(new RuntimeException(
+                            log.error("Action execution failed for node {}: {}", node.getName(), error.getMessage(), error);
+                            return Mono.error(WorkflowException.stepError(workflow.getName(), node.getName(), 
                                     "Action execution failed: " + error.getMessage(), error));
                         });
 
-            } catch (Exception e) {
-                log.error("Error preparing action node execution", e);
+            } catch (WorkflowException e) {
+                log.error("Error preparing action node execution: {}", e.getMessage(), e);
                 return Mono.error(e);
+            } catch (Exception e) {
+                log.error("Error preparing action node execution: {}", e.getMessage(), e);
+                return Mono.error(WorkflowException.stepError(workflow.getName(), node.getName(), "Action node preparation failed", e));
             }
         });
     }
@@ -314,9 +336,12 @@ public class WorkflowExecutor {
                 // 返回决策结果
                 return Mono.just(createDecisionResult(node, conditionResult, selectedBranch));
                 
+            } catch (WorkflowException e) {
+                log.error("Error executing decision node: {}", node.getName(), e);
+                return Mono.error(e);
             } catch (Exception e) {
                 log.error("Error executing decision node: {}", node.getName(), e);
-                return Mono.error(new RuntimeException("Decision node execution failed: " + e.getMessage(), e));
+                return Mono.error(WorkflowException.stepError(workflow.getName(), node.getName(), "Decision node execution failed", e));
             }
         });
     }
@@ -330,40 +355,45 @@ public class WorkflowExecutor {
         // 例如："result.success == true", "count > 5", "status == 'completed'"
         
         try {
+            String trimmed = condition != null ? condition.trim() : "";
+
             // 处理 context.开头的表达式
-            if (condition.startsWith("context.")) {
-                return evaluateContextCondition(condition);
+            if (trimmed.startsWith(CONTEXT_PREFIX)) {
+                return evaluateContextCondition(trimmed);
             }
             
             // 处理布尔值
-            if ("true".equalsIgnoreCase(condition)) {
+            if ("true".equalsIgnoreCase(trimmed)) {
                 return true;
             }
-            if ("false".equalsIgnoreCase(condition)) {
+            if ("false".equalsIgnoreCase(trimmed)) {
                 return false;
             }
             
             // 处理比较表达式
-            if (condition.contains("==")) {
-                return evaluateEqualsCondition(condition);
+            if (trimmed.contains(OP_EQUALS)) {
+                return evaluateEqualsCondition(trimmed);
             }
-            if (condition.contains("!=")) {
-                return evaluateNotEqualsCondition(condition);
+            if (trimmed.contains(OP_NOT_EQUALS)) {
+                return evaluateNotEqualsCondition(trimmed);
             }
-            if (condition.contains(">")) {
-                return evaluateGreaterThanCondition(condition);
+            if (trimmed.contains(OP_GREATER_THAN)) {
+                return evaluateGreaterThanCondition(trimmed);
             }
-            if (condition.contains("<")) {
-                return evaluateLessThanCondition(condition);
+            if (trimmed.contains(OP_LESS_THAN)) {
+                return evaluateLessThanCondition(trimmed);
             }
             
             // 默认返回 true
             log.warn("Cannot parse condition: {}, defaulting to true", condition);
             return true;
             
-        } catch (Exception e) {
+        } catch (WorkflowException e) {
             log.error("Error evaluating condition: {}", condition, e);
             return false;
+        } catch (Exception e) {
+            log.error("Error evaluating condition: {}", condition, e);
+            throw WorkflowException.executionError(workflow.getName(), "Condition evaluation failed: " + condition, e);
         }
     }
     
@@ -372,17 +402,14 @@ public class WorkflowExecutor {
      */
     private Object evaluateContextCondition(String condition) {
         // 例如：context.lastResult.success == true
-        String expr = condition.substring("context.".length()).trim();
+        String expr = condition.substring(CONTEXT_PREFIX.length()).trim();
         
-        // 简单实现：检查 executionData 中的值
-        if (expr.contains("==")) {
-            String[] parts = expr.split("==");
-            if (parts.length == 2) {
-                String key = parts[0].trim();
-                String expectedValue = parts[1].trim().replace("'", "").replace("\"", "");
-                Object actualValue = context.getExecutionData(key);
-                return actualValue != null && actualValue.toString().equals(expectedValue);
-            }
+        Matcher matcher = EQUALS_PATTERN.matcher(expr);
+        if (matcher.matches()) {
+            String key = matcher.group(1).trim();
+            String expectedValue = matcher.group(2).trim().replace("'", "").replace("\"", "");
+            Object actualValue = context.getExecutionData(key);
+            return actualValue != null && actualValue.toString().equals(expectedValue);
         }
         
         return false;
@@ -392,11 +419,13 @@ public class WorkflowExecutor {
      * 评估相等条件
      */
     private boolean evaluateEqualsCondition(String condition) {
-        String[] parts = condition.split("==");
-        if (parts.length != 2) return false;
+        Matcher matcher = EQUALS_PATTERN.matcher(condition);
+        if (!matcher.matches()) {
+            return false;
+        }
         
-        String left = parts[0].trim();
-        String right = parts[1].trim().replace("'", "").replace("\"", "");
+        String left = matcher.group(1).trim();
+        String right = matcher.group(2).trim().replace("'", "").replace("\"", "");
         
         // 从上下文获取值
         Object leftValue = context.getExecutionData(left);
@@ -409,26 +438,31 @@ public class WorkflowExecutor {
      * 评估不相等条件
      */
     private boolean evaluateNotEqualsCondition(String condition) {
-        return !evaluateEqualsCondition(condition.replace("!=", "=="));
+        String equalsCondition = condition.replace(OP_NOT_EQUALS, OP_EQUALS);
+        return !evaluateEqualsCondition(equalsCondition);
     }
     
     /**
      * 评估大于条件
      */
     private boolean evaluateGreaterThanCondition(String condition) {
-        String[] parts = condition.split(">");
-        if (parts.length != 2) return false;
+        Matcher matcher = GREATER_THAN_PATTERN.matcher(condition);
+        if (!matcher.matches()) {
+            return false;
+        }
+        
+        String left = matcher.group(1).trim();
+        String rightPart = matcher.group(2).trim();
         
         try {
-            String left = parts[0].trim();
-            double rightValue = Double.parseDouble(parts[1].trim());
-            
+            double rightValue = Double.parseDouble(rightPart);
             Object leftObj = context.getExecutionData(left);
             if (leftObj == null) return false;
             
             double leftValue = Double.parseDouble(leftObj.toString());
             return leftValue > rightValue;
         } catch (NumberFormatException e) {
+            log.warn("Failed to parse numeric value in condition '{}': {}", condition, e.getMessage());
             return false;
         }
     }
@@ -437,19 +471,23 @@ public class WorkflowExecutor {
      * 评估小于条件
      */
     private boolean evaluateLessThanCondition(String condition) {
-        String[] parts = condition.split("<");
-        if (parts.length != 2) return false;
+        Matcher matcher = LESS_THAN_PATTERN.matcher(condition);
+        if (!matcher.matches()) {
+            return false;
+        }
+        
+        String left = matcher.group(1).trim();
+        String rightPart = matcher.group(2).trim();
         
         try {
-            String left = parts[0].trim();
-            double rightValue = Double.parseDouble(parts[1].trim());
-            
+            double rightValue = Double.parseDouble(rightPart);
             Object leftObj = context.getExecutionData(left);
             if (leftObj == null) return false;
             
             double leftValue = Double.parseDouble(leftObj.toString());
             return leftValue < rightValue;
         } catch (NumberFormatException e) {
+            log.warn("Failed to parse numeric value in condition '{}': {}", condition, e.getMessage());
             return false;
         }
     }
@@ -565,9 +603,12 @@ public class WorkflowExecutor {
                     case FIRST -> executeParallelFirst(node, parallelNodeIds);
                 };
                 
+            } catch (WorkflowException e) {
+                log.error("Error executing parallel node: {}", node.getName(), e);
+                return Mono.error(e);
             } catch (Exception e) {
                 log.error("Error executing parallel node: {}", node.getName(), e);
-                return Mono.error(new RuntimeException("Parallel node execution failed: " + e.getMessage(), e));
+                return Mono.error(WorkflowException.stepError(workflow.getName(), node.getName(), "Parallel node execution failed", e));
             }
         });
     }
@@ -727,9 +768,12 @@ public class WorkflowExecutor {
                 // 执行循环
                 return executeLoop(node, loopBody, condition, maxIterations);
                 
+            } catch (WorkflowException e) {
+                log.error("Error executing loop node: {}", node.getName(), e);
+                return Mono.error(e);
             } catch (Exception e) {
                 log.error("Error executing loop node: {}", node.getName(), e);
-                return Mono.error(new RuntimeException("Loop node execution failed: " + e.getMessage(), e));
+                return Mono.error(WorkflowException.stepError(workflow.getName(), node.getName(), "Loop node execution failed", e));
             }
         });
     }
@@ -784,17 +828,12 @@ public class WorkflowExecutor {
                     
                     log.debug("Loop iteration {} completed", iteration);
                     
+                } catch (WorkflowException e) {
+                    log.error("Loop iteration {} failed: {}", iteration, e.getMessage(), e);
+                    throw e;
                 } catch (Exception e) {
-                    log.error("Loop iteration {} failed: {}", iteration, e.getMessage());
-                    // 循环体执行失败，记录错误并继续或退出
-                    Map<String, Object> iterResult = new HashMap<>();
-                    iterResult.put("iteration", iteration);
-                    iterResult.put("status", "failed");
-                    iterResult.put("error", e.getMessage());
-                    iterationResults.add(iterResult);
-                    
-                    // 可以选择在失败时退出循环
-                    break;
+                    log.error("Loop iteration {} failed: {}", iteration, e.getMessage(), e);
+                    throw WorkflowException.stepError(workflow.getName(), loopNode.getName(), "Loop iteration " + iteration + " failed", e);
                 }
                 
                 iteration++;
@@ -859,9 +898,12 @@ public class WorkflowExecutor {
                 
                 return Mono.just(createSubWorkflowResult(node, subWorkflowResult, processedOutput));
                 
+            } catch (WorkflowException e) {
+                log.error("Error executing subworkflow node: {}", node.getName(), e);
+                return Mono.error(e);
             } catch (Exception e) {
                 log.error("Error executing subworkflow node: {}", node.getName(), e);
-                return Mono.error(new RuntimeException("Subworkflow node execution failed: " + e.getMessage(), e));
+                return Mono.error(WorkflowException.stepError(workflow.getName(), node.getName(), "Subworkflow node execution failed", e));
             }
         });
     }

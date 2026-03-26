@@ -21,15 +21,10 @@ public class InMemoryVectorStore implements VectorStore {
     /**
      * 向量条目
      */
-    private static class VectorEntry {
-        String id;
-        float[] vector;
-        Map<String, Object> metadata;
+    private static class InMemoryVectorEntry extends VectorEntry {
 
-        VectorEntry(String id, float[] vector, Map<String, Object> metadata) {
-            this.id = id;
-            this.vector = vector;
-            this.metadata = metadata != null ? new HashMap<>(metadata) : new HashMap<>();
+        InMemoryVectorEntry(String id, float[] vector, Map<String, Object> metadata) {
+            super(id, vector, metadata);
         }
     }
 
@@ -97,10 +92,10 @@ public class InMemoryVectorStore implements VectorStore {
 
         // 计算所有向量的相似度
         List<SearchResult> results = vectors.values().stream()
-            .filter(entry -> matchesFilter(entry.metadata, filter))
+            .filter(entry -> matchesFilter(entry.getMetadata(), filter))
             .map(entry -> {
-                float score = cosineSimilarity(queryVector, entry.vector);
-                return new SearchResult(entry.id, entry.vector, entry.metadata, score);
+                float score = cosineSimilarity(queryVector, entry.getVector());
+                return new SearchResult(entry.getId(), entry.getVector(), entry.getMetadata(), score);
             })
             .sorted((a, b) -> Float.compare(b.getScore(), a.getScore())) // 降序排列
             .limit(topK)

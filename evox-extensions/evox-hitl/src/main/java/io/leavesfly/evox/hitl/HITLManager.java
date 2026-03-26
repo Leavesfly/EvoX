@@ -4,6 +4,8 @@ import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
 import reactor.core.publisher.Mono;
 
+import java.io.Closeable;
+import java.io.IOException;
 import java.time.Duration;
 import java.util.HashMap;
 import java.util.Map;
@@ -17,7 +19,7 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 @Slf4j
 @Data
-public class HITLManager {
+public class HITLManager implements Closeable {
 
     /**
      * HITL是否当前激活
@@ -135,11 +137,11 @@ public class HITLManager {
     private Mono<HITLResponse> handleCLIInteraction(HITLRequest request) {
         return Mono.fromCallable(() -> {
             // 显示请求
-            System.out.println("\n" + "=".repeat(80));
-            System.out.println("🔔 Human-in-the-Loop Approval Request");
-            System.out.println("=".repeat(80));
-            System.out.println(request.getPromptMessage());
-            System.out.println("=".repeat(80));
+            log.info("\n" + "=".repeat(80));
+            log.info("🔔 Human-in-the-Loop Approval Request");
+            log.info("=".repeat(80));
+            log.info(request.getPromptMessage());
+            log.info("=".repeat(80));
 
             // 根据交互类型获取用户决策
             if (request.getInteractionType() == HITLInteractionType.APPROVE_REJECT) {
@@ -161,7 +163,7 @@ public class HITLManager {
      * 处理批准/拒绝交互
      */
     private HITLResponse handleApproveReject(HITLRequest request) {
-        System.out.print("\nPlease select [a]pprove / [r]eject: ");
+        log.info("\nPlease select [a]pprove / [r]eject: ");
         
         String choice = scanner.nextLine().toLowerCase().trim();
         HITLDecision decision;
@@ -171,13 +173,13 @@ public class HITLManager {
         } else if ("r".equals(choice) || "reject".equals(choice)) {
             decision = HITLDecision.REJECT;
         } else {
-            System.out.println("Invalid input, defaulting to REJECT");
+            log.warn("Invalid input, defaulting to REJECT");
             decision = HITLDecision.REJECT;
         }
 
         String feedback = "";
         if (decision == HITLDecision.REJECT) {
-            System.out.print("Please provide reason for rejection (optional): ");
+            log.info("Please provide reason for rejection (optional): ");
             feedback = scanner.nextLine().trim();
         }
 
@@ -192,12 +194,12 @@ public class HITLManager {
      * 处理用户输入收集
      */
     private HITLResponse handleUserInputCollection(HITLRequest request) {
-        System.out.println("\nPlease provide the requested information:");
+        log.info("\nPlease provide the requested information:");
         
         Map<String, Object> collectedData = new HashMap<>();
         
         // 简单实现:收集一个输入
-        System.out.print("Input data: ");
+        log.info("Input data: ");
         String inputData = scanner.nextLine().trim();
         
         if (!inputData.isEmpty()) {
@@ -249,10 +251,38 @@ public class HITLManager {
 
     /**
      * 关闭资源
+     * 注意：Scanner 包装了 System.in，关闭 Scanner 会同时关闭 System.in
+     * 为避免后续无法使用 System.in，这里采用安全关闭策略
      */
+    @Override
     public void close() {
         if (scanner != null) {
-            scanner.close();
+            try {
+                // Scanner 关闭时会关闭底层流，对于 System.in 不应关闭
+                // 但 Scanner 没有提供只关闭自身而不关闭底层流的方法
+                // 因此设置 scanner = null，让 GC 处理，不显式关闭
+                // 这样可以避免 System.in 被关闭后无法使用的问题
+                scanner = null;
+                log.debug("HITLManager resources released (Scanner reference cleared)");
+            } catch (Exception e) {
+                log.warn("Error releasing HITLManager resources", e);
+            }
+        }
+    }
+    
+    /**
+     * 强制关闭（包括 Scanner）
+     * 仅在确定不再需要 System.in 时使用
+     */
+    public void forceClose() {
+        if (scanner != null) {
+            try {
+                scanner.close();
+            } catch (Exception e) {
+                log.warn("Error closing scanner", e);
+            } finally {
+                scanner = null;
+            }
         }
     }
 }

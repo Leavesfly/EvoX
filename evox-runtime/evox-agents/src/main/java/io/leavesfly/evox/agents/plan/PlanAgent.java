@@ -7,6 +7,7 @@ import io.leavesfly.evox.actions.base.SimpleActionOutput;
 import io.leavesfly.evox.agents.base.Agent;
 import io.leavesfly.evox.core.message.Message;
 import io.leavesfly.evox.core.message.MessageType;
+import io.leavesfly.evox.exception.AgentException;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.extern.slf4j.Slf4j;
@@ -95,10 +96,7 @@ public class PlanAgent extends Agent {
                     .build();
         } catch (Exception e) {
             log.error("Failed to execute planning action", e);
-            return Message.builder()
-                    .messageType(MessageType.ERROR)
-                    .content("Execution failed: " + e.getMessage())
-                    .build();
+            throw AgentException.executionError(getName(), e.getMessage(), e);
         }
     }
 
@@ -156,7 +154,7 @@ public class PlanAgent extends Agent {
                 return SimpleActionOutput.success(result);
             } catch (Exception e) {
                 log.error("PlanningAction execution failed", e);
-                return SimpleActionOutput.failure("Execution failed: " + e.getMessage());
+                throw new AgentException("PlanningAction execution failed: " + e.getMessage(), e);
             }
         }
 

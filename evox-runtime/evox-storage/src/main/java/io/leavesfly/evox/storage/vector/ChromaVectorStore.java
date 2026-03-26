@@ -1,5 +1,6 @@
 package io.leavesfly.evox.storage.vector;
 
+import io.leavesfly.evox.exception.StorageException;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
 
@@ -44,6 +45,10 @@ public class ChromaVectorStore implements VectorStore {
                 createCollection();
                 initialized = true;
                 log.info("Chroma vector store initialized successfully");
+            } catch (StorageException e) {
+                log.warn("Failed to connect to Chroma server, using in-memory fallback: {}", e.getMessage());
+                // 使用内存备用方案
+                initialized = true;
             } catch (Exception e) {
                 log.warn("Failed to connect to Chroma server, using in-memory fallback: {}", e.getMessage());
                 // 使用内存备用方案
@@ -76,6 +81,10 @@ public class ChromaVectorStore implements VectorStore {
                 vectorStorage.put(id, new VectorEntry(id, vector, metadata));
                 log.debug("Vector added to in-memory storage: {}", id);
             }
+        } catch (StorageException e) {
+            log.error("Failed to add vector: {}", id, e);
+            // 备用到内存
+            vectorStorage.put(id, new VectorEntry(id, vector, metadata));
         } catch (Exception e) {
             log.error("Failed to add vector: {}", id, e);
             // 备用到内存
@@ -108,6 +117,9 @@ public class ChromaVectorStore implements VectorStore {
                 // 备用方案：内存搜索
                 return searchInMemory(queryVector, topK, filter);
             }
+        } catch (StorageException e) {
+            log.error("Search failed, using in-memory fallback", e);
+            return searchInMemory(queryVector, topK, filter);
         } catch (Exception e) {
             log.error("Search failed, using in-memory fallback", e);
             return searchInMemory(queryVector, topK, filter);
@@ -123,6 +135,9 @@ public class ChromaVectorStore implements VectorStore {
             } else {
                 return vectorStorage.remove(id) != null;
             }
+        } catch (StorageException e) {
+            log.error("Failed to delete vector: {}", id, e);
+            return vectorStorage.remove(id) != null;
         } catch (Exception e) {
             log.error("Failed to delete vector: {}", id, e);
             return vectorStorage.remove(id) != null;
@@ -155,13 +170,13 @@ public class ChromaVectorStore implements VectorStore {
     @Override
     public void save(String path) {
         // Chroma 的持久化由 Chroma 服务器管理
-        throw new UnsupportedOperationException("Chroma 存储由服务器管理，请使用 PersistentVectorStore");
+        throw StorageException.operationError("save", "Chroma 存储由服务器管理，请使用 PersistentVectorStore");
     }
 
     @Override
     public void load(String path) {
         // Chroma 的持久化由 Chroma 服务器管理
-        throw new UnsupportedOperationException("Chroma 存储由服务器管理，请使用 PersistentVectorStore");
+        throw StorageException.operationError("load", "Chroma 存储由服务器管理，请使用 PersistentVectorStore");
     }
 
     /**
@@ -228,11 +243,11 @@ public class ChromaVectorStore implements VectorStore {
         
         for (VectorEntry entry : vectorStorage.values()) {
             // 计算余弦相似度
-            float similarity = cosineSimilarity(queryVector, entry.vector);
+            float similarity = cosineSimilarity(queryVector, entry.getVector());
             SearchResult result = new SearchResult();
-            result.setId(entry.id);
+            result.setId(entry.getId());
             result.setScore(similarity);
-            result.setMetadata(entry.metadata);
+            result.setMetadata(entry.getMetadata());
             results.add(result);
         }
         
@@ -309,13 +324,4 @@ public class ChromaVectorStore implements VectorStore {
         return "";
     }
     
-    /**
-     * 向量存储项
-     */
-    @Data
-    private static class VectorEntry {
-        private final String id;
-        private final float[] vector;
-        private final Map<String, Object> metadata;
-    }
 }

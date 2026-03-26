@@ -3,6 +3,8 @@ package io.leavesfly.evox.tools.agent;
 import io.leavesfly.evox.core.agent.IAgent;
 import io.leavesfly.evox.core.message.Message;
 import io.leavesfly.evox.core.message.MessageType;
+import io.leavesfly.evox.exception.AgentException;
+import io.leavesfly.evox.exception.ToolException;
 import io.leavesfly.evox.tools.base.BaseTool;
 import lombok.extern.slf4j.Slf4j;
 
@@ -153,8 +155,11 @@ public class AgentTool extends BaseTool {
             // 转换结果
             return convertToToolResult(result);
 
-        } catch (Exception e) {
+        } catch (ToolException | AgentException e) {
             log.error("AgentTool [{}] execution failed: {}", name, e.getMessage(), e);
+            return ToolResult.failure("Agent execution failed: " + e.getMessage());
+        } catch (Exception e) {
+            log.error("AgentTool [{}] unexpected execution error: {}", name, e.getMessage(), e);
             return ToolResult.failure("Agent execution failed: " + e.getMessage());
         }
     }
@@ -205,11 +210,16 @@ public class AgentTool extends BaseTool {
 
             return result;
 
-        } catch (Exception e) {
+        } catch (ToolException | AgentException e) {
             long elapsed = System.currentTimeMillis() - startTime;
             log.error("AgentTool [{}] agent execution failed after {}ms: {}",
-                    name, elapsed, e.getMessage());
+                    name, elapsed, e.getMessage(), e);
             throw e;
+        } catch (Exception e) {
+            long elapsed = System.currentTimeMillis() - startTime;
+            log.error("AgentTool [{}] unexpected execution error after {}ms: {}",
+                    name, elapsed, e.getMessage(), e);
+            throw ToolException.executionError(name, "Agent execution failed after " + elapsed + "ms", e);
         }
     }
 

@@ -40,19 +40,27 @@ public class GeminiLLM implements LLMProvider {
     private static final String SSE_DATA_PREFIX = "data: ";
     private static final String SSE_DONE_MARKER = "[DONE]";
 
+    /**
+     * 共享的 ObjectMapper 实例（线程安全，读取操作可安全共享）
+     */
+    private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
+
     private final GeminiLLMConfig config;
     private final WebClient webClient;
-    private final ObjectMapper objectMapper;
+
+    private static final String GEMINI_API_KEY_HEADER = "x-goog-api-key";
 
     public GeminiLLM(GeminiLLMConfig config) {
         this.config = config;
-        this.objectMapper = new ObjectMapper();
 
         Duration timeout = config.getTimeout() != null ? config.getTimeout() : Duration.ofSeconds(60);
 
+        // Security: Use HTTP header for API key instead of URL query parameter
+        // to prevent API key exposure in server logs and browser history
         this.webClient = WebClient.builder()
                 .baseUrl(config.getBaseUrl())
                 .defaultHeader("Content-Type", MediaType.APPLICATION_JSON_VALUE)
+                .defaultHeader(GEMINI_API_KEY_HEADER, config.getApiKey())
                 .build();
 
         log.info("Initialized Gemini LLM with model: {}", config.getModel());
@@ -65,7 +73,7 @@ public class GeminiLLM implements LLMProvider {
 
             GeminiRequest request = buildGenerateRequest(prompt, null);
             String response = webClient.post()
-                    .uri(String.format(GENERATE_CONTENT_PATH, config.getModel()) + "?key=" + config.getApiKey())
+                    .uri(String.format(GENERATE_CONTENT_PATH, config.getModel()))
                     .bodyValue(request)
                     .retrieve()
                     .bodyToMono(String.class)
@@ -90,7 +98,7 @@ public class GeminiLLM implements LLMProvider {
             GeminiRequest request = buildGenerateRequest(prompt, null);
 
             return webClient.post()
-                    .uri(String.format(STREAM_GENERATE_CONTENT_PATH, config.getModel()) + "&key=" + config.getApiKey())
+                    .uri(String.format(STREAM_GENERATE_CONTENT_PATH, config.getModel()))
                     .bodyValue(request)
                     .retrieve()
                     .bodyToFlux(String.class)
@@ -120,7 +128,7 @@ public class GeminiLLM implements LLMProvider {
         try {
             GeminiRequest request = buildChatRequest(messages, null);
             String response = webClient.post()
-                    .uri(String.format(GENERATE_CONTENT_PATH, config.getModel()) + "?key=" + config.getApiKey())
+                    .uri(String.format(GENERATE_CONTENT_PATH, config.getModel()))
                     .bodyValue(request)
                     .retrieve()
                     .bodyToMono(String.class)
@@ -144,7 +152,7 @@ public class GeminiLLM implements LLMProvider {
         GeminiRequest request = buildChatRequest(messages, null);
 
         return webClient.post()
-                .uri(String.format(STREAM_GENERATE_CONTENT_PATH, config.getModel()) + "&key=" + config.getApiKey())
+                .uri(String.format(STREAM_GENERATE_CONTENT_PATH, config.getModel()))
                 .bodyValue(request)
                 .retrieve()
                 .bodyToFlux(String.class)
@@ -191,7 +199,7 @@ public class GeminiLLM implements LLMProvider {
             List<GeminiTool> geminiTools = convertToolSchemasToGeminiTools(toolSchemas);
             GeminiRequest request = buildChatRequest(messages, geminiTools);
             String response = webClient.post()
-                    .uri(String.format(GENERATE_CONTENT_PATH, config.getModel()) + "?key=" + config.getApiKey())
+                    .uri(String.format(GENERATE_CONTENT_PATH, config.getModel()))
                     .bodyValue(request)
                     .retrieve()
                     .bodyToMono(String.class)
@@ -216,7 +224,7 @@ public class GeminiLLM implements LLMProvider {
             List<GeminiTool> geminiTools = convertToolDefinitionsToGeminiTools(toolDefinitions);
             GeminiRequest request = buildChatRequest(messages, geminiTools);
             String response = webClient.post()
-                    .uri(String.format(GENERATE_CONTENT_PATH, config.getModel()) + "?key=" + config.getApiKey())
+                    .uri(String.format(GENERATE_CONTENT_PATH, config.getModel()))
                     .bodyValue(request)
                     .retrieve()
                     .bodyToMono(String.class)
@@ -242,7 +250,7 @@ public class GeminiLLM implements LLMProvider {
             GeminiRequest request = buildChatRequest(messages, geminiTools);
 
             return webClient.post()
-                    .uri(String.format(STREAM_GENERATE_CONTENT_PATH, config.getModel()) + "&key=" + config.getApiKey())
+                    .uri(String.format(STREAM_GENERATE_CONTENT_PATH, config.getModel()))
                     .bodyValue(request)
                     .retrieve()
                     .bodyToFlux(String.class)
@@ -308,7 +316,7 @@ public class GeminiLLM implements LLMProvider {
 
     private String extractContentFromResponse(String response) {
         try {
-            JsonNode root = objectMapper.readTree(response);
+            JsonNode root = OBJECT_MAPPER.readTree(response);
             JsonNode candidates = root.get("candidates");
             if (candidates != null && candidates.isArray() && candidates.size() > 0) {
                 JsonNode firstCandidate = candidates.get(0);
@@ -332,7 +340,7 @@ public class GeminiLLM implements LLMProvider {
 
     private String parseStreamChunkContent(String jsonData) {
         try {
-            JsonNode root = objectMapper.readTree(jsonData);
+            JsonNode root = OBJECT_MAPPER.readTree(jsonData);
             JsonNode candidates = root.get("candidates");
             if (candidates != null && candidates.isArray() && candidates.size() > 0) {
                 JsonNode firstCandidate = candidates.get(0);
@@ -356,7 +364,7 @@ public class GeminiLLM implements LLMProvider {
 
     private ChatCompletionResponse parseStreamChunk(String jsonData) {
         try {
-            JsonNode root = objectMapper.readTree(jsonData);
+            JsonNode root = OBJECT_MAPPER.readTree(jsonData);
             ChatCompletionResponse response = new ChatCompletionResponse();
             List<ChatCompletionResponse.Choice> choices = new ArrayList<>();
 
@@ -412,7 +420,7 @@ public class GeminiLLM implements LLMProvider {
                 @SuppressWarnings("unchecked")
                 Map<String, Object> paramsMap = (Map<String, Object>) functionMap.get("parameters");
                 if (paramsMap != null) {
-                    funcDecl.parameters = objectMapper.convertValue(paramsMap, JsonNode.class);
+                    funcDecl.parameters = OBJECT_MAPPER.convertValue(paramsMap, JsonNode.class);
                 }
 
                 tool.functionDeclarations.add(funcDecl);
@@ -432,7 +440,7 @@ public class GeminiLLM implements LLMProvider {
             funcDecl.description = toolDef.getFunction().getDescription();
 
             if (toolDef.getFunction().getParameters() != null) {
-                funcDecl.parameters = objectMapper.convertValue(toolDef.getFunction().getParameters(), JsonNode.class);
+                funcDecl.parameters = OBJECT_MAPPER.convertValue(toolDef.getFunction().getParameters(), JsonNode.class);
             }
 
             tool.functionDeclarations.add(funcDecl);
@@ -444,7 +452,7 @@ public class GeminiLLM implements LLMProvider {
     private Map<String, Object> parseToolUseResponse(String response) {
         Map<String, Object> resultMap = new HashMap<>();
         try {
-            JsonNode root = objectMapper.readTree(response);
+            JsonNode root = OBJECT_MAPPER.readTree(response);
             JsonNode candidates = root.get("candidates");
             
             if (candidates != null && candidates.isArray() && candidates.size() > 0) {
@@ -483,7 +491,7 @@ public class GeminiLLM implements LLMProvider {
 
     private ChatCompletionResult parseToolUseResponseToResult(String response) {
         try {
-            JsonNode root = objectMapper.readTree(response);
+            JsonNode root = OBJECT_MAPPER.readTree(response);
             JsonNode candidates = root.get("candidates");
             
             if (candidates != null && candidates.isArray() && candidates.size() > 0) {

@@ -9,6 +9,7 @@ import io.leavesfly.evox.core.message.Message;
 import io.leavesfly.evox.core.message.MessageType;
 import io.leavesfly.evox.core.llm.ILLM;
 import io.leavesfly.evox.core.llm.LLMConfig;
+import io.leavesfly.evox.exception.AgentException;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.extern.slf4j.Slf4j;
@@ -115,8 +116,14 @@ public class CustomizeAgent extends Agent {
                     .messageType(output.isSuccess() ? MessageType.RESPONSE : MessageType.ERROR)
                     .content(output.getData())
                     .build();
-        } catch (Exception e) {
+        } catch (AgentException e) {
             log.error("Failed to execute action: {}", resolvedName, e);
+            return Message.builder()
+                    .messageType(MessageType.ERROR)
+                    .content("Execution failed: " + e.getMessage())
+                    .build();
+        } catch (Exception e) {
+            log.error("Unexpected error executing action: {}", resolvedName, e);
             return Message.builder()
                     .messageType(MessageType.ERROR)
                     .content("Execution failed: " + e.getMessage())
@@ -135,9 +142,7 @@ public class CustomizeAgent extends Agent {
             if (msg.getMessageType() == MessageType.INPUT) {
                 Object content = msg.getContent();
                 if (content instanceof Map) {
-                    @SuppressWarnings("unchecked")
-                    Map<String, Object> contentMap = (Map<String, Object>) content;
-                    inputData.putAll(contentMap);
+                    inputData.putAll((Map<String, Object>) content);
                 }
             }
         }
@@ -360,8 +365,11 @@ public class CustomizeAgent extends Agent {
                 Map<String, Object> parsed = parseResponse(response);
 
                 return SimpleActionOutput.success(parsed);
+            } catch (AgentException e) {
+                log.error("CustomizeAction execution failed: {}", e.getMessage(), e);
+                return SimpleActionOutput.failure("Execution failed: " + e.getMessage());
             } catch (Exception e) {
-                log.error("CustomizeAction execution failed", e);
+                log.error("Unexpected error in CustomizeAction execution: {}", e.getMessage(), e);
                 return SimpleActionOutput.failure("Execution failed: " + e.getMessage());
             }
         }

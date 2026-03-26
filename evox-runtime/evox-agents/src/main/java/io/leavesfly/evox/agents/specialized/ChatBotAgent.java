@@ -8,6 +8,7 @@ import io.leavesfly.evox.agents.base.Agent;
 import io.leavesfly.evox.core.message.Message;
 import io.leavesfly.evox.core.message.MessageType;
 import io.leavesfly.evox.core.llm.ILLM;
+import io.leavesfly.evox.exception.AgentException;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.extern.slf4j.Slf4j;
@@ -94,8 +95,14 @@ public class ChatBotAgent extends Agent {
                         .build();
             }
             
-        } catch (Exception e) {
+        } catch (AgentException e) {
             log.error("Error executing action: {}", actionName, e);
+            return Message.builder()
+                    .content("执行异常: " + e.getMessage())
+                    .messageType(MessageType.ERROR)
+                    .build();
+        } catch (Exception e) {
+            log.error("Unexpected error executing action: {}", actionName, e);
             return Message.builder()
                     .content("执行异常: " + e.getMessage())
                     .messageType(MessageType.ERROR)
@@ -142,8 +149,11 @@ public class ChatBotAgent extends Agent {
                 // 使用 LLM 生成回复
                 return generateResponse(messages);
                 
+            } catch (AgentException e) {
+                log.error("Chat action execution failed: {}", e.getMessage(), e);
+                return new SimpleActionOutput(false, "执行失败: " + e.getMessage(), null);
             } catch (Exception e) {
-                log.error("Chat action execution failed", e);
+                log.error("Unexpected error in Chat action execution: {}", e.getMessage(), e);
                 return new SimpleActionOutput(false, "执行失败: " + e.getMessage(), null);
             }
         }
@@ -182,8 +192,11 @@ public class ChatBotAgent extends Agent {
                 
                 return new SimpleActionOutput(true, response, null);
                 
+            } catch (AgentException e) {
+                log.error("LLM generation failed: {}", e.getMessage(), e);
+                return new SimpleActionOutput(false, "LLM 调用失败: " + e.getMessage(), null);
             } catch (Exception e) {
-                log.error("LLM generation failed", e);
+                log.error("Unexpected error in LLM generation: {}", e.getMessage(), e);
                 return new SimpleActionOutput(false, "LLM 调用失败: " + e.getMessage(), null);
             }
         }
