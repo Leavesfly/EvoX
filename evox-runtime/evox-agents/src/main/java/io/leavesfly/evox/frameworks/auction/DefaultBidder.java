@@ -133,7 +133,7 @@ public class DefaultBidder<T> extends Agent implements Bidder<T> {
     }
 
     @Override
-    public Message execute(String actionName, List<Message> messages) {
+    public Message execute(List<Message> messages) {
         // 基础 Agent 接口实现，在拍卖框架中主要使用 Bidder 接口
         return Message.builder()
                 .messageType(MessageType.RESPONSE)

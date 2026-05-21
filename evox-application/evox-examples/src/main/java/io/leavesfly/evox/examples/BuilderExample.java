@@ -37,7 +37,7 @@ public class BuilderExample {
             .messageType(MessageType.INPUT)
             .build();
         
-        Message response = agent.execute("chat", Collections.singletonList(userMsg));
+        Message response = agent.execute(Collections.singletonList(userMsg));
         
         // 输出结果
         log.info("用户: {}", userMsg.getContent());

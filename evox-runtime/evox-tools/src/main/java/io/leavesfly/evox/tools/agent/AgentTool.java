@@ -198,11 +198,11 @@ public class AgentTool extends BaseTool {
 
             if (timeoutMs > 0) {
                 // 带超时的异步执行
-                result = wrappedAgent.executeAsync(actionName, messages)
+                result = wrappedAgent.executeAsync( messages)
                         .block(java.time.Duration.ofMillis(timeoutMs));
             } else {
                 // 同步执行
-                result = wrappedAgent.execute(actionName, messages);
+                result = wrappedAgent.execute( messages);
             }
 
             long elapsed = System.currentTimeMillis() - startTime;

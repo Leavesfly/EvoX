@@ -1,9 +1,5 @@
 package io.leavesfly.evox.examples;
 
-import io.leavesfly.evox.actions.base.Action;
-import io.leavesfly.evox.actions.base.ActionInput;
-import io.leavesfly.evox.actions.base.ActionOutput;
-import io.leavesfly.evox.actions.base.SimpleActionOutput;
 import io.leavesfly.evox.agents.base.Agent;
 import io.leavesfly.evox.agents.manager.AgentManager;
 import io.leavesfly.evox.core.agent.IAgent;
@@ -143,7 +139,7 @@ public class ComprehensiveChatBot {
             
             // Step 1: 路由Agent分析
             IAgent routerAgent = agentManager.getAgent("RouterAgent");
-            Message routeResult = routerAgent.execute("route", Collections.singletonList(userMessage));
+            Message routeResult = routerAgent.execute(Collections.singletonList(userMessage));
             String selectedAgent = extractSelectedAgent(routeResult.getContent().toString());
             
             log.info("🔀 路由结果: 选择 {} 处理", selectedAgent);
@@ -151,7 +147,7 @@ public class ComprehensiveChatBot {
             // Step 2: 执行选定的Agent
             IAgent selectedAgentInstance = agentManager.getAgent(selectedAgent);
             List<Message> context = memory.getLatestMessages(5);
-            Message response = selectedAgentInstance.execute("process", context);
+            Message response = selectedAgentInstance.execute(context);
             
             log.info("🤖 {}: {}", selectedAgent, response.getContent());
             
@@ -186,136 +182,15 @@ public class ComprehensiveChatBot {
     static class RouterAgent extends Agent {
         public RouterAgent() {
             super();
-            addAction(new RouteAction());
         }
 
         @Override
-        public Message execute(String actionName, List<Message> messages) {
-            // 实现execute方法
-            Action action = getAction(actionName);
-            if (action == null) {
-                return Message.builder()
-                        .messageType(MessageType.ERROR)
-                        .content("Action not found: " + actionName)
-                        .build();
-            }
-
-            try {
-                Map<String, Object> inputData = new HashMap<>();
-                inputData.put("messages", messages);
-                ActionInput input = new ActionInput(inputData);
-
-                ActionOutput output = action.execute(input);
-
-                return Message.builder()
-                        .messageType(output.isSuccess() ? MessageType.RESPONSE : MessageType.ERROR)
-                        .content(output.getData())
-                        .build();
-            } catch (Exception e) {
-                return Message.builder()
-                        .messageType(MessageType.ERROR)
-                        .content("Execution failed: " + e.getMessage())
-                        .build();
-            }
-        }
-    }
-
-    /**
-     * 工具 Agent - 使用工具处理请求
-     */
-    static class ToolAgent extends Agent {
-        public ToolAgent(Toolkit toolkit) {
-            super();
-            addAction(new ToolProcessAction(toolkit));
-        }
-
-        @Override
-        public Message execute(String actionName, List<Message> messages) {
-            // 实现execute方法
-            Action action = getAction(actionName);
-            if (action == null) {
-                return Message.builder()
-                        .messageType(MessageType.ERROR)
-                        .content("Action not found: " + actionName)
-                        .build();
-            }
-
-            try {
-                Map<String, Object> inputData = new HashMap<>();
-                inputData.put("messages", messages);
-                ActionInput input = new ActionInput(inputData);
-
-                ActionOutput output = action.execute(input);
-
-                return Message.builder()
-                        .messageType(output.isSuccess() ? MessageType.RESPONSE : MessageType.ERROR)
-                        .content(output.getData())
-                        .build();
-            } catch (Exception e) {
-                return Message.builder()
-                        .messageType(MessageType.ERROR)
-                        .content("Execution failed: " + e.getMessage())
-                        .build();
-            }
-        }
-    }
-
-    /**
-     * 聊天 Agent - 处理普通对话
-     */
-    static class ChatAgentImpl extends Agent {
-        public ChatAgentImpl() {
-            super();
-            addAction(new ChatProcessAction());
-        }
-
-        @Override
-        public Message execute(String actionName, List<Message> messages) {
-            // 实现execute方法
-            Action action = getAction(actionName);
-            if (action == null) {
-                return Message.builder()
-                        .messageType(MessageType.ERROR)
-                        .content("Action not found: " + actionName)
-                        .build();
-            }
-
-            try {
-                Map<String, Object> inputData = new HashMap<>();
-                inputData.put("messages", messages);
-                ActionInput input = new ActionInput(inputData);
-
-                ActionOutput output = action.execute(input);
-
-                return Message.builder()
-                        .messageType(output.isSuccess() ? MessageType.RESPONSE : MessageType.ERROR)
-                        .content(output.getData())
-                        .build();
-            } catch (Exception e) {
-                return Message.builder()
-                        .messageType(MessageType.ERROR)
-                        .content("Execution failed: " + e.getMessage())
-                        .build();
-            }
-        }
-    }
-
-    // ========== Actions ==========
-
-    /**
-     * 路由Action - 分析输入决定路由
-     */
-    static class RouteAction extends Action {
-        public RouteAction() {
-            setName("route");
-            setDescription("分析用户输入，决定路由到哪个Agent");
-        }
-
-        @Override
-        public ActionOutput execute(ActionInput input) {
-            List<Message> messages = (List<Message>) input.toMap().get("messages");
+        public Message execute(List<Message> messages) {
             if (messages == null || messages.isEmpty()) {
-                return SimpleActionOutput.failure("No messages to route");
+                return Message.builder()
+                        .messageType(MessageType.ERROR)
+                        .content("没有消息可路由")
+                        .build();
             }
             
             String userInput = messages.get(messages.size() - 1).getContent().toString().toLowerCase();
@@ -327,88 +202,69 @@ public class ComprehensiveChatBot {
                              userInput.contains("天气");
             
             String selectedAgent = needTool ? "ToolAgent" : "ChatAgent";
-            return SimpleActionOutput.success("选择: " + selectedAgent);
-        }
-
-        @Override
-        public String[] getInputFields() {
-            return new String[]{"messages"};
-        }
-
-        @Override
-        public String[] getOutputFields() {
-            return new String[]{"selectedAgent"};
+            return Message.builder()
+                    .messageType(MessageType.RESPONSE)
+                    .content("选择: " + selectedAgent)
+                    .build();
         }
     }
 
     /**
-     * 工具处理Action - 使用工具处理请求
+     * 工具 Agent - 使用工具处理请求
      */
-    static class ToolProcessAction extends Action {
+    static class ToolAgent extends Agent {
         private final Toolkit toolkit;
 
-        public ToolProcessAction(Toolkit toolkit) {
+        public ToolAgent(Toolkit toolkit) {
+            super();
             this.toolkit = toolkit;
-            setName("process");
-            setDescription("使用工具处理用户请求");
         }
 
         @Override
-        public ActionOutput execute(ActionInput input) {
-            List<Message> messages = (List<Message>) input.toMap().get("messages");
+        public Message execute(List<Message> messages) {
             if (messages == null || messages.isEmpty()) {
-                return SimpleActionOutput.failure("No messages to process");
+                return Message.builder()
+                        .messageType(MessageType.ERROR)
+                        .content("没有消息可处理")
+                        .build();
             }
             
             String userInput = messages.get(messages.size() - 1).getContent().toString();
             
             // 简单模拟工具调用
             String response = "工具处理结果: " + userInput;
-            return SimpleActionOutput.success(response);
-        }
-
-        @Override
-        public String[] getInputFields() {
-            return new String[]{"messages"};
-        }
-
-        @Override
-        public String[] getOutputFields() {
-            return new String[]{"response"};
+            return Message.builder()
+                    .messageType(MessageType.RESPONSE)
+                    .content(response)
+                    .build();
         }
     }
 
     /**
-     * 聊天处理Action - 处理普通对话
+     * 聊天 Agent - 处理普通对话
      */
-    static class ChatProcessAction extends Action {
-        public ChatProcessAction() {
-            setName("process");
-            setDescription("处理普通聊天对话");
+    static class ChatAgentImpl extends Agent {
+        public ChatAgentImpl() {
+            super();
         }
 
         @Override
-        public ActionOutput execute(ActionInput input) {
-            List<Message> messages = (List<Message>) input.toMap().get("messages");
+        public Message execute(List<Message> messages) {
             if (messages == null || messages.isEmpty()) {
-                return SimpleActionOutput.failure("No messages to process");
+                return Message.builder()
+                        .messageType(MessageType.ERROR)
+                        .content("没有消息可处理")
+                        .build();
             }
             
             String userInput = messages.get(messages.size() - 1).getContent().toString();
             
             // 简单模拟对话回复
             String response = "聊天回复: " + userInput;
-            return SimpleActionOutput.success(response);
-        }
-
-        @Override
-        public String[] getInputFields() {
-            return new String[]{"messages"};
-        }
-
-        @Override
-        public String[] getOutputFields() {
-            return new String[]{"response"};
+            return Message.builder()
+                    .messageType(MessageType.RESPONSE)
+                    .content(response)
+                    .build();
         }
     }
 }

@@ -1,9 +1,5 @@
 package io.leavesfly.evox.examples;
 
-import io.leavesfly.evox.actions.base.Action;
-import io.leavesfly.evox.actions.base.ActionInput;
-import io.leavesfly.evox.actions.base.ActionOutput;
-import io.leavesfly.evox.actions.base.SimpleActionOutput;
 import io.leavesfly.evox.agents.base.Agent;
 import io.leavesfly.evox.agents.manager.AgentManager;
 import io.leavesfly.evox.core.message.Message;
@@ -353,49 +349,38 @@ public class WorkflowDemo {
     static class DataProcessorAgent extends Agent {
         
         public DataProcessorAgent() {
-            // 添加三个数据处理动作
-            addAction(new ValidateAction());
-            addAction(new TransformAction());
-            addAction(new SummarizeAction());
         }
         
         @Override
-        public Message execute(String actionName, List<Message> messages) {
-            Action action = getAction(actionName);
-            if (action == null) {
-                return Message.builder()
-                        .content("未找到动作: " + actionName)
-                        .messageType(MessageType.ERROR)
-                        .build();
+        public Message execute(List<Message> messages) {
+            // 从消息中提取数据和动作名称
+            Object data = null;
+            String action = "validate"; // 默认动作
+            if (!messages.isEmpty()) {
+                Message lastMsg = messages.get(messages.size() - 1);
+                if (lastMsg.getContent() instanceof Map) {
+                    @SuppressWarnings("unchecked")
+                    Map<String, Object> content = (Map<String, Object>) lastMsg.getContent();
+                    data = content.get("data");
+                    if (content.containsKey("action")) {
+                        action = content.get("action").toString();
+                    }
+                }
             }
             
             try {
-                // 准备输入
-                Map<String, Object> inputs = new HashMap<>();
-                if (!messages.isEmpty()) {
-                    Message lastMsg = messages.get(messages.size() - 1);
-                    if (lastMsg.getContent() instanceof Map) {
-                        @SuppressWarnings("unchecked")
-                        Map<String, Object> content = (Map<String, Object>) lastMsg.getContent();
-                        inputs.putAll(content);
-                    }
-                }
-                
-                DataActionInput input = new DataActionInput(inputs);
-                
-                // 执行动作
-                ActionOutput output = action.execute(input);
-                
-                if (output.isSuccess()) {
-                    return Message.builder()
-                            .content(output.getData())
-                            .messageType(MessageType.RESPONSE)
-                            .build();
-                } else {
-                    return Message.builder()
-                            .content("错误: " + output.getError())
-                            .messageType(MessageType.ERROR)
-                            .build();
+                switch (action) {
+                    case "validate":
+                        return handleValidate(data);
+                    case "transform":
+                        return handleTransform(data);
+                    case "summarize":
+                        return handleSummarize(data);
+                    default:
+                        return Message.builder()
+                                .content("未找到动作: " + action)
+                                .messageType(MessageType.ERROR)
+                                .build();
                 }
             } catch (Exception e) {
                 log.error("动作执行失败", e);
@@ -405,24 +390,16 @@ public class WorkflowDemo {
                         .build();
             }
         }
-    }
-
-    /**
-     * 数据验证动作
-     */
-    static class ValidateAction extends Action {
         
-        public ValidateAction() {
-            setName("validate");
-            setDescription("验证数据是否有效");
-        }
-        
-        @Override
-        public ActionOutput execute(ActionInput input) {
-            Object data = input.toMap().get("data");
-            
+        /**
+         * 处理数据验证
+         */
+        private Message handleValidate(Object data) {
             if (data == null) {
-                return SimpleActionOutput.failure("数据为空");
+                return Message.builder()
+                        .content("数据为空")
+                        .messageType(MessageType.ERROR)
+                        .build();
             }
             
             if (data instanceof List) {
@@ -435,37 +412,22 @@ public class WorkflowDemo {
                 result.put("data", data);
                 
                 log.info("数据验证通过: {} 个元素", size);
-                return SimpleActionOutput.success(result);
+                return Message.builder()
+                        .content(result)
+                        .messageType(MessageType.RESPONSE)
+                        .build();
             }
             
-            return SimpleActionOutput.failure("数据格式不正确");
+            return Message.builder()
+                    .content("数据格式不正确")
+                    .messageType(MessageType.ERROR)
+                    .build();
         }
         
-        @Override
-        public String[] getInputFields() {
-            return new String[]{"data"};
-        }
-        
-        @Override
-        public String[] getOutputFields() {
-            return new String[]{"valid", "dataSize", "data"};
-        }
-    }
-
-    /**
-     * 数据转换动作
-     */
-    static class TransformAction extends Action {
-        
-        public TransformAction() {
-            setName("transform");
-            setDescription("转换数据格式");
-        }
-        
-        @Override
-        public ActionOutput execute(ActionInput input) {
-            Object data = input.toMap().get("data");
-            
+        /**
+         * 处理数据转换
+         */
+        private Message handleTransform(Object data) {
             if (data instanceof List) {
                 @SuppressWarnings("unchecked")
                 List<Integer> list = (List<Integer>) data;
@@ -480,37 +442,22 @@ public class WorkflowDemo {
                 result.put("transformedCount", transformed.size());
                 
                 log.info("数据转换完成: {} -> {}", list, transformed);
-                return SimpleActionOutput.success(result);
+                return Message.builder()
+                        .content(result)
+                        .messageType(MessageType.RESPONSE)
+                        .build();
             }
             
-            return SimpleActionOutput.failure("无法转换数据");
+            return Message.builder()
+                    .content("无法转换数据")
+                    .messageType(MessageType.ERROR)
+                    .build();
         }
         
-        @Override
-        public String[] getInputFields() {
-            return new String[]{"data"};
-        }
-        
-        @Override
-        public String[] getOutputFields() {
-            return new String[]{"data", "transformedCount"};
-        }
-    }
-
-    /**
-     * 数据汇总动作
-     */
-    static class SummarizeAction extends Action {
-        
-        public SummarizeAction() {
-            setName("summarize");
-            setDescription("汇总数据");
-        }
-        
-        @Override
-        public ActionOutput execute(ActionInput input) {
-            Object data = input.toMap().get("data");
-            
+        /**
+         * 处理数据汇总
+         */
+        private Message handleSummarize(Object data) {
             if (data instanceof List) {
                 @SuppressWarnings("unchecked")
                 List<Integer> list = (List<Integer>) data;
@@ -525,46 +472,16 @@ public class WorkflowDemo {
                 result.put("data", list);
                 
                 log.info("数据汇总: 数量={}, 总和={}, 平均值={}", list.size(), sum, avg);
-                return SimpleActionOutput.success(result);
+                return Message.builder()
+                        .content(result)
+                        .messageType(MessageType.RESPONSE)
+                        .build();
             }
             
-            return SimpleActionOutput.failure("无法汇总数据");
-        }
-        
-        @Override
-        public String[] getInputFields() {
-            return new String[]{"data"};
-        }
-        
-        @Override
-        public String[] getOutputFields() {
-            return new String[]{"count", "sum", "average", "data"};
-        }
-    }
-
-    /**
-     * 数据动作输入
-     */
-    @Data
-    static class DataActionInput extends ActionInput {
-        private Map<String, Object> inputs = new HashMap<>();
-        
-        public DataActionInput() {
-            super();
-        }
-        
-        public DataActionInput(Map<String, Object> inputs) {
-            super(inputs);
-            this.inputs = inputs;
-        }
-        
-        public void setInputs(Map<String, Object> inputs) {
-            this.inputs = inputs;
-            super.setData(inputs);
-        }
-        
-        public Map<String, Object> getInputs() {
-            return inputs;
+            return Message.builder()
+                    .content("无法汇总数据")
+                    .messageType(MessageType.ERROR)
+                    .build();
         }
     }
 }

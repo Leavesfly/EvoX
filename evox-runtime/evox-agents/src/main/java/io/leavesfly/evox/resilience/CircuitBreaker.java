@@ -90,13 +90,17 @@ public class CircuitBreaker {
         if (currentState == State.OPEN) {
             long lastFailure = lastFailureTime.get();
             if (System.currentTimeMillis() - lastFailure > resetTimeout.toMillis()) {
-                log.info("Circuit breaker [{}] transitioning from OPEN to HALF_OPEN", name);
-                state.compareAndSet(State.OPEN, State.HALF_OPEN);
-                return true;
+                // 只有 CAS 成功的线程才能进入 HALF_OPEN 探测，其余线程仍拒绝
+                if (state.compareAndSet(State.OPEN, State.HALF_OPEN)) {
+                    log.info("Circuit breaker [{}] transitioning from OPEN to HALF_OPEN", name);
+                    successCount.set(0);
+                    return true;
+                }
             }
             return false;
         }
 
+        // HALF_OPEN 状态：允许请求通过以进行探测
         return true;
     }
 

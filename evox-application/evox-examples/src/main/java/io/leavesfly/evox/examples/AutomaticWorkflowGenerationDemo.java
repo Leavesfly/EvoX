@@ -220,7 +220,7 @@ public class AutomaticWorkflowGenerationDemo {
                     .build()
             );
             
-            var planResult = projectPlanner.execute("chat", planningInputs);
+            var planResult = projectPlanner.execute(planningInputs);
             System.out.println("任务分解结果:");
             System.out.println(planResult.getContent());
             System.out.println();

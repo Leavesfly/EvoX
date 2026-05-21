@@ -69,7 +69,7 @@ public class MemoryAgentExample {
             List<Message> context = memoryManager.getLatestMessages(5);
             
             // 执行智能体
-            Message response = agent.execute("chat", context);
+            Message response = agent.execute(context);
             log.info("AI: {}", response.getContent());
             
             // 存入 AI 回复

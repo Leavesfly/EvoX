@@ -87,7 +87,7 @@ public class DefaultConsensusAgent<T> extends Agent implements ConsensusFramewor
     }
 
     @Override
-    public Message execute(String actionName, List<Message> messages) {
+    public Message execute(List<Message> messages) {
         return Message.builder()
                 .messageType(MessageType.RESPONSE)
                 .content("Consensus agent is active.")

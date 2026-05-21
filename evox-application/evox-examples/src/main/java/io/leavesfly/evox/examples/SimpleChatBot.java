@@ -1,9 +1,5 @@
 package io.leavesfly.evox.examples;
 
-import io.leavesfly.evox.actions.base.Action;
-import io.leavesfly.evox.actions.base.ActionInput;
-import io.leavesfly.evox.actions.base.ActionOutput;
-import io.leavesfly.evox.actions.base.SimpleActionOutput;
 import io.leavesfly.evox.agents.base.Agent;
 import io.leavesfly.evox.core.message.Message;
 import io.leavesfly.evox.core.message.MessageType;
@@ -77,7 +73,7 @@ public class SimpleChatBot {
             List<Message> history = memory.getLatestMessages(5);
             
             // 执行聊天动作
-            Message response = agent.execute("chat", history);
+            Message response = agent.execute(history);
             
             log.info("机器人: {}", response.getContent());
             
@@ -134,7 +130,7 @@ public class SimpleChatBot {
             List<Message> history = memory.getLatestMessages(5);
             
             // 执行聊天动作
-            Message response = agent.execute("chat", history);
+            Message response = agent.execute(history);
             
             log.info("机器人: {}", response.getContent());
             
@@ -156,69 +152,15 @@ public class SimpleChatBot {
         
         public ChatBotAgent(LLMProvider llm) {
             this.llm = llm;
-            // 添加聊天动作
-            addAction(new ChatAction(llm));
         }
         
         @Override
-        public Message execute(String actionName, List<Message> messages) {
-            Action action = getAction(actionName);
-            if (action == null) {
+        public Message execute(List<Message> messages) {
+            if (messages == null || messages.isEmpty()) {
                 return Message.builder()
-                        .content("未找到动作: " + actionName)
+                        .content("没有消息可处理")
                         .messageType(MessageType.ERROR)
                         .build();
-            }
-            
-            try {
-                // 准备输入
-                ChatActionInput input = new ChatActionInput();
-                input.setMessages(messages);
-                
-                // 执行动作
-                ActionOutput output = action.execute(input);
-                
-                if (output.isSuccess()) {
-                    return Message.builder()
-                            .content(output.getData())
-                            .messageType(MessageType.RESPONSE)
-                            .build();
-                } else {
-                    return Message.builder()
-                            .content("错误: " + output.getError())
-                            .messageType(MessageType.ERROR)
-                            .build();
-                }
-            } catch (Exception e) {
-                log.error("动作执行失败", e);
-                return Message.builder()
-                        .content("执行错误: " + e.getMessage())
-                        .messageType(MessageType.ERROR)
-                        .build();
-            }
-        }
-    }
-
-    /**
-     * 聊天动作
-     */
-    @Slf4j
-    static class ChatAction extends Action {
-        private final LLMProvider llm;
-        
-        public ChatAction(LLMProvider llm) {
-            this.llm = llm;
-            setName("chat");
-            setDescription("处理用户聊天消息");
-        }
-        
-        @Override
-        public ActionOutput execute(ActionInput input) {
-            ChatActionInput chatInput = (ChatActionInput) input;
-            List<Message> messages = chatInput.getMessages();
-            
-            if (messages.isEmpty()) {
-                return SimpleActionOutput.failure("没有消息可处理");
             }
             
             // 如果没有 LLM，使用模拟回复
@@ -233,7 +175,7 @@ public class SimpleChatBot {
         /**
          * 生成模拟回复
          */
-        private ActionOutput generateMockResponse(List<Message> messages) {
+        private Message generateMockResponse(List<Message> messages) {
             Message lastMessage = messages.get(messages.size() - 1);
             String userInput = lastMessage.getContent().toString().toLowerCase();
             
@@ -250,13 +192,16 @@ public class SimpleChatBot {
                 response = "我理解了你的消息。我是一个基于 EvoX 框架的示例机器人。";
             }
             
-            return SimpleActionOutput.success(response);
+            return Message.builder()
+                    .content(response)
+                    .messageType(MessageType.RESPONSE)
+                    .build();
         }
         
         /**
          * 使用 LLM 生成回复
          */
-        private ActionOutput generateLLMResponse(List<Message> messages) {
+        private Message generateLLMResponse(List<Message> messages) {
             try {
                 // 构建对话上下文
                 String prompt = buildPrompt(messages);
@@ -264,10 +209,16 @@ public class SimpleChatBot {
                 // 调用 LLM
                 String response = llm.generate(prompt);
                 
-                return SimpleActionOutput.success(response);
+                return Message.builder()
+                        .content(response)
+                        .messageType(MessageType.RESPONSE)
+                        .build();
             } catch (Exception e) {
                 log.error("LLM 调用失败", e);
-                return SimpleActionOutput.failure("LLM 调用失败: " + e.getMessage());
+                return Message.builder()
+                        .content("LLM 调用失败: " + e.getMessage())
+                        .messageType(MessageType.ERROR)
+                        .build();
             }
         }
         
@@ -288,36 +239,6 @@ public class SimpleChatBot {
             
             sb.append("\n请用简洁友好的方式回复用户的最后一条消息。");
             return sb.toString();
-        }
-        
-        @Override
-        public String[] getInputFields() {
-            return new String[]{"messages"};
-        }
-        
-        @Override
-        public String[] getOutputFields() {
-            return new String[]{"response"};
-        }
-    }
-
-    /**
-     * 聊天动作输入
-     */
-    @Data
-    static class ChatActionInput extends ActionInput {
-        private List<Message> messages;
-        
-        @Override
-        public boolean validate() {
-            return messages != null && !messages.isEmpty();
-        }
-        
-        @Override
-        public Map<String, Object> toMap() {
-            Map<String, Object> map = new HashMap<>();
-            map.put("messages", messages);
-            return map;
         }
     }
 }

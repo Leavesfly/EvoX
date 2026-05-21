@@ -49,11 +49,16 @@ public class CommonUtils {
     }
 
     /**
-     * 合并Map
+     * 合并Map，任一参数为 null 时安全处理
      */
     public static <K, V> Map<K, V> mergeMaps(Map<K, V> map1, Map<K, V> map2) {
-        Map<K, V> result = new HashMap<>(map1);
-        result.putAll(map2);
+        Map<K, V> result = new HashMap<>();
+        if (map1 != null) {
+            result.putAll(map1);
+        }
+        if (map2 != null) {
+            result.putAll(map2);
+        }
         return result;
     }
 
@@ -75,9 +80,12 @@ public class CommonUtils {
     }
 
     /**
-     * 计算两个列表的交集
+     * 计算两个列表的交集，任一参数为 null 时返回空列表
      */
     public static <T> List<T> intersection(List<T> list1, List<T> list2) {
+        if (list1 == null || list2 == null) {
+            return new ArrayList<>();
+        }
         List<T> result = new ArrayList<>(list1);
         result.retainAll(list2);
         return result;

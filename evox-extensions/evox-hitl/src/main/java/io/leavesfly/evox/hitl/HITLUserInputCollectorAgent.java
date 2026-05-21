@@ -79,12 +79,12 @@ public class HITLUserInputCollectorAgent extends Agent {
      * 实现 Agent 的抽象方法 execute
      */
     @Override
-    public Message execute(String actionName, List<Message> messages) {
+    public Message execute(List<Message> messages) {
         log.warn("HITLUserInputCollectorAgent.execute called, this agent is for user input collection");
         return Message.responseMessage(
                 "User input collection completed",
                 this.getName(),
-                actionName
+                null
         );
     }
 }

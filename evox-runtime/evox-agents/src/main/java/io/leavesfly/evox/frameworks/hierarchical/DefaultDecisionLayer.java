@@ -127,7 +127,7 @@ public class DefaultDecisionLayer extends Agent implements DecisionLayer<String>
     }
 
     @Override
-    public Message execute(String actionName, List<Message> messages) {
+    public Message execute(List<Message> messages) {
         // 基础 Agent 接口实现
         return Message.builder()
                 .messageType(MessageType.RESPONSE)

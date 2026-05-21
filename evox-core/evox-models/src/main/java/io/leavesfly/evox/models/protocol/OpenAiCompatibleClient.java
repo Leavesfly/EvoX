@@ -4,8 +4,11 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatusCode;
 import org.springframework.http.MediaType;
+import org.springframework.web.reactive.function.client.ClientResponse;
 import org.springframework.web.reactive.function.client.WebClient;
+import org.springframework.web.reactive.function.client.WebClientResponseException;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
@@ -70,6 +73,7 @@ public class OpenAiCompatibleClient {
                 .uri(CHAT_COMPLETIONS_PATH)
                 .bodyValue(request)
                 .retrieve()
+                .onStatus(HttpStatusCode::isError, this::handleErrorResponse)
                 .bodyToMono(ChatCompletionResponse.class)
                 .timeout(timeout)
                 .block();
@@ -90,6 +94,7 @@ public class OpenAiCompatibleClient {
                 .uri(CHAT_COMPLETIONS_PATH)
                 .bodyValue(request)
                 .retrieve()
+                .onStatus(HttpStatusCode::isError, this::handleErrorResponse)
                 .bodyToMono(ChatCompletionResponse.class)
                 .timeout(timeout)
                 .block();
@@ -110,6 +115,7 @@ public class OpenAiCompatibleClient {
                 .uri(CHAT_COMPLETIONS_PATH)
                 .bodyValue(request)
                 .retrieve()
+                .onStatus(HttpStatusCode::isError, this::handleErrorResponse)
                 .bodyToMono(ChatCompletionResponse.class)
                 .timeout(timeout)
                 .map(this::extractContent);
@@ -128,6 +134,7 @@ public class OpenAiCompatibleClient {
                 .uri(CHAT_COMPLETIONS_PATH)
                 .bodyValue(request)
                 .retrieve()
+                .onStatus(HttpStatusCode::isError, this::handleErrorResponse)
                 .bodyToFlux(String.class)
                 .timeout(timeout)
                 .filter(line -> line.startsWith(SSE_DATA_PREFIX))
@@ -149,6 +156,7 @@ public class OpenAiCompatibleClient {
                 .uri(CHAT_COMPLETIONS_PATH)
                 .bodyValue(request)
                 .retrieve()
+                .onStatus(HttpStatusCode::isError, this::handleErrorResponse)
                 .bodyToFlux(String.class)
                 .timeout(timeout)
                 .filter(line -> line.startsWith(SSE_DATA_PREFIX))
@@ -168,6 +176,7 @@ public class OpenAiCompatibleClient {
                 .uri(EMBEDDINGS_PATH)
                 .bodyValue(request)
                 .retrieve()
+                .onStatus(HttpStatusCode::isError, this::handleErrorResponse)
                 .bodyToMono(EmbeddingResponse.class)
                 .timeout(timeout)
                 .block();
@@ -184,6 +193,7 @@ public class OpenAiCompatibleClient {
                 .uri(IMAGES_GENERATIONS_PATH)
                 .bodyValue(request)
                 .retrieve()
+                .onStatus(HttpStatusCode::isError, this::handleErrorResponse)
                 .bodyToMono(ImageGenerationResponse.class)
                 .timeout(timeout)
                 .block();
@@ -263,6 +273,21 @@ public class OpenAiCompatibleClient {
             log.debug("Failed to parse SSE chunk: {}", jsonData, e);
             return null;
         }
+    }
+
+    /**
+     * 处理 HTTP 错误响应，提取错误信息并抛出有意义的异常
+     */
+    private Mono<? extends Throwable> handleErrorResponse(ClientResponse response) {
+        return response.bodyToMono(String.class)
+                .defaultIfEmpty("No response body")
+                .map(body -> {
+                    String errorMessage = String.format(
+                            "LLM API request failed with status %d: %s",
+                            response.statusCode().value(), body);
+                    log.error(errorMessage);
+                    return new RuntimeException(errorMessage);
+                });
     }
 
     private String normalizeBaseUrl(String baseUrl) {

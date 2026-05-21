@@ -32,21 +32,21 @@ public class DefaultDebateAgent extends Agent implements MultiAgentDebate.Debate
         // 1. 角色设定
         if (getSystemPrompt() != null && !getSystemPrompt().isEmpty()) {
             sb.append("### 你的角色设定\n")
-              .append(getSystemPrompt())
-              .append("\n\n");
+                    .append(getSystemPrompt())
+                    .append("\n\n");
         }
 
         // 2. 核心问题
         sb.append("### 当前辩论主题\n")
-          .append(question)
-          .append("\n\n");
+                .append(question)
+                .append("\n\n");
 
         // 3. 辩论历史
         if (history != null && !history.isEmpty()) {
             sb.append("### 辩论历史记录\n");
             for (MultiAgentDebate.DebateRecord record : history) {
-                sb.append(String.format("[%d] %s: %s\n", 
-                    record.getRound(), record.getAgentName(), record.getResponse()));
+                sb.append(String.format("[%d] %s: %s\n",
+                        record.getRound(), record.getAgentName(), record.getResponse()));
             }
             sb.append("\n请仔细分析上述历史观点，提出你的看法。你可以支持、反驳或补充他人的论点。");
         } else {
@@ -64,10 +64,10 @@ public class DefaultDebateAgent extends Agent implements MultiAgentDebate.Debate
     }
 
     @Override
-    public Message execute(String actionName, List<Message> messages) {
+    public Message execute(List<Message> messages) {
         // 为了兼容 Agent 基类，提供一个默认的 execute 实现
         // 在辩论框架中，主要通过 respond 接口进行交互
-        String response = respond("Executing action: " + actionName, null);
+        String response = respond("Executing action: ", null);
         return Message.builder()
                 .messageType(MessageType.RESPONSE)
                 .content(response)

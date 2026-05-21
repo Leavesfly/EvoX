@@ -1,6 +1,5 @@
 package io.leavesfly.evox.agents.builder;
 
-import io.leavesfly.evox.actions.base.Action;
 import io.leavesfly.evox.agents.base.Agent;
 import io.leavesfly.evox.agents.specialized.ChatBotAgent;
 import io.leavesfly.evox.core.llm.ILLM;
@@ -11,8 +10,6 @@ import io.leavesfly.evox.models.provider.openai.OpenAILLMConfig;
 import io.leavesfly.evox.models.config.LLMFactory;
 import io.leavesfly.evox.models.provider.openai.OpenAILLM;
 
-import java.util.ArrayList;
-import java.util.List;
 import java.util.function.Supplier;
 
 /**
@@ -49,7 +46,6 @@ public class AgentBuilder<T extends Agent> {
     private String description;
     private String systemPrompt;
     private ILLM llm;
-    private List<Action> actions = new ArrayList<>();
     
     /**
      * 通过 Supplier 工厂构造（推荐）
@@ -250,23 +246,6 @@ public class AgentBuilder<T extends Agent> {
         this.llm = LLMFactory.siliconflow(apiKey, model);
         return this;
     }
-
-    
-    /**
-     * 添加动作
-     */
-    public AgentBuilder<T> addAction(Action action) {
-        this.actions.add(action);
-        return this;
-    }
-    
-    /**
-     * 批量添加动作
-     */
-    public AgentBuilder<T> addActions(Action... actions) {
-        this.actions.addAll(List.of(actions));
-        return this;
-    }
     
     /**
      * 构建 Agent
@@ -308,11 +287,6 @@ public class AgentBuilder<T extends Agent> {
             
             if (llm != null) {
                 agent.setLlm(llm);
-            }
-            
-            // 添加动作
-            for (Action action : actions) {
-                agent.addAction(action);
             }
             
             // 初始化

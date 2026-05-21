@@ -1,9 +1,5 @@
 package io.leavesfly.evox.agents.plan;
 
-import io.leavesfly.evox.actions.base.Action;
-import io.leavesfly.evox.actions.base.ActionInput;
-import io.leavesfly.evox.actions.base.ActionOutput;
-import io.leavesfly.evox.actions.base.SimpleActionOutput;
 import io.leavesfly.evox.agents.base.Agent;
 import io.leavesfly.evox.core.message.Message;
 import io.leavesfly.evox.core.message.MessageType;
@@ -47,55 +43,45 @@ public class PlanAgent extends Agent {
     @Override
     public void initModule() {
         super.initModule();
-        // 创建规划动作
-        PlanningAction action = new PlanningAction();
-        action.setName("planning");
-        action.setDescription("Task planning and decomposition");
-        action.setLlm(getLlm());
-        action.setPromptTemplate(planningPrompt);
-        addAction(action);
+        // Planning logic is now inline in execute() method
     }
 
     @Override
-    public Message execute(String actionName, List<Message> messages) {
-        Action action = getAction(actionName);
-        if (action == null) {
-            return Message.builder()
-                    .messageType(MessageType.ERROR)
-                    .content("Action not found: " + actionName)
-                    .build();
-        }
-
+    public Message execute(List<Message> messages) {
         try {
             // 提取目标
             String goal = extractGoal(messages);
             
-            // 创建输入
-            Map<String, Object> inputData = new HashMap<>();
-            inputData.put("goal", goal);
+            if (goal == null || goal.isEmpty()) {
+                return Message.builder()
+                        .messageType(MessageType.ERROR)
+                        .content("No goal found in messages")
+                        .build();
+            }
             
-            ActionInput input = new ActionInput() {
-                @Override
-                public Map<String, Object> toMap() {
-                    return inputData;
-                }
-
-                @Override
-                public boolean validate() {
-                    return goal != null && !goal.isEmpty();
-                }
-            };
-
-            // 执行动作
-            ActionOutput output = action.execute(input);
-
-            // 构建响应消息
+            // 构建提示
+            String prompt = planningPrompt.replace("{goal}", goal);
+            
+            // 获取 LLM 响应
+            String response = getLlm().generate(prompt);
+            log.debug("Planning response: {}", response);
+            
+            // 解析任务列表
+            List<Task> tasks = parseTasks(response);
+            
+            // 构建结果
+            Map<String, Object> result = new HashMap<>();
+            result.put("tasks", tasks);
+            result.put("total_tasks", tasks.size());
+            result.put("plan", response);
+            
+            // 返回响应消息
             return Message.builder()
-                    .messageType(output.isSuccess() ? MessageType.RESPONSE : MessageType.ERROR)
-                    .content(output.getData())
+                    .messageType(MessageType.RESPONSE)
+                    .content(result)
                     .build();
         } catch (Exception e) {
-            log.error("Failed to execute planning action", e);
+            log.error("Failed to execute planning", e);
             throw AgentException.executionError(getName(), e.getMessage(), e);
         }
     }
@@ -123,87 +109,42 @@ public class PlanAgent extends Agent {
     }
 
     /**
-     * PlanningAction 内部类
+     * 解析任务列表
      */
-    @Data
-    @EqualsAndHashCode(callSuper = true)
-    private static class PlanningAction extends Action {
-        private String promptTemplate;
-
-        @Override
-        public ActionOutput execute(ActionInput input) {
-            try {
-                String goal = (String) input.toMap().get("goal");
-                
-                // 构建提示
-                String prompt = promptTemplate.replace("{goal}", goal);
-                
-                // 获取 LLM 响应
-                String response = getLlm().generate(prompt);
-                log.debug("Planning response: {}", response);
-                
-                // 解析任务列表
-                List<Task> tasks = parseTasks(response);
-                
-                // 构建结果
-                Map<String, Object> result = new HashMap<>();
-                result.put("tasks", tasks);
-                result.put("total_tasks", tasks.size());
-                result.put("plan", response);
-                
-                return SimpleActionOutput.success(result);
-            } catch (Exception e) {
-                log.error("PlanningAction execution failed", e);
-                throw new AgentException("PlanningAction execution failed: " + e.getMessage(), e);
-            }
-        }
-
-        /**
-         * 解析任务列表
-         */
-        private List<Task> parseTasks(String response) {
-            List<Task> tasks = new ArrayList<>();
-            String[] lines = response.split("\n");
-            
-            int taskId = 1;
-            for (String line : lines) {
-                line = line.trim();
-                if (line.isEmpty()) {
-                    continue;
-                }
-                
-                // 匹配 "Task X: Description" 或 "X. Description" 格式
-                if (line.matches("^Task\\s+\\d+:.*") || line.matches("^\\d+\\..*")) {
-                    String description;
-                    if (line.contains(":")) {
-                        description = line.substring(line.indexOf(":") + 1).trim();
-                    } else if (line.contains(".")) {
-                        description = line.substring(line.indexOf(".") + 1).trim();
-                    } else {
-                        description = line;
-                    }
-                    
-                    Task task = new Task();
-                    task.setId(taskId++);
-                    task.setDescription(description);
-                    task.setStatus("pending");
-                    tasks.add(task);
-                }
+    private List<Task> parseTasks(String response) {
+        List<Task> tasks = new ArrayList<>();
+        String[] lines = response.split("\n");
+        
+        int taskId = 1;
+        for (String line : lines) {
+            line = line.trim();
+            if (line.isEmpty()) {
+                continue;
             }
             
-            return tasks;
+            // 匹配 "Task X: Description" 或 "X. Description" 格式
+            if (line.matches("^Task\\s+\\d+:.*") || line.matches("^\\d+\\..*")) {
+                String description;
+                if (line.contains(":")) {
+                    description = line.substring(line.indexOf(":") + 1).trim();
+                } else if (line.contains(".")) {
+                    description = line.substring(line.indexOf(".") + 1).trim();
+                } else {
+                    description = line;
+                }
+                
+                Task task = new Task();
+                task.setId(taskId++);
+                task.setDescription(description);
+                task.setStatus("pending");
+                tasks.add(task);
+            }
         }
-
-        @Override
-        public String[] getInputFields() {
-            return new String[]{"goal"};
-        }
-
-        @Override
-        public String[] getOutputFields() {
-            return new String[]{"tasks", "total_tasks", "plan"};
-        }
+        
+        return tasks;
     }
+
+
 
     /**
      * 任务类

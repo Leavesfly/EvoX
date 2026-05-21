@@ -71,7 +71,7 @@ public class TaskPlannerAgent extends Agent {
     }
 
     @Override
-    public Message execute(String actionName, List<Message> messages) {
+    public Message execute(List<Message> messages) {
         log.debug("TaskPlannerAgent {} executing planning", getName());
 
         try {

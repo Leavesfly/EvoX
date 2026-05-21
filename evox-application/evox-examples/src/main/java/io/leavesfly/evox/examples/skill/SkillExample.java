@@ -133,27 +133,27 @@ public class SkillExample {
         // 方式 A: 通过 SkillDefinitionFile 创建
         SkillDefinitionFile definition = SkillDefinitionFile.builder()
                 .name("api_design")
-                .description("Design RESTful APIs following best practices")
-                .whenToUse("When the user asks to design, review, or improve an API")
+                .description("按照最佳实践设计 RESTful API")
+                .whenToUse("当用户要求设计、评审或改进 API 时")
                 .allowedTools(List.of("file_system", "shell"))
                 .model("inherit")
                 .promptContent("""
-                        You are an expert API designer specializing in RESTful APIs.
+                        你是一位专精于 RESTful API 的资深 API 设计专家。
                         
-                        When designing APIs, follow these principles:
-                        1. Use proper HTTP methods (GET, POST, PUT, DELETE, PATCH)
-                        2. Use plural nouns for resource names
-                        3. Version your API (e.g., /api/v1/)
-                        4. Return appropriate HTTP status codes
-                        5. Use pagination for list endpoints
-                        6. Include HATEOAS links where appropriate
-                        7. Document with OpenAPI/Swagger
+                        设计 API 时，请遵循以下原则：
+                        1. 使用正确的 HTTP 方法（GET、POST、PUT、DELETE、PATCH）
+                        2. 资源名称使用复数名词
+                        3. 对 API 进行版本管理（如 /api/v1/）
+                        4. 返回恰当的 HTTP 状态码
+                        5. 列表接口使用分页
+                        6. 在适当位置包含 HATEOAS 链接
+                        7. 使用 OpenAPI/Swagger 编写文档
                         
-                        Always provide:
-                        - Endpoint definitions with methods and paths
-                        - Request/response body schemas
-                        - Error response formats
-                        - Authentication requirements
+                        始终提供：
+                        - 接口定义（包含方法和路径）
+                        - 请求/响应体的 Schema
+                        - 错误响应格式
+                        - 认证要求
                         """)
                 .build();
 
@@ -164,20 +164,20 @@ public class SkillExample {
         // 方式 B: 直接设置 BaseSkill 字段
         BaseSkill debugSkill = new BaseSkill();
         debugSkill.setName("debug_assistant");
-        debugSkill.setDescription("Help debug code issues systematically");
-        debugSkill.setWhenToUse("When the user encounters a bug or error");
+        debugSkill.setDescription("系统化地帮助调试代码问题");
+        debugSkill.setWhenToUse("当用户遇到 Bug 或错误时");
         debugSkill.setSystemPrompt("""
-                You are a systematic debugging assistant.
+                你是一位系统化的调试助手。
                 
-                Follow this debugging methodology:
-                1. **Reproduce**: Understand and reproduce the issue
-                2. **Isolate**: Narrow down the root cause
-                3. **Identify**: Find the exact line/component causing the issue
-                4. **Fix**: Apply the minimal fix
-                5. **Verify**: Confirm the fix resolves the issue
-                6. **Prevent**: Suggest tests or guards to prevent recurrence
+                请遵循以下调试方法论：
+                1. **复现**：理解并复现问题
+                2. **隔离**：缩小根因范围
+                3. **定位**：找到导致问题的确切行/组件
+                4. **修复**：应用最小化修复
+                5. **验证**：确认修复已解决问题
+                6. **预防**：建议测试或防护措施以防止再次发生
                 
-                Always ask clarifying questions before jumping to conclusions.
+                在得出结论前，始终先提出澄清性问题。
                 """);
         debugSkill.setAllowedTools(List.of("shell", "file_system", "grep"));
         debugSkill.setModel("inherit");

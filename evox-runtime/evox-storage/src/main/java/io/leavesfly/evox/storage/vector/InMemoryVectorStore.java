@@ -184,12 +184,15 @@ public class InMemoryVectorStore implements VectorStore {
         if (filter == null || filter.isEmpty()) {
             return true;
         }
+        if (metadata == null) {
+            return false;
+        }
 
         for (Map.Entry<String, Object> entry : filter.entrySet()) {
             Object metadataValue = metadata.get(entry.getKey());
             Object filterValue = entry.getValue();
 
-            if (metadataValue == null || !metadataValue.equals(filterValue)) {
+            if (!java.util.Objects.equals(metadataValue, filterValue)) {
                 return false;
             }
         }

@@ -100,17 +100,14 @@ public class CoworkAgent extends Agent {
 
     // ==================== IAgent / Agent contract ====================
 
-    @Override
-    protected String getPrimaryActionName() {
-        return "chat";
-    }
+
 
     /**
-     * 实现 {@link Agent#execute(String, List)} — IAgent 标准入口。
+     * 实现 {@link Agent#execute(List)} — IAgent 标准入口。
      * 将 EvoX 框架的 Message 列表转换为用户输入，委托给 {@link #chat(String)}。
      */
     @Override
-    public Message execute(String actionName, List<Message> messages) {
+    public Message execute(List<Message> messages) {
         String userInput = extractUserInput(messages);
         if (userInput == null || userInput.isBlank()) {
             return Message.builder()

@@ -122,11 +122,15 @@ public class HITLManager implements Closeable {
         return handleCLIInteraction(request)
                 .timeout(Duration.ofSeconds(defaultTimeout))
                 .onErrorResume(error -> {
-                    log.error("HITL request error: {}", error.getMessage());
+                    log.error("HITL request failed [type={}, requestId={}]: {}",
+                            error.getClass().getSimpleName(), request.getRequestId(),
+                            error.getMessage(), error);
+                    String feedback = String.format("Error (%s): %s",
+                            error.getClass().getSimpleName(), error.getMessage());
                     return Mono.just(HITLResponse.builder()
                             .requestId(request.getRequestId())
                             .decision(HITLDecision.REJECT)
-                            .feedback("Error: " + error.getMessage())
+                            .feedback(feedback)
                             .build());
                 });
     }

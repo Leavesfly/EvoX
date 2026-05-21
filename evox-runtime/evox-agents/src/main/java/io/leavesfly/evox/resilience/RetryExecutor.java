@@ -5,6 +5,11 @@ import lombok.extern.slf4j.Slf4j;
 
 import java.time.Duration;
 import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 
 /**
  * 重试执行器
@@ -81,7 +86,9 @@ public class RetryExecutor {
     }
 
     /**
-     * 执行带超时和重试
+     * 执行带超时和重试。
+     * 使用独立线程 + Future.get(timeout) 实现真正的超时控制，
+     * 能够在超时后中断正在执行的任务。
      *
      * @param callable 可调用对象
      * @param timeout 超时时间
@@ -90,15 +97,23 @@ public class RetryExecutor {
      */
     public <T> T executeWithTimeout(Callable<T> callable, Duration timeout) {
         return execute(() -> {
-            long startTime = System.currentTimeMillis();
-            T result = callable.call();
-            long elapsed = System.currentTimeMillis() - startTime;
-
-            if (elapsed > timeout.toMillis()) {
-                throw new ExecutionException("Execution timeout after " + elapsed + "ms");
+            ExecutorService executor = Executors.newSingleThreadExecutor();
+            Future<T> future = executor.submit(callable);
+            try {
+                return future.get(timeout.toMillis(), TimeUnit.MILLISECONDS);
+            } catch (TimeoutException e) {
+                future.cancel(true);
+                throw new ExecutionException(
+                        "Execution timeout after " + timeout.toMillis() + "ms", e);
+            } catch (java.util.concurrent.ExecutionException e) {
+                Throwable cause = e.getCause();
+                if (cause instanceof Exception) {
+                    throw (Exception) cause;
+                }
+                throw new ExecutionException("Execution failed", cause);
+            } finally {
+                executor.shutdownNow();
             }
-
-            return result;
         });
     }
 

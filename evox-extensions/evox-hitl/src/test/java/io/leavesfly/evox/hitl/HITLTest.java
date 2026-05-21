@@ -278,22 +278,5 @@ class HITLTest {
         assertEquals("user@example.com", field.getDefaultValue());
     }
 
-    @Test
-    @DisplayName("HITL拦截器动作包装器")
-    void testInterceptorActionWrapper() {
-        HITLInterceptorAgent agent = HITLInterceptorAgent.builder()
-                .name("test_interceptor")
-                .targetAgentName("target_agent")
-                .targetActionName("target_action")
-                .interactionType(HITLInteractionType.APPROVE_REJECT)
-                .mode(HITLMode.PRE_EXECUTION)
-                .build();
 
-        HITLInterceptorAgent.HITLInterceptorAction action = 
-                new HITLInterceptorAgent.HITLInterceptorAction(agent);
-
-        assertNotNull(action);
-        assertEquals("HITLInterceptorAction", action.getName());
-        assertNotNull(action.getDescription());
-    }
 }

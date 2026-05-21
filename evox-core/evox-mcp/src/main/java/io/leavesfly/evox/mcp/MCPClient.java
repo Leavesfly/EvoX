@@ -15,8 +15,9 @@ public class MCPClient {
 
     private final String url;
     @Getter
-    private ConnectionStatus status;
-    private MCPServer connectedServer;
+    private volatile ConnectionStatus status;
+    private volatile MCPServer connectedServer;
+    private final Object connectionLock = new Object();
 
     public MCPClient(String url) {
         this.url = url;
@@ -24,19 +25,23 @@ public class MCPClient {
     }
 
     /**
-     * 连接到服务器
+     * 连接到服务器（线程安全）
      */
     public void connect(MCPServer server) {
-        this.connectedServer = server;
-        this.status = ConnectionStatus.CONNECTED;
+        synchronized (connectionLock) {
+            this.connectedServer = server;
+            this.status = ConnectionStatus.CONNECTED;
+        }
     }
 
     /**
-     * 断开连接
+     * 断开连接（线程安全）
      */
     public void disconnect() {
-        this.connectedServer = null;
-        this.status = ConnectionStatus.DISCONNECTED;
+        synchronized (connectionLock) {
+            this.connectedServer = null;
+            this.status = ConnectionStatus.DISCONNECTED;
+        }
     }
 
     /**
@@ -50,20 +55,22 @@ public class MCPClient {
      * 列出资源
      */
     public List<MCPResource> listResources() {
-        if (status != ConnectionStatus.CONNECTED) {
+        MCPServer server = this.connectedServer;
+        if (status != ConnectionStatus.CONNECTED || server == null) {
             throw MCPException.connectionError("客户端未连接");
         }
-        return connectedServer.listResources();
+        return server.listResources();
     }
 
     /**
      * 调用工具
      */
     public MCPProtocol.ToolCallResult callTool(String name, Map<String, Object> args) {
-        if (status != ConnectionStatus.CONNECTED) {
+        MCPServer server = this.connectedServer;
+        if (status != ConnectionStatus.CONNECTED || server == null) {
             throw MCPException.connectionError("客户端未连接");
         }
-        return connectedServer.invokeTool(name, args);
+        return server.invokeTool(name, args);
     }
 
     /**

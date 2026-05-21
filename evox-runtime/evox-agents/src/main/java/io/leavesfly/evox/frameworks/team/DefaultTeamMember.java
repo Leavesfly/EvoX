@@ -105,9 +105,9 @@ public class DefaultTeamMember extends Agent implements TeamMember<String> {
     }
 
     @Override
-    public Message execute(String actionName, List<Message> messages) {
+    public Message execute(List<Message> messages) {
         // 基础 Agent 接口实现，在团队框架中主要使用 execute(String task, ...)
-        String response = execute("Action: " + actionName, null, null);
+        String response = execute("Executing task", null, null);
         return Message.builder()
                 .messageType(MessageType.RESPONSE)
                 .content(response)

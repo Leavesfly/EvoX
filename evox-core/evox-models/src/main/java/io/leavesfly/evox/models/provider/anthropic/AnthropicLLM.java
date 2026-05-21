@@ -118,8 +118,9 @@ public class AnthropicLLM implements LLMProvider {
     @Override
     public String chat(List<Message> messages) {
         try {
+            String systemPrompt = extractSystemPrompt(messages);
             List<Map<String, Object>> anthropicMessages = convertMessages(messages);
-            Map<String, Object> requestBody = buildChatRequestBody(anthropicMessages, null, null);
+            Map<String, Object> requestBody = buildChatRequestBody(anthropicMessages, null, null, systemPrompt);
 
             String response = webClient.post()
                     .uri("/v1/messages")
@@ -146,8 +147,9 @@ public class AnthropicLLM implements LLMProvider {
 
     @Override
     public Flux<String> chatStream(List<Message> messages) {
+        String systemPrompt = extractSystemPrompt(messages);
         List<Map<String, Object>> anthropicMessages = convertMessages(messages);
-        Map<String, Object> requestBody = buildChatRequestBody(anthropicMessages, null, null);
+        Map<String, Object> requestBody = buildChatRequestBody(anthropicMessages, null, null, systemPrompt);
         requestBody.put("stream", true);
 
         return webClient.post()
@@ -181,10 +183,11 @@ public class AnthropicLLM implements LLMProvider {
             log.debug("Chat with tools, messages count: {}, tools count: {}", 
                     messages.size(), toolSchemas.size());
 
+            String systemPrompt = extractSystemPrompt(messages);
             List<Map<String, Object>> anthropicMessages = convertMessages(messages);
             List<Map<String, Object>> anthropicTools = convertToolSchemas(toolSchemas);
 
-            Map<String, Object> requestBody = buildChatRequestBody(anthropicMessages, anthropicTools, toolChoice);
+            Map<String, Object> requestBody = buildChatRequestBody(anthropicMessages, anthropicTools, toolChoice, systemPrompt);
             String response = webClient.post()
                     .uri("/v1/messages")
                     .bodyValue(requestBody)
@@ -211,10 +214,11 @@ public class AnthropicLLM implements LLMProvider {
             log.debug("Chat with tool definitions, messages count: {}, tools count: {}", 
                     messages.size(), toolDefinitions.size());
 
+            String systemPrompt = extractSystemPrompt(messages);
             List<Map<String, Object>> anthropicMessages = convertMessages(messages);
             List<Map<String, Object>> anthropicTools = convertToolDefinitions(toolDefinitions);
 
-            Map<String, Object> requestBody = buildChatRequestBody(anthropicMessages, anthropicTools, toolChoice);
+            Map<String, Object> requestBody = buildChatRequestBody(anthropicMessages, anthropicTools, toolChoice, systemPrompt);
             String response = webClient.post()
                     .uri("/v1/messages")
                     .bodyValue(requestBody)
@@ -237,10 +241,11 @@ public class AnthropicLLM implements LLMProvider {
             log.debug("Streaming chat with tool definitions, messages count: {}, tools count: {}",
                     messages.size(), toolDefinitions.size());
 
+            String systemPrompt = extractSystemPrompt(messages);
             List<Map<String, Object>> anthropicMessages = convertMessages(messages);
             List<Map<String, Object>> anthropicTools = convertToolDefinitions(toolDefinitions);
 
-            Map<String, Object> requestBody = buildChatRequestBody(anthropicMessages, anthropicTools, toolChoice);
+            Map<String, Object> requestBody = buildChatRequestBody(anthropicMessages, anthropicTools, toolChoice, systemPrompt);
             requestBody.put("stream", true);
 
             return webClient.post()
@@ -283,11 +288,17 @@ public class AnthropicLLM implements LLMProvider {
 
     private Map<String, Object> buildChatRequestBody(List<Map<String, Object>> messages,
                                                       List<Map<String, Object>> tools,
-                                                      String toolChoice) {
+                                                      String toolChoice,
+                                                      String systemPrompt) {
         Map<String, Object> body = new HashMap<>();
         body.put("model", config.getModel());
         body.put("max_tokens", config.getMaxTokens() != null ? config.getMaxTokens() : 4096);
         body.put("messages", messages);
+
+        // Anthropic API 支持独立的 "system" 顶级参数
+        if (systemPrompt != null && !systemPrompt.isEmpty()) {
+            body.put("system", systemPrompt);
+        }
 
         if (config.getTemperature() != null) {
             body.put("temperature", config.getTemperature());
@@ -303,17 +314,24 @@ public class AnthropicLLM implements LLMProvider {
         return body;
     }
 
+    /**
+     * 转换消息列表为 Anthropic API 格式。
+     * SYSTEM 消息会被过滤掉（由 extractSystemPrompt 单独处理为 "system" 顶级参数）。
+     */
     private List<Map<String, Object>> convertMessages(List<Message> messages) {
         List<Map<String, Object>> anthropicMessages = new ArrayList<>();
 
         for (Message message : messages) {
-            Map<String, Object> anthropicMessage = new HashMap<>();
             MessageType messageType = message.getMessageType();
 
+            // SYSTEM 消息不放入 messages 数组，由 extractSystemPrompt 处理
             if (messageType == MessageType.SYSTEM) {
-                anthropicMessage.put("role", "user");
-                anthropicMessage.put("content", "System: " + message.getContent());
-            } else if (messageType == MessageType.INPUT) {
+                continue;
+            }
+
+            Map<String, Object> anthropicMessage = new HashMap<>();
+
+            if (messageType == MessageType.INPUT) {
                 anthropicMessage.put("role", "user");
                 anthropicMessage.put("content", message.getContent());
             } else if (messageType == MessageType.OUTPUT || messageType == MessageType.RESPONSE) {
@@ -336,6 +354,23 @@ public class AnthropicLLM implements LLMProvider {
         }
 
         return anthropicMessages;
+    }
+
+    /**
+     * 从消息列表中提取 SYSTEM 消息内容，合并为单个 system prompt。
+     * Anthropic API 支持独立的 "system" 顶级参数。
+     */
+    private String extractSystemPrompt(List<Message> messages) {
+        StringBuilder systemPrompt = new StringBuilder();
+        for (Message message : messages) {
+            if (message.getMessageType() == MessageType.SYSTEM && message.getContent() != null) {
+                if (!systemPrompt.isEmpty()) {
+                    systemPrompt.append("\n");
+                }
+                systemPrompt.append(message.getContent());
+            }
+        }
+        return systemPrompt.isEmpty() ? null : systemPrompt.toString();
     }
 
     private List<Map<String, Object>> convertToolSchemas(List<Map<String, Object>> toolSchemas) {

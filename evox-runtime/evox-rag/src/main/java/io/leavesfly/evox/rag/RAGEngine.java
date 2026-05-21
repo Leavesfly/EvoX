@@ -62,6 +62,15 @@ public class RAGEngine {
             EmbeddingService embeddingService,
             DocumentVectorStore vectorStore,
             ILLM llm) {
+        if (config == null) {
+            throw new IllegalArgumentException("RAGConfig must not be null");
+        }
+        if (embeddingService == null) {
+            throw new IllegalArgumentException("EmbeddingService must not be null");
+        }
+        if (vectorStore == null) {
+            throw new IllegalArgumentException("DocumentVectorStore must not be null");
+        }
         this.config = config;
         this.reader = reader;
         this.embeddingService = embeddingService;
@@ -118,20 +127,29 @@ public class RAGEngine {
      *
      * @param documents 文档列表
      * @return 总分块数量
+     * @throws RuntimeException 如果有文档索引失败（包含失败详情）
      */
     public int indexDocuments(List<Document> documents) {
         log.info("Starting batch indexing for {} documents", documents.size());
         
         int totalChunks = 0;
+        List<String> failedDocIds = new ArrayList<>();
         for (Document document : documents) {
             try {
                 totalChunks += indexDocument(document);
             } catch (Exception e) {
                 log.error("Failed to index document {}: {}", document.getId(), e.getMessage(), e);
+                failedDocIds.add(document.getId());
             }
         }
         
-        log.info("Batch indexing completed. Total chunks: {}", totalChunks);
+        if (!failedDocIds.isEmpty()) {
+            log.warn("Batch indexing partially failed. {} out of {} documents failed: {}",
+                    failedDocIds.size(), documents.size(), failedDocIds);
+        }
+        
+        log.info("Batch indexing completed. Total chunks: {}, failed documents: {}",
+                totalChunks, failedDocIds.size());
         return totalChunks;
     }
 

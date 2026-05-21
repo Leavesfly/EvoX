@@ -50,16 +50,17 @@ public class SanitizeUtils {
     }
 
     /**
-     * 清理代码块
+     * 清理代码块，移除 markdown 代码块标记（包括前后可能的空白）
      */
     public static String sanitizeCode(String code) {
         if (code == null) {
             return "";
         }
         
-        // 移除markdown代码块标记
-        code = code.replaceAll("^```[a-zA-Z]*\\n", "");
-        code = code.replaceAll("\\n```$", "");
+        // 移除 markdown 代码块的开始标记（支持前后空白和语言标识）
+        code = code.replaceAll("(?m)^\\s*```[a-zA-Z]*\\s*\\n?", "");
+        // 移除 markdown 代码块的结束标记
+        code = code.replaceAll("(?m)\\n?\\s*```\\s*$", "");
         
         return code.trim();
     }

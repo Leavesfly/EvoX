@@ -1,9 +1,5 @@
 package io.leavesfly.evox.agents.react;
 
-import io.leavesfly.evox.actions.base.Action;
-import io.leavesfly.evox.actions.base.ActionInput;
-import io.leavesfly.evox.actions.base.ActionOutput;
-import io.leavesfly.evox.actions.base.SimpleActionOutput;
 import io.leavesfly.evox.agents.base.Agent;
 import io.leavesfly.evox.core.agent.IAgent;
 import io.leavesfly.evox.core.llm.ILLM;
@@ -153,17 +149,6 @@ public class ReActAgent extends Agent {
         for (BaseTool tool : tools) {
             toolMap.putIfAbsent(tool.getName(), tool);
         }
-
-        // 创建 ReAct 动作
-        ReActAction action = new ReActAction();
-        action.setName("react");
-        action.setDescription("ReAct reasoning and acting");
-        action.setLlm(getLlm());
-        action.setTools(tools);
-        action.setToolMap(toolMap);
-        action.setMaxIterations(maxIterations);
-        action.setPromptTemplate(reactPrompt);
-        addAction(action);
     }
 
     /**
@@ -238,51 +223,89 @@ public class ReActAgent extends Agent {
     }
 
     @Override
-    public Message execute(String actionName, List<Message> messages) {
-        Action action = getAction(actionName);
-        if (action == null) {
+    public Message execute(List<Message> messages) {
+        // 前置校验
+        if (messages == null || messages.isEmpty()) {
             return Message.builder()
                     .messageType(MessageType.ERROR)
-                    .content("Action not found: " + actionName)
+                    .content("No messages provided")
                     .build();
         }
 
         try {
+            // 前置检查：LLM 不能为 null
+            if (getLlm() == null) {
+                log.error("LLM is not configured for ReActAgent");
+                return Message.builder()
+                        .messageType(MessageType.ERROR)
+                        .content("LLM is not configured. Please set an LLM before executing.")
+                        .build();
+            }
+
             // 提取问题
             String question = extractQuestion(messages);
-            
-            // 创建输入
-            Map<String, Object> inputData = new HashMap<>();
-            inputData.put("question", question);
-            
-            ActionInput input = new ActionInput() {
-                @Override
-                public Map<String, Object> toMap() {
-                    return inputData;
+            if (question == null || question.isEmpty()) {
+                return Message.builder()
+                        .messageType(MessageType.ERROR)
+                        .content("No question provided")
+                        .build();
+            }
+
+            String history = "";
+
+            // ReAct 循环
+            for (int i = 0; i < maxIterations; i++) {
+                // 构建提示
+                String prompt = buildPrompt(question, history);
+
+                // 获取 LLM 响应
+                String response = getLlm().generate(prompt);
+                log.debug("ReAct iteration {}: {}", i + 1, response);
+
+                // 解析响应
+                ParsedStep step = parseResponse(response);
+
+                // 检查是否完成
+                if (step.isFinalAnswer) {
+                    Map<String, Object> result = new HashMap<>();
+                    result.put("answer", step.finalAnswer);
+                    result.put("steps", i + 1);
+                    return Message.builder()
+                            .messageType(MessageType.RESPONSE)
+                            .content(step.finalAnswer)
+                            .build();
                 }
 
-                @Override
-                public boolean validate() {
-                    return question != null && !question.isEmpty();
+                // 解析失败（action 为空）时提前退出，避免无效迭代
+                if (step.action == null || step.action.isEmpty()) {
+                    log.warn("ReAct iteration {}: failed to parse action from LLM response, stopping early", i + 1);
+                    return Message.builder()
+                            .messageType(MessageType.ERROR)
+                            .content("Failed to parse action from LLM response at iteration " + (i + 1))
+                            .build();
                 }
-            };
 
-            // 执行动作
-            ActionOutput output = action.execute(input);
+                // 执行动作并获取观察
+                String observation = executeToolAction(step.action, step.actionInput);
 
-            // 构建响应消息
+                // 更新历史
+                history += String.format("Thought: %s%nAction: %s%nAction Input: %s%nObservation: %s%n%n",
+                        step.thought, step.action, step.actionInput, observation);
+            }
+
+            // 达到最大迭代次数
             return Message.builder()
-                    .messageType(output.isSuccess() ? MessageType.RESPONSE : MessageType.ERROR)
-                    .content(output.getData())
+                    .messageType(MessageType.ERROR)
+                    .content("Max iterations reached without final answer")
                     .build();
         } catch (AgentException | ToolException e) {
-            log.error("Failed to execute ReAct action: {}", e.getMessage(), e);
+            log.error("ReActAgent execution failed: {}", e.getMessage(), e);
             return Message.builder()
                     .messageType(MessageType.ERROR)
                     .content("Execution failed: " + e.getMessage())
                     .build();
         } catch (Exception e) {
-            log.error("Unexpected error in ReAct action execution: {}", e.getMessage(), e);
+            log.error("Unexpected error in ReActAgent execution: {}", e.getMessage(), e);
             return Message.builder()
                     .messageType(MessageType.ERROR)
                     .content("Execution failed: " + e.getMessage())
@@ -313,185 +336,121 @@ public class ReActAgent extends Agent {
     }
 
     /**
-     * ReActAction 内部类
+     * 构建提示
      */
-    @Data
-    @EqualsAndHashCode(callSuper = true)
-    private static class ReActAction extends Action {
-        private List<BaseTool> tools;
-        private Map<String, BaseTool> toolMap;
-        private int maxIterations;
-        private String promptTemplate;
+    private String buildPrompt(String question, String history) {
+        String toolsDesc = buildToolsDescription();
+        String prompt = reactPrompt
+                .replace("{tools}", toolsDesc)
+                .replace("{question}", question);
+        return prompt + "\n\n" + history;
+    }
 
-        @Override
-        public ActionOutput execute(ActionInput input) {
-            try {
-                String question = (String) input.toMap().get("question");
-                String history = "";
-                
-                for (int i = 0; i < maxIterations; i++) {
-                    // 构建提示
-                    String prompt = buildPrompt(question, history);
-                    
-                    // 获取 LLM 响应
-                    String response = getLlm().generate(prompt);
-                    log.debug("ReAct iteration {}: {}", i + 1, response);
-                    
-                    // 解析响应
-                    ParsedStep step = parseResponse(response);
-                    
-                    // 检查是否完成
-                    if (step.isFinalAnswer) {
-                        Map<String, Object> result = new HashMap<>();
-                        result.put("answer", step.finalAnswer);
-                        result.put("steps", i + 1);
-                        return SimpleActionOutput.success(result);
-                    }
-                    
-                    // 执行动作并获取观察
-                    String observation = executeToolAction(step.action, step.actionInput);
-                    
-                    // 更新历史
-                    history += String.format("Thought: %s%nAction: %s%nAction Input: %s%nObservation: %s%n%n",
-                            step.thought, step.action, step.actionInput, observation);
-                }
-                
-                // 达到最大迭代次数
-                return SimpleActionOutput.failure("Max iterations reached without final answer");
-            } catch (AgentException | ToolException e) {
-                log.error("ReActAction execution failed: {}", e.getMessage(), e);
-                return SimpleActionOutput.failure("Execution failed: " + e.getMessage());
-            } catch (Exception e) {
-                log.error("Unexpected error in ReActAction execution: {}", e.getMessage(), e);
-                return SimpleActionOutput.failure("Execution failed: " + e.getMessage());
-            }
+    /**
+     * 构建工具描述
+     */
+    private String buildToolsDescription() {
+        if (tools == null || tools.isEmpty()) {
+            return "No tools available";
         }
 
-        /**
-         * 构建提示
-         */
-        private String buildPrompt(String question, String history) {
-            String toolsDesc = buildToolsDescription();
-            String prompt = promptTemplate
-                    .replace("{tools}", toolsDesc)
-                    .replace("{question}", question);
-            return prompt + "\n\n" + history;
+        StringBuilder sb = new StringBuilder();
+        for (BaseTool tool : tools) {
+            sb.append(String.format("- %s: %s%n", tool.getName(), tool.getDescription()));
         }
+        return sb.toString();
+    }
 
-        /**
-         * 构建工具描述
-         */
-        private String buildToolsDescription() {
-            if (tools == null || tools.isEmpty()) {
-                return "No tools available";
-            }
-            
-            StringBuilder sb = new StringBuilder();
-            for (BaseTool tool : tools) {
-                sb.append(String.format("- %s: %s%n", tool.getName(), tool.getDescription()));
-            }
-            return sb.toString();
-        }
+    /**
+     * 解析 LLM 响应
+     */
+    private ParsedStep parseResponse(String response) {
+        ParsedStep step = new ParsedStep();
 
-        /**
-         * 解析 LLM 响应
-         */
-        private ParsedStep parseResponse(String response) {
-            ParsedStep step = new ParsedStep();
-            
-            // 检查是否是最终答案
-            Pattern finalPattern = Pattern.compile("Final Answer:\\s*(.+)", Pattern.DOTALL);
-            Matcher finalMatcher = finalPattern.matcher(response);
-            if (finalMatcher.find()) {
-                step.isFinalAnswer = true;
-                step.finalAnswer = finalMatcher.group(1).trim();
-                return step;
-            }
-            
-            // 解析思考
-            Pattern thoughtPattern = Pattern.compile("Thought:\\s*(.+?)(?=Action:|$)", Pattern.DOTALL);
-            Matcher thoughtMatcher = thoughtPattern.matcher(response);
-            if (thoughtMatcher.find()) {
-                step.thought = thoughtMatcher.group(1).trim();
-            }
-            
-            // 解析动作
-            Pattern actionPattern = Pattern.compile("Action:\\s*(.+?)(?=Action Input:|$)", Pattern.DOTALL);
-            Matcher actionMatcher = actionPattern.matcher(response);
-            if (actionMatcher.find()) {
-                step.action = actionMatcher.group(1).trim();
-            }
-            
-            // 解析动作输入
-            Pattern inputPattern = Pattern.compile("Action Input:\\s*(.+?)(?=Observation:|$)", Pattern.DOTALL);
-            Matcher inputMatcher = inputPattern.matcher(response);
-            if (inputMatcher.find()) {
-                step.actionInput = inputMatcher.group(1).trim();
-            }
-            
+        // 检查是否是最终答案
+        Pattern finalPattern = Pattern.compile("Final Answer:\\s*(.+)", Pattern.DOTALL);
+        Matcher finalMatcher = finalPattern.matcher(response);
+        if (finalMatcher.find()) {
+            step.isFinalAnswer = true;
+            step.finalAnswer = finalMatcher.group(1).trim();
             return step;
         }
 
-        /**
-         * 执行工具动作（优先使用 toolMap 快速查找，回退到忽略大小写的线性匹配）
-         */
-        private String executeToolAction(String toolName, String input) {
-            if (toolMap == null || toolMap.isEmpty()) {
-                return "No tools available";
-            }
+        // 解析思考
+        Pattern thoughtPattern = Pattern.compile("Thought:\\s*(.+?)(?=Action:|$)", Pattern.DOTALL);
+        Matcher thoughtMatcher = thoughtPattern.matcher(response);
+        if (thoughtMatcher.find()) {
+            step.thought = thoughtMatcher.group(1).trim();
+        }
 
-            // 优先精确匹配
-            BaseTool tool = toolMap.get(toolName);
+        // 解析动作
+        Pattern actionPattern = Pattern.compile("Action:\\s*(.+?)(?=Action Input:|$)", Pattern.DOTALL);
+        Matcher actionMatcher = actionPattern.matcher(response);
+        if (actionMatcher.find()) {
+            step.action = actionMatcher.group(1).trim();
+        }
 
-            // 回退：忽略大小写匹配
-            if (tool == null) {
-                for (BaseTool candidate : toolMap.values()) {
-                    if (candidate.getName().equalsIgnoreCase(toolName)) {
-                        tool = candidate;
-                        break;
-                    }
+        // 解析动作输入
+        Pattern inputPattern = Pattern.compile("Action Input:\\s*(.+?)(?=Observation:|$)", Pattern.DOTALL);
+        Matcher inputMatcher = inputPattern.matcher(response);
+        if (inputMatcher.find()) {
+            step.actionInput = inputMatcher.group(1).trim();
+        }
+
+        return step;
+    }
+
+    /**
+     * 执行工具动作（优先使用 toolMap 快速查找，回退到忽略大小写的线性匹配）
+     */
+    private String executeToolAction(String toolName, String input) {
+        if (toolMap == null || toolMap.isEmpty()) {
+            return "No tools available";
+        }
+
+        // 优先精确匹配
+        BaseTool tool = toolMap.get(toolName);
+
+        // 回退：忽略大小写匹配
+        if (tool == null) {
+            for (BaseTool candidate : toolMap.values()) {
+                if (candidate.getName().equalsIgnoreCase(toolName)) {
+                    tool = candidate;
+                    break;
                 }
             }
-
-            if (tool == null) {
-                return "Tool not found: " + toolName;
-            }
-
-            try {
-                Map<String, Object> params = new HashMap<>();
-                params.put("input", input);
-                BaseTool.ToolResult result = tool.execute(params);
-                return result != null && result.isSuccess()
-                        ? (result.getData() != null ? result.getData().toString() : "No result")
-                        : "Error: " + (result != null ? result.getError() : "Unknown error");
-            } catch (ToolException e) {
-                log.error("Tool execution error: {}", e.getMessage(), e);
-                return "Error executing tool: " + e.getMessage();
-            } catch (Exception e) {
-                log.error("Unexpected error executing tool: {}", e.getMessage(), e);
-                return "Error executing tool: " + e.getMessage();
-            }
         }
 
-        @Override
-        public String[] getInputFields() {
-            return new String[]{"question"};
+        if (tool == null) {
+            return "Tool not found: " + toolName;
         }
 
-        @Override
-        public String[] getOutputFields() {
-            return new String[]{"answer", "steps"};
+        try {
+            Map<String, Object> params = new HashMap<>();
+            params.put("input", input);
+            BaseTool.ToolResult result = tool.execute(params);
+            return result != null && result.isSuccess()
+                    ? (result.getData() != null ? result.getData().toString() : "No result")
+                    : "Error: " + (result != null ? result.getError() : "Unknown error");
+        } catch (ToolException e) {
+            log.error("Tool execution error: {}", e.getMessage(), e);
+            return "Error executing tool: " + e.getMessage();
+        } catch (Exception e) {
+            log.error("Unexpected error executing tool: {}", e.getMessage(), e);
+            return "Error executing tool: " + e.getMessage();
         }
+    }
 
-        /**
-         * 解析的步骤
-         */
-        private static class ParsedStep {
-            String thought = "";
-            String action = "";
-            String actionInput = "";
-            boolean isFinalAnswer = false;
-            String finalAnswer = "";
-        }
+
+
+    /**
+     * 解析的步骤
+     */
+    private static class ParsedStep {
+        String thought = "";
+        String action = "";
+        String actionInput = "";
+        boolean isFinalAnswer = false;
+        String finalAnswer = "";
     }
 }

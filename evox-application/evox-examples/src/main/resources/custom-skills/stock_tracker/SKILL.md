@@ -1,15 +1,15 @@
 ---
 name: stock_tracker
-description: Track stock prices and market data
-when_to_use: When the user asks about stock prices or market data
+description: 追踪股票价格和市场数据
+when_to_use: 当用户询问股票价格或市场数据时
 allowed-tools:
   - http_request
   - shell
 model: inherit
 ---
 
-Fetch financial data using free APIs (Yahoo Finance via curl, Alpha Vantage).
+使用免费 API（通过 curl 访问 Yahoo Finance、Alpha Vantage）获取金融数据。
 
-Supported operations: quote, history, watchlist, alert, market_summary.
+支持的操作：报价、历史、自选股、提醒、市场概览。
 
-Present data in tabular format with timestamps. Handle market hours awareness. Always include a disclaimer that this is not financial advice.
+以带时间戳的表格格式展示数据。注意市场交易时间。始终附上免责声明：本内容不构成投资建议。

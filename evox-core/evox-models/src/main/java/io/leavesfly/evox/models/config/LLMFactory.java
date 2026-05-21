@@ -45,11 +45,11 @@ public class LLMFactory {
     private static final Map<String, Function<LLMConfig, LLMProvider>> REGISTRY = new ConcurrentHashMap<>();
 
     static {
-        register("openai", config -> new OpenAILLM((OpenAILLMConfig) config));
-        register("ollama", config -> new OllamaLLM((OllamaLLMConfig) config));
-        register("aliyun", config -> new AliyunLLM((AliyunLLMConfig) config));
-        register("deepseek", config -> new DeepSeekLLM((DeepSeekLLMConfig) config));
-        register("siliconflow", config -> new SiliconFlowLLM((SiliconFlowLLMConfig) config));
+        register("openai", config -> new OpenAILLM(safeCast(config, OpenAILLMConfig.class, "openai")));
+        register("ollama", config -> new OllamaLLM(safeCast(config, OllamaLLMConfig.class, "ollama")));
+        register("aliyun", config -> new AliyunLLM(safeCast(config, AliyunLLMConfig.class, "aliyun")));
+        register("deepseek", config -> new DeepSeekLLM(safeCast(config, DeepSeekLLMConfig.class, "deepseek")));
+        register("siliconflow", config -> new SiliconFlowLLM(safeCast(config, SiliconFlowLLMConfig.class, "siliconflow")));
     }
 
     private LLMFactory() {
@@ -212,6 +212,20 @@ public class LLMFactory {
         throw new IllegalArgumentException(
                 "Cannot infer provider from config type: " + config.getClass().getSimpleName() +
                 ". Please set the 'provider' field explicitly.");
+    }
+
+    /**
+     * 安全类型转换，提供有意义的错误信息
+     */
+    @SuppressWarnings("unchecked")
+    private static <T extends LLMConfig> T safeCast(LLMConfig config, Class<T> expectedType, String provider) {
+        if (!expectedType.isInstance(config)) {
+            throw new IllegalArgumentException(String.format(
+                    "Provider '%s' requires config type '%s', but got '%s'. " +
+                    "Please use the matching config class or let LLMFactory.inferProvider() determine the provider automatically.",
+                    provider, expectedType.getSimpleName(), config.getClass().getSimpleName()));
+        }
+        return expectedType.cast(config);
     }
 
     private static String getEnvOrThrow(String envKey) {

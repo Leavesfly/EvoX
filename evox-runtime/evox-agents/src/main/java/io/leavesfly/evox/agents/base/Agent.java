@@ -1,6 +1,5 @@
 package io.leavesfly.evox.agents.base;
 
-import io.leavesfly.evox.actions.base.Action;
 import io.leavesfly.evox.core.agent.IAgent;
 import io.leavesfly.evox.core.llm.ILLM;
 import io.leavesfly.evox.core.llm.LLMConfig;
@@ -14,7 +13,6 @@ import lombok.extern.slf4j.Slf4j;
 import reactor.core.publisher.Mono;
 
 import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Agent基类
@@ -59,16 +57,6 @@ public abstract class Agent extends BaseModule implements IAgent {
     private String systemPrompt;
 
     /**
-     * 可用动作列表
-     */
-    private List<Action> actions = new ArrayList<>();
-
-    /**
-     * 动作映射表
-     */
-    private transient Map<String, Action> actionMap = new ConcurrentHashMap<>();
-
-    /**
      * 是否为人类用户
      */
     private boolean isHuman = false;
@@ -100,12 +88,6 @@ public abstract class Agent extends BaseModule implements IAgent {
         validateRequiredFields();
         
         super.initModule();
-        // 初始化动作映射
-        if (actions != null) {
-            for (Action action : actions) {
-                actionMap.put(action.getName(), action);
-            }
-        }
     }
 
     /**
@@ -121,38 +103,28 @@ public abstract class Agent extends BaseModule implements IAgent {
         }
     }
 
-    /**
-     * 获取主要动作名称（供 execute(null, messages) 时使用）
-     * 子类应该覆写此方法返回自己的 primaryActionName
-     *
-     * @return 主要动作名称
-     */
-    protected String getPrimaryActionName() {
-        return null;
-    }
+
 
     /**
-     * 执行指定动作
+     * 执行
      *
-     * @param actionName 动作名称（传 null 使用默认动作）
      * @param messages 消息列表
      * @return 执行结果消息
      */
-    public abstract Message execute(String actionName, List<Message> messages);
+    public abstract Message execute(List<Message> messages);
 
     /**
-     * 异步执行指定动作
+     * 异步执行
      *
      * <p>默认实现将同步 {@link #execute} 包装为 {@link Mono}。
      * 如果子类的底层 LLM 支持原生异步（如 {@code chatAsync}），
      * 应覆写此方法以获得真正的非阻塞执行。</p>
      *
-     * @param actionName 动作名称
      * @param messages 消息列表
      * @return 执行结果消息(Mono)
      */
-    public Mono<Message> executeAsync(String actionName, List<Message> messages) {
-        return Mono.fromCallable(() -> execute(actionName, messages))
+    public Mono<Message> executeAsync(List<Message> messages) {
+        return Mono.fromCallable(() -> execute(messages))
                 .onErrorResume(e -> {
                     log.error("Async execution failed for agent {}: {}", name, e.getMessage(), e);
                     return Mono.just(Message.builder()
@@ -163,51 +135,7 @@ public abstract class Agent extends BaseModule implements IAgent {
     }
 
     /**
-     * 异步执行（使用默认动作，便捷方法）
-     *
-     * @param input 输入字符串
-     * @return 执行结果消息(Mono)
-     */
-    public Mono<Message> callAsync(String input) {
-        List<Message> messages = List.of(Message.builder()
-                .messageType(MessageType.INPUT)
-                .content(input)
-                .build());
-        return executeAsync(getPrimaryActionName(), messages);
-    }
-
-    /**
-     * 异步执行（使用默认动作，Map 输入）
-     *
-     * @param inputs 输入参数
-     * @return 执行结果消息(Mono)
-     */
-    public Mono<Message> callAsync(Map<String, Object> inputs) {
-        List<Message> messages = List.of(Message.builder()
-                .messageType(MessageType.INPUT)
-                .content(inputs)
-                .build());
-        return executeAsync(getPrimaryActionName(), messages);
-    }
-
-    /**
-     * 使用默认动作执行（Map 输入，统一调用入口）
-     *
-     * <p>所有 Agent 子类均可通过此方法调用，无需知道内部 actionName</p>
-     *
-     * @param inputs 输入参数
-     * @return 执行结果消息
-     */
-    public Message call(Map<String, Object> inputs) {
-        List<Message> messages = List.of(Message.builder()
-                .messageType(MessageType.INPUT)
-                .content(inputs)
-                .build());
-        return execute(getPrimaryActionName(), messages);
-    }
-
-    /**
-     * 使用默认动作执行（字符串输入，便捷方法）
+     * 便捷方法：字符串输入执行
      *
      * @param input 输入字符串
      * @return 执行结果消息
@@ -217,56 +145,49 @@ public abstract class Agent extends BaseModule implements IAgent {
                 .messageType(MessageType.INPUT)
                 .content(input)
                 .build());
-        return execute(getPrimaryActionName(), messages);
+        return execute(messages);
     }
 
     /**
-     * 解析 actionName，如果为 null 则使用 primaryActionName
+     * 便捷方法：Map 输入执行
      *
-     * @param actionName 传入的 actionName
-     * @return 实际使用的 actionName
+     * @param inputs 输入参数
+     * @return 执行结果消息
      */
-    protected String resolveActionName(String actionName) {
-        if (actionName != null) {
-            return actionName;
-        }
-        String primary = getPrimaryActionName();
-        return primary != null ? primary : "default";
+    public Message call(Map<String, Object> inputs) {
+        List<Message> messages = List.of(Message.builder()
+                .messageType(MessageType.INPUT)
+                .content(inputs)
+                .build());
+        return execute(messages);
     }
 
     /**
-     * 获取动作
+     * 异步便捷方法：字符串输入
      *
-     * @param actionName 动作名称
-     * @return 动作实例
+     * @param input 输入字符串
+     * @return 执行结果消息(Mono)
      */
-    public Action getAction(String actionName) {
-        return actionMap.get(actionName);
+    public Mono<Message> callAsync(String input) {
+        List<Message> messages = List.of(Message.builder()
+                .messageType(MessageType.INPUT)
+                .content(input)
+                .build());
+        return executeAsync(messages);
     }
 
     /**
-     * 添加动作
+     * 异步便捷方法：Map 输入
      *
-     * @param action 动作实例
+     * @param inputs 输入参数
+     * @return 执行结果消息(Mono)
      */
-    public void addAction(Action action) {
-        if (action != null) {
-            actions.add(action);
-            actionMap.put(action.getName(), action);
-            log.debug("Added action {} to agent {}", action.getName(), name);
-        }
+    public Mono<Message> callAsync(Map<String, Object> inputs) {
+        List<Message> messages = List.of(Message.builder()
+                .messageType(MessageType.INPUT)
+                .content(inputs)
+                .build());
+        return executeAsync(messages);
     }
 
-    /**
-     * 移除动作
-     *
-     * @param actionName 动作名称
-     */
-    public void removeAction(String actionName) {
-        Action removed = actionMap.remove(actionName);
-        if (removed != null) {
-            actions.remove(removed);
-            log.debug("Removed action {} from agent {}", actionName, name);
-        }
-    }
 }

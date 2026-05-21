@@ -41,7 +41,7 @@ public class QuickStart {
             .messageType(MessageType.INPUT)
             .build();
         
-        Message response = agent.execute("chat", Collections.singletonList(userMsg));
+        Message response = agent.execute(Collections.singletonList(userMsg));
         
         // 第 4 步: 输出结果
         log.info("用户: {}", userMsg.getContent());

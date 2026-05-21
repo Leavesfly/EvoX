@@ -70,15 +70,19 @@ public class MemoryManager extends BaseModule {
     /**
      * 添加消息
      */
-    public void addMessage(Message message) {
+    public synchronized void addMessage(Message message) {
         if (message == null) {
+            return;
+        }
+        if (shortTermMemory == null) {
+            log.warn("ShortTermMemory is not initialized, cannot add message");
             return;
         }
 
         // 添加到短期记忆
         shortTermMemory.addMessage(message);
 
-        // 检查是否需要同步到长期记忆
+        // 检查是否需要同步到长期记忆（shouldSync + syncToLongTerm 需要原子执行）
         if (useLongTermMemory && shouldSync()) {
             syncToLongTerm();
         }

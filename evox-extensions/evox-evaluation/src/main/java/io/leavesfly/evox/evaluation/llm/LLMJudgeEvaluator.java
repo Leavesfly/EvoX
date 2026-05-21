@@ -82,69 +82,69 @@ public class LLMJudgeEvaluator extends Evaluator {
         this.dynamicCriteria = new ArrayList<>();
 
         this.judgePromptTemplate = """
-                Please evaluate the quality of the following answer:
+                请评估以下回答的质量：
                 
-                Task/Question: {task}
+                任务/问题：{task}
                 
-                Answer: {answer}
+                回答：{answer}
                 
-                Expected Answer (Reference): {expected}
+                期望答案（参考）：{expected}
                 
-                Please score on the following dimensions (0-{max_score}):
-                1. accuracy: Is the answer correct and accurate?
-                2. completeness: Does it fully answer the question?
-                3. relevance: Is the answer on-topic?
-                4. clarity: Is the expression clear and easy to understand?
+                请从以下维度进行评分（0-{max_score}）：
+                1. accuracy（准确性）：回答是否正确、准确？
+                2. completeness（完整性）：是否完整地回答了问题？
+                3. relevance（相关性）：回答是否切题？
+                4. clarity（清晰度）：表达是否清晰易懂？
                 
                 {dynamic_criteria_section}
                 
-                Return ONLY a JSON object (no markdown, no explanation):
+                请仅返回一个 JSON 对象（不要 markdown 标记，不要额外解释）：
                 {
-                  "accuracy": score,
-                  "completeness": score,
-                  "relevance": score,
-                  "clarity": score,
-                  "overall": overall_score,
-                  "reasoning": "brief explanation"
+                  "accuracy": 分数,
+                  "completeness": 分数,
+                  "relevance": 分数,
+                  "clarity": 分数,
+                  "overall": 综合分数,
+                  "reasoning": "简要评价说明"
                 }
                 """;
 
         this.consistencyPromptTemplate = """
-                Please check the semantic consistency between the following two texts:
+                请检查以下两段文本之间的语义一致性：
                 
-                Text A (Prediction): {prediction}
+                文本 A（预测输出）：{prediction}
                 
-                Text B (Reference): {reference}
+                文本 B（参考答案）：{reference}
                 
-                Evaluate the following aspects:
-                1. factual_consistency: Do both texts convey the same factual information? (0-{max_score})
-                2. semantic_similarity: How semantically similar are the two texts? (0-{max_score})
-                3. contradiction_score: Are there any contradictions? (0 = many contradictions, {max_score} = no contradictions)
+                请从以下方面进行评估：
+                1. factual_consistency（事实一致性）：两段文本是否传达了相同的事实信息？（0-{max_score}）
+                2. semantic_similarity（语义相似度）：两段文本的语义相似程度如何？（0-{max_score}）
+                3. contradiction_score（无矛盾度）：是否存在矛盾？（0 = 存在大量矛盾，{max_score} = 无矛盾）
                 
-                Return ONLY a JSON object (no markdown, no explanation):
+                请仅返回一个 JSON 对象（不要 markdown 标记，不要额外解释）：
                 {
-                  "factual_consistency": score,
-                  "semantic_similarity": score,
-                  "contradiction_score": score,
-                  "consistency_overall": overall_score,
-                  "reasoning": "brief explanation"
+                  "factual_consistency": 分数,
+                  "semantic_similarity": 分数,
+                  "contradiction_score": 分数,
+                  "consistency_overall": 综合分数,
+                  "reasoning": "简要评价说明"
                 }
                 """;
 
         this.dynamicCriteriaPromptTemplate = """
-                Please evaluate the following output based on the specified criteria:
+                请根据指定的评估标准对以下输出进行评价：
                 
-                Output: {answer}
+                输出内容：{answer}
                 
-                Reference (if available): {expected}
+                参考答案（如有）：{expected}
                 
-                Evaluation Criteria:
+                评估标准：
                 {criteria_list}
                 
-                For each criterion, provide a score from 0 to {max_score}.
+                请为每个标准给出 0 到 {max_score} 的分数。
                 
-                Return ONLY a JSON object (no markdown, no explanation) with each criterion name as key and its score as value.
-                Also include "reasoning" with a brief explanation.
+                请仅返回一个 JSON 对象（不要 markdown 标记，不要额外解释），以每个标准名称为 key、分数为 value。
+                同时包含 "reasoning" 字段，提供简要的评价说明。
                 """;
     }
 

@@ -65,7 +65,6 @@
         <module>evox-application/evox-examples</module>
         <module>evox-application/evox-benchmark</module>
         <module>evox-application/evox-spring-boot-starter</module>
-        <module>evox-application/evox-claudecode</module>
         <module>evox-application/evox-cowork</module>
 
     </modules>

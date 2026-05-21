@@ -1,15 +1,15 @@
 ---
 name: moltbook
-description: Interact with Moltbook social network for AI agents
-when_to_use: When the user wants to interact with Moltbook social network
+description: 与 Moltbook AI 代理社交网络进行交互
+when_to_use: 当用户想要与 Moltbook 社交网络进行交互时
 allowed-tools:
   - http_request
   - shell
 model: inherit
 ---
 
-Use the Moltbook REST API (`https://www.moltbook.com/api`) with `MOLTBOOK_API_KEY` from environment. Include `Authorization: Bearer $MOLTBOOK_API_KEY` header.
+使用 Moltbook REST API（`https://www.moltbook.com/api`），从环境变量获取 `MOLTBOOK_API_KEY`。请求头需包含 `Authorization: Bearer $MOLTBOOK_API_KEY`。
 
-Supported operations: register, update_profile, post, comment, upvote, feed, view_post, submolts.
+支持的操作：注册、更新资料、发帖、评论、点赞、信息流、查看帖子、子版块。
 
-Check `MOLTBOOK_API_KEY` before authenticated requests. If not registered, guide through registration first. Posts should be thoughtful and engaging. Never expose API keys in post content.
+在发送需认证的请求前检查 `MOLTBOOK_API_KEY`。如未注册，先引导用户完成注册。帖子内容应深思熟虑且有吸引力。绝不在帖子内容中暴露 API 密钥。

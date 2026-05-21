@@ -73,7 +73,7 @@ public class WorkflowExecutor {
         context.updateState(WorkflowContext.ExecutionState.RUNNING);
 
         return executeNodes()
-                .then(Mono.defer(()-> extractOutput()))
+                .then(Mono.defer(() -> extractOutput()))
                 .doOnError(error -> {
                     context.markFailed(error.getMessage());
                     log.error("Workflow execution failed", error);
@@ -150,7 +150,7 @@ public class WorkflowExecutor {
         // 智能调度策略：按优先级降序排序，返回优先级最高的节点
         readyNodes.sort(Comparator.comparingInt(WorkflowNode::getPriority).reversed());
         WorkflowNode selectedNode = readyNodes.get(0);
-        
+
         log.debug("Selected node {} with priority {}", selectedNode.getName(), selectedNode.getPriority());
         return selectedNode;
     }
@@ -275,7 +275,7 @@ public class WorkflowExecutor {
 
                 List<Message> messages = context.getMessages();
 
-                return agent.executeAsync(actionName, messages)
+                return agent.executeAsync(messages)
                         .map(message -> {
                             Map<String, Object> result = new HashMap<>();
                             result.put("node", node.getName());
@@ -287,7 +287,7 @@ public class WorkflowExecutor {
                         })
                         .onErrorResume(error -> {
                             log.error("Action execution failed for node {}: {}", node.getName(), error.getMessage(), error);
-                            return Mono.error(WorkflowException.stepError(workflow.getName(), node.getName(), 
+                            return Mono.error(WorkflowException.stepError(workflow.getName(), node.getName(),
                                     "Action execution failed: " + error.getMessage(), error));
                         });
 
@@ -309,33 +309,33 @@ public class WorkflowExecutor {
         return Mono.defer(() -> {
             try {
                 log.debug("Executing decision node: {}", node.getName());
-                
+
                 // 获取条件表达式
                 String condition = node.getCondition();
                 if (condition == null || condition.isEmpty()) {
                     log.warn("Decision node {} has no condition, using first branch", node.getName());
                     return evaluateDefaultBranch(node);
                 }
-                
+
                 // 评估条件
                 Object conditionResult = evaluateCondition(condition);
                 log.debug("Condition '{}' evaluated to: {}", condition, conditionResult);
-                
+
                 // 根据结果选择分支
                 String selectedBranch = selectBranch(node, conditionResult);
                 if (selectedBranch == null) {
                     log.warn("No matching branch for condition result: {}", conditionResult);
                     return Mono.just(createDecisionResult(node, conditionResult, null));
                 }
-                
+
                 log.info("Decision node {} selected branch: {}", node.getName(), selectedBranch);
-                
+
                 // 标记其他分支为 SKIPPED
                 markUnselectedBranches(node, selectedBranch);
-                
+
                 // 返回决策结果
                 return Mono.just(createDecisionResult(node, conditionResult, selectedBranch));
-                
+
             } catch (WorkflowException e) {
                 log.error("Error executing decision node: {}", node.getName(), e);
                 return Mono.error(e);
@@ -345,7 +345,7 @@ public class WorkflowExecutor {
             }
         });
     }
-    
+
     /**
      * 评估条件表达式
      * 支持简单的条件判断
@@ -353,7 +353,7 @@ public class WorkflowExecutor {
     private Object evaluateCondition(String condition) {
         // 简单实现：支持基本的条件表达式
         // 例如："result.success == true", "count > 5", "status == 'completed'"
-        
+
         try {
             String trimmed = condition != null ? condition.trim() : "";
 
@@ -361,7 +361,7 @@ public class WorkflowExecutor {
             if (trimmed.startsWith(CONTEXT_PREFIX)) {
                 return evaluateContextCondition(trimmed);
             }
-            
+
             // 处理布尔值
             if ("true".equalsIgnoreCase(trimmed)) {
                 return true;
@@ -369,7 +369,7 @@ public class WorkflowExecutor {
             if ("false".equalsIgnoreCase(trimmed)) {
                 return false;
             }
-            
+
             // 处理比较表达式
             if (trimmed.contains(OP_EQUALS)) {
                 return evaluateEqualsCondition(trimmed);
@@ -383,11 +383,11 @@ public class WorkflowExecutor {
             if (trimmed.contains(OP_LESS_THAN)) {
                 return evaluateLessThanCondition(trimmed);
             }
-            
+
             // 默认返回 true
             log.warn("Cannot parse condition: {}, defaulting to true", condition);
             return true;
-            
+
         } catch (WorkflowException e) {
             log.error("Error evaluating condition: {}", condition, e);
             return false;
@@ -396,14 +396,14 @@ public class WorkflowExecutor {
             throw WorkflowException.executionError(workflow.getName(), "Condition evaluation failed: " + condition, e);
         }
     }
-    
+
     /**
      * 评估上下文条件
      */
     private Object evaluateContextCondition(String condition) {
         // 例如：context.lastResult.success == true
         String expr = condition.substring(CONTEXT_PREFIX.length()).trim();
-        
+
         Matcher matcher = EQUALS_PATTERN.matcher(expr);
         if (matcher.matches()) {
             String key = matcher.group(1).trim();
@@ -411,10 +411,10 @@ public class WorkflowExecutor {
             Object actualValue = context.getExecutionData(key);
             return actualValue != null && actualValue.toString().equals(expectedValue);
         }
-        
+
         return false;
     }
-    
+
     /**
      * 评估相等条件
      */
@@ -423,17 +423,17 @@ public class WorkflowExecutor {
         if (!matcher.matches()) {
             return false;
         }
-        
+
         String left = matcher.group(1).trim();
         String right = matcher.group(2).trim().replace("'", "").replace("\"", "");
-        
+
         // 从上下文获取值
         Object leftValue = context.getExecutionData(left);
         if (leftValue == null) return false;
-        
+
         return leftValue.toString().equals(right);
     }
-    
+
     /**
      * 评估不相等条件
      */
@@ -441,7 +441,7 @@ public class WorkflowExecutor {
         String equalsCondition = condition.replace(OP_NOT_EQUALS, OP_EQUALS);
         return !evaluateEqualsCondition(equalsCondition);
     }
-    
+
     /**
      * 评估大于条件
      */
@@ -450,15 +450,15 @@ public class WorkflowExecutor {
         if (!matcher.matches()) {
             return false;
         }
-        
+
         String left = matcher.group(1).trim();
         String rightPart = matcher.group(2).trim();
-        
+
         try {
             double rightValue = Double.parseDouble(rightPart);
             Object leftObj = context.getExecutionData(left);
             if (leftObj == null) return false;
-            
+
             double leftValue = Double.parseDouble(leftObj.toString());
             return leftValue > rightValue;
         } catch (NumberFormatException e) {
@@ -466,7 +466,7 @@ public class WorkflowExecutor {
             return false;
         }
     }
-    
+
     /**
      * 评估小于条件
      */
@@ -475,15 +475,15 @@ public class WorkflowExecutor {
         if (!matcher.matches()) {
             return false;
         }
-        
+
         String left = matcher.group(1).trim();
         String rightPart = matcher.group(2).trim();
-        
+
         try {
             double rightValue = Double.parseDouble(rightPart);
             Object leftObj = context.getExecutionData(left);
             if (leftObj == null) return false;
-            
+
             double leftValue = Double.parseDouble(leftObj.toString());
             return leftValue < rightValue;
         } catch (NumberFormatException e) {
@@ -491,7 +491,7 @@ public class WorkflowExecutor {
             return false;
         }
     }
-    
+
     /**
      * 选择分支
      */
@@ -502,16 +502,20 @@ public class WorkflowExecutor {
             List<String> successors = node.getSuccessors();
             return successors.isEmpty() ? null : successors.get(0);
         }
-        
+
+        // conditionResult 为 null 时走 default 分支
+        if (conditionResult == null) {
+            return branches.getOrDefault("default", null);
+        }
+
         // 尝试直接匹配
         String resultStr = conditionResult.toString();
         if (branches.containsKey(resultStr)) {
             return branches.get(resultStr);
         }
-        
+
         // 尝试 true/false 匹配
-        if (conditionResult instanceof Boolean) {
-            boolean boolResult = (Boolean) conditionResult;
+        if (conditionResult instanceof Boolean boolResult) {
             if (branches.containsKey("true") && boolResult) {
                 return branches.get("true");
             }
@@ -519,15 +523,15 @@ public class WorkflowExecutor {
                 return branches.get("false");
             }
         }
-        
+
         // 如果没有匹配，尝试 "default" 分支
         if (branches.containsKey("default")) {
             return branches.get("default");
         }
-        
+
         return null;
     }
-    
+
     /**
      * 评估默认分支
      */
@@ -536,13 +540,13 @@ public class WorkflowExecutor {
         String selectedBranch = successors.isEmpty() ? null : successors.get(0);
         return Mono.just(createDecisionResult(node, true, selectedBranch));
     }
-    
+
     /**
      * 标记未选中的分支为 SKIPPED
      */
     private void markUnselectedBranches(WorkflowNode node, String selectedBranch) {
         if (selectedBranch == null) return;
-        
+
         for (String successorId : node.getSuccessors()) {
             if (!successorId.equals(selectedBranch)) {
                 WorkflowNode successorNode = workflow.getGraph().getNode(successorId);
@@ -553,7 +557,7 @@ public class WorkflowExecutor {
             }
         }
     }
-    
+
     /**
      * 创建决策结果
      */
@@ -575,34 +579,34 @@ public class WorkflowExecutor {
         return Mono.defer(() -> {
             try {
                 log.debug("Executing parallel node: {}", node.getName());
-                
+
                 // 获取并行执行的子节点列表
                 List<String> parallelNodeIds = node.getParallelNodes();
                 if (parallelNodeIds == null || parallelNodeIds.isEmpty()) {
                     // 如果没有配置并行节点，使用所有后继节点
                     parallelNodeIds = node.getSuccessors();
                 }
-                
+
                 if (parallelNodeIds.isEmpty()) {
                     log.warn("Parallel node {} has no child nodes", node.getName());
                     return Mono.just(createParallelResult(node, List.of(), "no_children"));
                 }
-                
+
                 log.info("Parallel node {} executing {} child nodes", node.getName(), parallelNodeIds.size());
-                
+
                 // 获取执行策略
                 WorkflowNode.ParallelStrategy strategy = node.getParallelStrategy();
                 if (strategy == null) {
                     strategy = WorkflowNode.ParallelStrategy.ALL;
                 }
-                
+
                 // 根据策略执行并行节点
                 return switch (strategy) {
                     case ALL -> executeParallelAll(node, parallelNodeIds);
                     case ANY -> executeParallelAny(node, parallelNodeIds);
                     case FIRST -> executeParallelFirst(node, parallelNodeIds);
                 };
-                
+
             } catch (WorkflowException e) {
                 log.error("Error executing parallel node: {}", node.getName(), e);
                 return Mono.error(e);
@@ -612,13 +616,13 @@ public class WorkflowExecutor {
             }
         });
     }
-    
+
     /**
      * 并行执行所有节点，等待全部完成（ALL策略）
      */
     private Mono<Object> executeParallelAll(WorkflowNode parallelNode, List<String> nodeIds) {
         WorkflowGraph graph = workflow.getGraph();
-        
+
         // 创建所有子节点的执行 Mono
         List<Mono<Map<String, Object>>> nodeTasks = nodeIds.stream()
                 .map(nodeId -> {
@@ -627,10 +631,10 @@ public class WorkflowExecutor {
                         log.warn("Child node {} not found", nodeId);
                         return Mono.just(createNodeResult(nodeId, null, "not_found"));
                     }
-                    
+
                     // 标记节点为就绪
                     childNode.markReady();
-                    
+
                     // 执行节点
                     return executeNodeByType(childNode)
                             .map(result -> {
@@ -647,19 +651,19 @@ public class WorkflowExecutor {
                             });
                 })
                 .toList();
-        
+
         // 使用 Flux.merge 并行执行所有节点，然后收集结果
         return Flux.merge(nodeTasks)
                 .collectList()
                 .map(results -> createParallelResult(parallelNode, results, "all_completed"));
     }
-    
+
     /**
      * 并行执行，任意一个完成即可（ANY策略）
      */
     private Mono<Object> executeParallelAny(WorkflowNode parallelNode, List<String> nodeIds) {
         WorkflowGraph graph = workflow.getGraph();
-        
+
         // 创建所有子节点的执行 Mono
         List<Mono<Map<String, Object>>> nodeTasks = nodeIds.stream()
                 .map(nodeId -> {
@@ -667,9 +671,9 @@ public class WorkflowExecutor {
                     if (childNode == null) {
                         return Mono.<Map<String, Object>>empty();
                     }
-                    
+
                     childNode.markReady();
-                    
+
                     return executeNodeByType(childNode)
                             .map(result -> {
                                 graph.completeNode(nodeId, result);
@@ -677,13 +681,13 @@ public class WorkflowExecutor {
                             });
                 })
                 .toList();
-        
+
         // 使用 Mono.firstWithValue 获取第一个完成的结果
         return Mono.firstWithValue(nodeTasks)
                 .map(result -> (Object) createParallelResult(parallelNode, List.of(result), "any_completed"))
                 .switchIfEmpty(Mono.just(createParallelResult(parallelNode, List.of(), "no_results")));
     }
-    
+
     /**
      * 并行执行，返回第一个完成的节点（FIRST策略）
      */
@@ -691,14 +695,14 @@ public class WorkflowExecutor {
         // FIRST 策略与 ANY 类似，但会取消其他任务
         return executeParallelAny(parallelNode, nodeIds);
     }
-    
+
     /**
      * 创建子节点执行结果
      */
     private Map<String, Object> createNodeResult(String nodeId, Object result, String status) {
         return createNodeResult(nodeId, result, status, null);
     }
-    
+
     /**
      * 创建子节点执行结果（带错误信息）
      */
@@ -714,7 +718,7 @@ public class WorkflowExecutor {
         }
         return nodeResult;
     }
-    
+
     /**
      * 创建并行节点结果
      */
@@ -737,7 +741,7 @@ public class WorkflowExecutor {
         return Mono.defer(() -> {
             try {
                 log.debug("Executing loop node: {}", node.getName());
-                
+
                 // 获取循环体节点
                 String loopBodyId = node.getLoopBodyNodeId();
                 if (loopBodyId == null || loopBodyId.isEmpty()) {
@@ -749,25 +753,25 @@ public class WorkflowExecutor {
                     }
                     loopBodyId = successors.get(0);
                 }
-                
+
                 WorkflowNode loopBody = workflow.getGraph().getNode(loopBodyId);
                 if (loopBody == null) {
                     log.error("Loop body node {} not found", loopBodyId);
                     return Mono.error(new RuntimeException("Loop body node not found: " + loopBodyId));
                 }
-                
+
                 // 获取循环条件和最大迭代次数
                 String condition = node.getLoopCondition();
                 int maxIterations = node.getMaxIterations();
                 if (maxIterations <= 0) {
                     maxIterations = 100; // 默认最大100次
                 }
-                
+
                 log.info("Loop node {} starting, max iterations: {}", node.getName(), maxIterations);
-                
+
                 // 执行循环
                 return executeLoop(node, loopBody, condition, maxIterations);
-                
+
             } catch (WorkflowException e) {
                 log.error("Error executing loop node: {}", node.getName(), e);
                 return Mono.error(e);
@@ -777,57 +781,57 @@ public class WorkflowExecutor {
             }
         });
     }
-    
+
     /**
      * 执行循环逻辑
      */
-    private Mono<Object> executeLoop(WorkflowNode loopNode, WorkflowNode loopBody, 
-                                      String condition, int maxIterations) {
+    private Mono<Object> executeLoop(WorkflowNode loopNode, WorkflowNode loopBody,
+                                     String condition, int maxIterations) {
         List<Map<String, Object>> iterationResults = new java.util.ArrayList<>();
-        
+
         return Mono.defer(() -> {
             int iteration = 0;
-            
+
             while (iteration < maxIterations) {
                 // 检查循环条件
                 if (condition != null && !condition.isEmpty()) {
                     Object conditionResult = evaluateCondition(condition);
                     boolean shouldContinue = conditionResult instanceof Boolean && (Boolean) conditionResult;
-                    
+
                     if (!shouldContinue) {
-                        log.info("Loop condition '{}' evaluated to false, exiting after {} iterations", 
+                        log.info("Loop condition '{}' evaluated to false, exiting after {} iterations",
                                 condition, iteration);
                         break;
                     }
                 }
-                
+
                 // 更新当前迭代次数
                 loopNode.setCurrentIteration(iteration);
                 context.updateExecutionData("loop_iteration", iteration);
-                
+
                 log.debug("Loop iteration {} starting", iteration);
-                
+
                 // 标记循环体为就绪
                 loopBody.markReady();
-                
+
                 try {
                     // 执行循环体
                     Object result = executeNodeByType(loopBody).block();
-                    
+
                     // 记录迭代结果
                     Map<String, Object> iterResult = new HashMap<>();
                     iterResult.put("iteration", iteration);
                     iterResult.put("result", result);
                     iterationResults.add(iterResult);
-                    
+
                     // 标记循环体完成
                     workflow.getGraph().completeNode(loopBody.getNodeId(), result);
-                    
+
                     // 重置循环体状态以便下次迭代
                     loopBody.setState(WorkflowNode.NodeState.READY);
-                    
+
                     log.debug("Loop iteration {} completed", iteration);
-                    
+
                 } catch (WorkflowException e) {
                     log.error("Loop iteration {} failed: {}", iteration, e.getMessage(), e);
                     throw e;
@@ -835,26 +839,26 @@ public class WorkflowExecutor {
                     log.error("Loop iteration {} failed: {}", iteration, e.getMessage(), e);
                     throw WorkflowException.stepError(workflow.getName(), loopNode.getName(), "Loop iteration " + iteration + " failed", e);
                 }
-                
+
                 iteration++;
             }
-            
+
             if (iteration >= maxIterations) {
                 log.warn("Loop node {} reached maximum iterations: {}", loopNode.getName(), maxIterations);
             }
-            
+
             loopNode.setCurrentIteration(iteration);
-            
+
             return Mono.just(createLoopResult(loopNode, iterationResults, iteration, "completed"));
         });
     }
-    
+
     /**
      * 创建循环节点结果
      */
-    private Map<String, Object> createLoopResult(WorkflowNode node, 
-                                                  List<Map<String, Object>> iterationResults,
-                                                  int iterations, String status) {
+    private Map<String, Object> createLoopResult(WorkflowNode node,
+                                                 List<Map<String, Object>> iterationResults,
+                                                 int iterations, String status) {
         Map<String, Object> result = new HashMap<>();
         result.put("node", node.getName());
         result.put("type", "loop");
@@ -874,30 +878,30 @@ public class WorkflowExecutor {
         return Mono.defer(() -> {
             try {
                 log.debug("Executing subworkflow node: {}", node.getName());
-                
+
                 // 获取子工作流
                 Workflow subWorkflow = node.getSubWorkflow();
                 if (subWorkflow == null) {
                     log.error("Subworkflow node {} has no subworkflow defined", node.getName());
                     return Mono.error(new RuntimeException("No subworkflow defined for node: " + node.getName()));
                 }
-                
+
                 // 准备子工作流的输入数据
                 Map<String, Object> subWorkflowInput = prepareSubWorkflowInput(node);
-                
-                log.info("Starting subworkflow: {} with input: {}", 
-                         subWorkflow.getName(), subWorkflowInput.keySet());
-                
+
+                log.info("Starting subworkflow: {} with input: {}",
+                        subWorkflow.getName(), subWorkflowInput.keySet());
+
                 // 执行子工作流
                 String subWorkflowResult = subWorkflow.execute(subWorkflowInput);
-                
+
                 // 处理子工作流的输出
                 Map<String, Object> processedOutput = processSubWorkflowOutput(node, subWorkflowResult);
-                
+
                 log.info("Subworkflow {} completed successfully", subWorkflow.getName());
-                
+
                 return Mono.just(createSubWorkflowResult(node, subWorkflowResult, processedOutput));
-                
+
             } catch (WorkflowException e) {
                 log.error("Error executing subworkflow node: {}", node.getName(), e);
                 return Mono.error(e);
@@ -907,7 +911,7 @@ public class WorkflowExecutor {
             }
         });
     }
-    
+
     /**
      * 准备子工作流的输入数据
      * 根据输入映射从父工作流上下文中提取数据
@@ -915,31 +919,31 @@ public class WorkflowExecutor {
     private Map<String, Object> prepareSubWorkflowInput(WorkflowNode node) {
         Map<String, Object> input = new HashMap<>();
         Map<String, String> inputMapping = node.getSubWorkflowInputMapping();
-        
+
         if (inputMapping == null || inputMapping.isEmpty()) {
             // 如果没有配置映射，传递整个上下文
             log.debug("No input mapping defined, passing entire context");
             return new HashMap<>(context.getExecutionData());
         }
-        
+
         // 根据映射提取数据
         for (Map.Entry<String, String> entry : inputMapping.entrySet()) {
             String subWorkflowParam = entry.getKey();  // 子工作流参数名
             String contextField = entry.getValue();     // 父上下文字段名
-            
+
             Object value = context.getExecutionData().get(contextField);
             if (value != null) {
                 input.put(subWorkflowParam, value);
                 log.debug("Mapping {} -> {} = {}", contextField, subWorkflowParam, value);
             } else {
-                log.warn("Context field '{}' not found for subworkflow input '{}'", 
+                log.warn("Context field '{}' not found for subworkflow input '{}'",
                         contextField, subWorkflowParam);
             }
         }
-        
+
         return input;
     }
-    
+
     /**
      * 处理子工作流的输出
      * 根据输出映射将子工作流结果映射回父工作流上下文
@@ -947,7 +951,7 @@ public class WorkflowExecutor {
     private Map<String, Object> processSubWorkflowOutput(WorkflowNode node, String subWorkflowResult) {
         Map<String, Object> output = new HashMap<>();
         Map<String, String> outputMapping = node.getSubWorkflowOutputMapping();
-        
+
         if (outputMapping == null || outputMapping.isEmpty()) {
             // 如果没有配置映射，直接返回结果
             log.debug("No output mapping defined, returning result as is");
@@ -956,31 +960,31 @@ public class WorkflowExecutor {
             context.updateExecutionData(node.getNodeId() + "_result", subWorkflowResult);
             return output;
         }
-        
+
         // 根据映射处理输出
         // 这里简化处理，实际应用中可能需要从 JSON 结果中提取字段
         for (Map.Entry<String, String> entry : outputMapping.entrySet()) {
             String contextField = entry.getKey();      // 父上下文字段名
             String subWorkflowField = entry.getValue(); // 子工作流结果字段名
-            
+
             // 简化处理：直接使用结果
             output.put(contextField, subWorkflowResult);
-            
+
             // 更新父工作流上下文
             context.updateExecutionData(contextField, subWorkflowResult);
-            
+
             log.debug("Mapping subworkflow.{} -> context.{}", subWorkflowField, contextField);
         }
-        
+
         return output;
     }
-    
+
     /**
      * 创建子工作流节点结果
      */
-    private Map<String, Object> createSubWorkflowResult(WorkflowNode node, 
-                                                         String subWorkflowResult,
-                                                         Map<String, Object> processedOutput) {
+    private Map<String, Object> createSubWorkflowResult(WorkflowNode node,
+                                                        String subWorkflowResult,
+                                                        Map<String, Object> processedOutput) {
         Map<String, Object> result = new HashMap<>();
         result.put("node", node.getName());
         result.put("type", "subworkflow");
