@@ -32,12 +32,12 @@ public class Toolkit extends BaseModule {
     /**
      * 工具列表
      */
-    private List<BaseTool> tools;
+    private List<BaseTool> tools = new ArrayList<>();
 
     /**
      * 工具名称索引（用于快速查找）
      */
-    private Map<String, BaseTool> toolIndex;
+    private Map<String, BaseTool> toolIndex = new ConcurrentHashMap<>();
 
     public Toolkit(String name, String description) {
         this.name = name;
