@@ -2,14 +2,14 @@
 
 <div align="center">
 
-**现代化的企业级 Java 智能代理框架**
+**让 Agent 在运行中自主进化 —— 企业级 Java 智能代理框架**
 
 [![Java](https://img.shields.io/badge/Java-17+-orange.svg)](https://www.oracle.com/java/)
 [![Spring Boot](https://img.shields.io/badge/Spring%20Boot-3.2.5-brightgreen.svg)](https://spring.io/projects/spring-boot)
 [![Maven](https://img.shields.io/badge/Maven-3.8+-blue.svg)](https://maven.apache.org/)
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
 
-[快速开始](#-快速开始) • [核心特性](#-核心特性) • [架构设计](#-架构设计) • [示例代码](#-示例代码) • [文档](#-文档)
+[🧬 自进化核心](#-自进化核心evolving-layer) • [快速开始](#-快速开始) • [核心特性](#-核心特性) • [架构设计](#-架构设计) • [示例代码](#-示例代码)
 
 </div>
 
@@ -17,12 +17,37 @@
 
 ## 📖 简介
 
-EvoX 是一个现代化的企业级智能代理（Agent）框架，基于 **Java 17**、**Spring Boot 3.2+** 和 **Project Reactor** 构建。它为开发者提供了一套完整的工具和抽象层，用于快速构建具有自主学习、协同决策和工作流自动化能力的 AI 应用系统。
+EvoX 是一个以 **Agent 自进化（Self-Evolution）** 为核心理念的企业级智能代理框架，基于 **Java 17**、**Spring Boot 3.2+** 和 **Project Reactor** 构建。
 
-EvoX 不仅是一个简单的 LLM 调用封装，而是一个完整的"智能体生态系统"，涵盖多智能体系统、工作流编排、记忆管理、RAG 检索增强、工具集成、技能系统、弹性机制、优化评估和人机协同等核心特性。
+> 💡 **核心理念**：传统 Agent 框架的智能体是"静态"的 —— 部署后能力固定。EvoX 的 Agent 能够在运行过程中**自主优化自身的 Prompt、工作流结构和记忆策略**，实现越用越聪明的自进化闭环。
+
+EvoX 内置完整的 **Evolving Layer（进化层）**，通过三层优化器（Agent / Workflow / Memory）驱动智能体持续进化：
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                    Evolving Layer（进化层）                    │
+│                                                             │
+│  ┌─────────────┐   ┌─────────────────┐   ┌─────────────┐  │
+│  │   Agent     │   │    Workflow      │   │   Memory    │  │
+│  │  Optimizer  │   │    Optimizer     │   │  Optimizer  │  │
+│  │             │   │                  │   │             │  │
+│  │ Prompt优化  │   │  DAG结构进化     │   │ 记忆裁剪    │  │
+│  │ 工具配置    │   │  节点增删改      │   │ 优先级调整  │  │
+│  │ 行动策略    │   │  参数调优        │   │ 选择性保留  │  │
+│  └──────┬──────┘   └───────┬─────────┘   └──────┬──────┘  │
+│         │                  │                     │          │
+│         └──────────────────┼─────────────────────┘          │
+│                            │                                │
+│                    ┌───────▼───────┐                        │
+│                    │  Evaluation   │                        │
+│                    │   Feedback    │  ← 统一评估信号 E       │
+│                    └───────────────┘                        │
+└─────────────────────────────────────────────────────────────┘
+```
 
 ### ✨ 核心优势
 
+- 🧬 **自进化能力**：内置 Evolving Layer，Agent 自动优化 Prompt、工作流和记忆，越用越强
 - 🏢 **企业级架构**：基于 Spring 生态，分层清晰，依赖明确，适合大型项目
 - 🧩 **模块化设计**：19 个独立模块，按需引入，支持渐进式集成
 - 🤖 **多模型支持**：统一接口层级（ILLMSync → ILLMAsync → ILLM），支持 OpenAI、Anthropic、DeepSeek、Gemini、Ollama、阿里云通义千问、OpenRouter、SiliconFlow 等 8 大提供商
@@ -34,13 +59,197 @@ EvoX 不仅是一个简单的 LLM 调用封装，而是一个完整的"智能体
 
 ### 🎯 适用场景
 
+- **Agent 自进化**：Prompt 自动调优、工作流结构进化、记忆策略优化
 - **智能对话**：客服机器人、虚拟助手、问答系统
 - **知识管理**：企业知识库、文档问答、智能搜索
 - **流程自动化**：业务流程编排、任务调度、审批流
 - **多智能体协同**：团队协作、辩论系统、共识决策
 - **代码辅助**：Claude Code 风格代码助手、代码生成与重构
-- **智能优化**：提示词优化、工作流优化、超参调优
 - **工具集成**：API 调用、文件操作、Shell 脚本、邮件、Git 等 20+ 工具类型
+
+---
+
+## 🧬 自进化核心（Evolving Layer）
+
+EvoX 的灵魂在于 **Evolving Layer** —— 一套基于评估反馈驱动的三层自进化系统。它让 Agent 不再是"一次性写死"的静态程序，而是能从每次执行中学习、持续优化的智能体。
+
+### 进化公式
+
+Evolving Layer 遵循统一的优化范式：
+
+```
+Target(t+1) = O(Target(t), E)
+```
+
+其中 `O` 为优化算子，`E` 为评估反馈信号。具体到三层：
+
+| 层级 | 公式 | 优化目标 | 内置算法 |
+|------|------|---------|---------|
+| **Agent 层** | `(Prompt(t+1), θ(t+1)) = O_agent(Prompt(t), θ(t), E)` | Prompt 模板、工具配置、行动策略 | TextGrad、MIPRO、EvoPrompt |
+| **Workflow 层** | `W(t+1) = O_workflow(W(t), E)` | DAG 图结构、节点参数、执行顺序 | AFlow、SEW（进化算法） |
+| **Memory 层** | `M(t+1) = O_memory(M(t), E)` | 记忆保留策略、裁剪规则、检索优先级 | MemoryOptimizer |
+
+### Demo 1：Agent Prompt 自进化（TextGrad）
+
+基于文本梯度的 Prompt 优化 —— Agent 根据执行效果自动改写自己的 Prompt：
+
+```java
+import io.leavesfly.evox.optimizers.TextGradOptimizer;
+import io.leavesfly.evox.optimizers.base.EvaluationFeedback;
+
+// 1. 创建 TextGrad 优化器
+TextGradOptimizer optimizer = TextGradOptimizer.builder()
+    .optimizerLLM(llm)              // 用于生成"文本梯度"的 LLM
+    .maxSteps(10)                   // 最大迭代步数
+    .evalEveryNSteps(1)             // 每步评估
+    .convergenceThreshold(3)        // 3步无提升则收敛停止
+    .build();
+
+// 2. 初始 Prompt（待优化）
+String initialPrompt = "你是一个客服助手，请回答用户问题。";
+
+// 3. 模拟评估反馈（来自真实执行结果的评分）
+EvaluationFeedback feedback = EvaluationFeedback.builder()
+    .primaryScore(0.65)             // 当前得分：65%
+    .textualGradient("回答缺乏结构化，未给出具体步骤，语气过于生硬")  // 文本梯度
+    .metrics(Map.of("accuracy", 0.7, "helpfulness", 0.6))
+    .build();
+
+// 4. 一步进化！Agent 自动优化自己的 Prompt
+String evolvedPrompt = optimizer.optimizePrompt(initialPrompt, Map.of(), feedback);
+
+// 输出进化后的 Prompt（自动融入了梯度反馈）
+System.out.println("进化后: " + evolvedPrompt);
+// → "你是一个专业的客服助手。请用分步骤的方式回答用户问题，
+//    语气友好专业，每个步骤给出具体操作指引..."
+```
+
+### Demo 2：Workflow 结构进化（SEW 进化算法）
+
+工作流不再需要手动设计 —— SEW 优化器通过**进化算法**自动发现最优 DAG 结构：
+
+```java
+import io.leavesfly.evox.optimizers.SEWOptimizer;
+
+// 1. 配置 SEW（Sequential Workflow Evolution）优化器
+SEWOptimizer sewOptimizer = SEWOptimizer.builder()
+    .evaluatorLLM(llm)
+    .scheme(SEWOptimizer.Scheme.YAML)   // 工作流用 YAML 表示
+    .maxIterations(20)                   // 进化 20 代
+    .populationSize(8)                   // 种群大小 8
+    .mutationRate(0.3)                   // 30% 变异率
+    .eliteRatio(0.25)                    // 25% 精英保留
+    .build();
+
+// 2. 提供初始工作流（可以很简单，甚至是空的）
+Workflow initialWorkflow = WorkflowBuilder.sequential()
+    .name("数据处理流水线")
+    .step("提取", extractAgent)
+    .step("转换", transformAgent)
+    .build();
+
+// 3. 启动进化！自动变异（增删节点、调整参数、重排顺序）+ 评估 + 选择
+EvaluationFeedback workflowFeedback = EvaluationFeedback.builder()
+    .primaryScore(0.72)
+    .metrics(Map.of("completeness", 0.8, "efficiency", 0.65))
+    .build();
+
+Workflow evolvedWorkflow = sewOptimizer.optimizeWorkflow(initialWorkflow, workflowFeedback);
+
+// 查看进化历史
+sewOptimizer.getEvolutionHistory().forEach(record ->
+    System.out.printf("第%d代: 最优适应度=%.3f, 平均适应度=%.3f%n",
+        record.getGeneration(), record.getBestFitness(), record.getAvgFitness()));
+```
+
+### Demo 3：EvoPrompt —— 基于遗传算法的 Prompt 种群进化
+
+不同于单次优化，EvoPrompt 维护一个 Prompt **种群**，通过交叉、变异、选择实现群体进化：
+
+```java
+import io.leavesfly.evox.optimizers.EvoPromptOptimizer;
+
+// 1. 创建 EvoPrompt 优化器
+EvoPromptOptimizer evoPrompt = EvoPromptOptimizer.builder()
+    .optimizerLLM(llm)
+    .populationSize(6)       // 种群 6 个个体
+    .iterations(15)          // 进化 15 轮
+    .mutationRate(0.2)       // 20% 变异率
+    .crossoverRate(0.7)      // 70% 交叉率
+    .eliteSize(2)            // 保留 2 个精英
+    .build();
+
+// 2. 初始化种群（从一个种子 Prompt 扩展）
+evoPrompt.initializePopulation("qa_agent",
+    "你是一个问答助手，请根据上下文回答用户问题。");
+
+// 3. 执行进化（内部自动完成：评估 → 选择 → 交叉 → 变异）
+evoPrompt.evolve();
+
+// 4. 获取进化后的最优 Prompt
+String bestPrompt = evoPrompt.getBestIndividuals().get("qa_agent");
+System.out.println("最优个体: " + bestPrompt);
+```
+
+### Demo 4：完整自进化闭环
+
+将三层优化器组合，实现 Agent 的全方位自进化：
+
+```java
+import io.leavesfly.evox.optimizers.TextGradOptimizer;
+import io.leavesfly.evox.optimizers.SEWOptimizer;
+import io.leavesfly.evox.optimizers.MemoryOptimizer;
+
+// === 构建自进化 Agent 系统 ===
+
+// Agent 层：优化 Prompt 和工具策略
+TextGradOptimizer agentOptimizer = TextGradOptimizer.builder()
+    .optimizerLLM(llm).maxSteps(5).build();
+
+// Workflow 层：优化执行流程
+SEWOptimizer workflowOptimizer = SEWOptimizer.builder()
+    .evaluatorLLM(llm).maxIterations(10).populationSize(6).mutationRate(0.3).build();
+
+// Memory 层：优化记忆策略
+MemoryOptimizer memoryOptimizer = MemoryOptimizer.builder()
+    .llm(llm).build();
+
+// === 进化循环 ===
+for (int epoch = 0; epoch < 10; epoch++) {
+    // 1. Agent 执行任务
+    Message result = agent.execute(taskMessages);
+
+    // 2. 评估执行效果
+    EvaluationFeedback feedback = evaluator.evaluate(result, groundTruth);
+
+    // 3. 三层同步进化
+    String newPrompt = agentOptimizer.optimizePrompt(
+        agent.getPrompt(), agent.getConfig(), feedback);
+    agent.setPrompt(newPrompt);  // Agent 进化
+
+    Workflow newWorkflow = workflowOptimizer.optimizeWorkflow(
+        currentWorkflow, feedback);  // Workflow 进化
+
+    memoryOptimizer.optimizeMemory(feedback);  // Memory 进化
+
+    System.out.printf("Epoch %d: score %.3f → %.3f%n",
+        epoch, feedback.getPrimaryScore(), agentOptimizer.getBestScore());
+}
+
+// 恢复各层最优状态
+agentOptimizer.restoreBest();
+workflowOptimizer.restoreBestWorkflow();
+```
+
+### 与传统 Agent 框架的本质区别
+
+| | 传统 Agent 框架 | EvoX |
+|---|---|---|
+| **Prompt** | 人工编写，部署后固定 | 自动优化，持续进化 |
+| **工作流** | 手动设计 DAG | 进化算法自动发现最优结构 |
+| **记忆** | 简单 FIFO / 全量保留 | 智能裁剪、优先级动态调整 |
+| **能力提升** | 需要人工介入修改 | 运行中自主进化，越用越强 |
+| **评估驱动** | 无 / 离线评估 | 在线评估反馈驱动实时优化 |
 
 ---
 
