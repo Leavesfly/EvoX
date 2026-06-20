@@ -23,7 +23,7 @@ import java.util.*;
 @EqualsAndHashCode(callSuper = true)
 public class HotpotQA extends Benchmark<HotpotQA.HotpotQAExample, String> {
 
-    private ObjectMapper objectMapper = new ObjectMapper();
+    private static final ObjectMapper objectMapper = new ObjectMapper();
     
     public HotpotQA(String path) {
         super("HotpotQA", path);

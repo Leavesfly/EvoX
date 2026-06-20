@@ -23,7 +23,7 @@ import java.util.*;
 @EqualsAndHashCode(callSuper = true)
 public class MBPP extends Benchmark<MBPP.MBPPExample, String> {
 
-    private ObjectMapper objectMapper = new ObjectMapper();
+    private static final ObjectMapper objectMapper = new ObjectMapper();
     
     public MBPP(String path) {
         super("MBPP", path);

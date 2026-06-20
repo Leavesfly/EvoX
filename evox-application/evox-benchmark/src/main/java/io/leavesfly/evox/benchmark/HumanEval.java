@@ -27,7 +27,7 @@ public class HumanEval extends Benchmark<HumanEval.HumanEvalExample, String> {
         super("HumanEval", path);
     }
 
-    private ObjectMapper objectMapper = new ObjectMapper();
+    private static final ObjectMapper objectMapper = new ObjectMapper();
 
     @Override
     protected void loadData() {

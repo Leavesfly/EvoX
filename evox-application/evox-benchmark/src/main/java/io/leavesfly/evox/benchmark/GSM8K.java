@@ -27,7 +27,7 @@ public class GSM8K extends Benchmark<GSM8K.GSM8KExample, String> {
         super("GSM8K", path);
     }
 
-    private ObjectMapper objectMapper = new ObjectMapper();
+    private static final ObjectMapper objectMapper = new ObjectMapper();
 
     @Override
     protected void loadData() {
