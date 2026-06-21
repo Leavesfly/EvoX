@@ -115,7 +115,7 @@ public class GSM8KBenchmarkDemo {
             // 提取标准答案的最终数值
             String groundTruth = extractNumericAnswer(example.getAnswer());
 
-            log.info("\n┌──────────────────────────────────────────────────────────────────────");
+            log.info("┌──────────────────────────────────────────────────────────────────────");
             log.info("│ 📝 第 {}/{} 题                                      正确答案: {}", i + 1, sampleSize, groundTruth);
             log.info("├──────────────────────────────────────────────────────────────────────");
             log.info("│ 【题目】");

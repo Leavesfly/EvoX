@@ -127,7 +127,7 @@ public class CEvalBenchmarkDemo {
 
             String prompt = ceval.formatPrompt(example, null);
 
-            log.info("\n┌──────────────────────────────────────────────────────────────────────");
+            log.info("┌──────────────────────────────────────────────────────────────────────");
             log.info("│ 📝 第 {}/{} 题  |  学科: {}  |  正确答案: {}", i + 1, sampleSize, example.getSubject(), example.getAnswer());
             log.info("├──────────────────────────────────────────────────────────────────────");
             log.info("│ 【题目】");

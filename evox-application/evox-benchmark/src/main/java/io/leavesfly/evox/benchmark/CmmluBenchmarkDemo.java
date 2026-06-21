@@ -137,7 +137,7 @@ public class CmmluBenchmarkDemo {
 
             String prompt = cmmlu.formatPrompt(example, null);
 
-            log.info("\n┌──────────────────────────────────────────────────────────────────────");
+            log.info("┌──────────────────────────────────────────────────────────────────────");
             log.info("│ 📝 第 {}/{} 题  |  主题: {}  |  大类: {}  |  正确答案: {}", i + 1, sampleSize, example.getSubject(), category, example.getAnswer());
             log.info("├──────────────────────────────────────────────────────────────────────");
             log.info("│ 【题目】");
