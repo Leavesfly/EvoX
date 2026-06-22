@@ -1,29 +1,31 @@
 package io.leavesfly.evox.benchmark;
 
 import io.leavesfly.evox.benchmark.CEval.CEvalExample;
-import io.leavesfly.evox.models.provider.ollama.OllamaLLM;
-import io.leavesfly.evox.models.provider.ollama.OllamaLLMConfig;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.*;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.*;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 /**
  * C-Eval 中文评测集 Demo
  * <p>
  * 使用真实的 C-Eval 数据集和 Ollama 本地 LLM 进行评测。
- * 通过 HuggingFace Datasets Server API 直接获取 JSON 格式数据，通过 Ollama 生成答案并评测。
+ * 通过 Ollama 原生 API（/api/chat）调用，使用 think:false 关闭思考模式，直接输出答案。
+ * 通过 HuggingFace Datasets Server API 直接获取 JSON 格式数据。
  * </p>
  * <p>
  * 前置条件：
  * 1. 本地运行 Ollama 服务 (http://localhost:11434)
- * 2. 已拉取模型，如: ollama pull qwen3:4b-instruct-2507-q8_0
+ * 2. 已拉取模型，如: ollama pull qwen3.5:4b
  * 3. 网络可访问 HuggingFace Datasets API
  * </p>
  *
@@ -63,6 +65,12 @@ public class CEvalBenchmarkDemo {
 
     private static final String DATA_DIR = "data/ceval";
 
+    /**
+     * Ollama 服务配置
+     */
+    private static final String OLLAMA_BASE_URL = "http://localhost:11434";
+    private static final String OLLAMA_MODEL = "qwen3.5:4b";
+
     public static void main(String[] args) {
         CEvalBenchmarkDemo demo = new CEvalBenchmarkDemo();
         demo.run();
@@ -73,15 +81,12 @@ public class CEvalBenchmarkDemo {
 
         // Step 1: 初始化 LLM
         log.info("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-        log.info("【Step 1】初始化 Ollama LLM");
+        log.info("【Step 1】初始化 Ollama LLM（非思考模式）");
         log.info("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
 
-        OllamaLLMConfig config = new OllamaLLMConfig();
-        config.setTemperature(0.1f);
-        config.setMaxTokens(100);
-        OllamaLLM llm = new OllamaLLM(config);
-        log.info("模型: {}", config.getModel());
-        log.info("地址: {}", config.getEffectiveBaseUrl());
+        log.info("模型: {}", OLLAMA_MODEL);
+        log.info("地址: {}", OLLAMA_BASE_URL);
+        log.info("模式: 非思考模式 (think=false，使用 Ollama 原生 API)");
 
         // Step 2: 下载数据集
         log.info("\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
@@ -141,7 +146,7 @@ public class CEvalBenchmarkDemo {
 
             String llmResponse;
             try {
-                llmResponse = llm.generate(prompt);
+                llmResponse = callOllama(prompt);
             } catch (Exception e) {
                 log.warn("│ LLM调用失败: {}", e.getMessage());
                 llmResponse = "";
@@ -176,7 +181,7 @@ public class CEvalBenchmarkDemo {
 
         double overallAccuracy = (double) correctCount / sampleSize;
         log.info("\n📊 总体结果:");
-        log.info("   模型: {}", config.getModel());
+        log.info("   模型: {}", OLLAMA_MODEL);
         log.info("   总题数: {}", sampleSize);
         log.info("   正确数: {}", correctCount);
         log.info("   错误数: {}", sampleSize - correctCount);
@@ -317,8 +322,71 @@ public class CEvalBenchmarkDemo {
         return s.replace("\\", "\\\\").replace("\"", "\\\"").replace("\n", "\\n").replace("\r", "");
     }
 
+    /**
+     * 通过 Ollama 原生 API (/api/chat) 调用 LLM
+     * 使用 think:false 关闭思考模式，直接输出答案，避免 OpenAI 兼容 API 下
+     * 思考 token 耗尽导致 content 为空的问题。
+     */
+    private String callOllama(String prompt) {
+        try {
+            URL url = new URL(OLLAMA_BASE_URL + "/api/chat");
+            HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+            conn.setRequestMethod("POST");
+            conn.setDoOutput(true);
+            conn.setConnectTimeout(30000);
+            conn.setReadTimeout(300000);
+            conn.setRequestProperty("Content-Type", "application/json");
+
+            // 构造请求体：think=false 关闭思考模式，stream=false 同步返回
+            String requestBody = String.format(
+                    "{\"model\":\"%s\",\"messages\":[{\"role\":\"user\",\"content\":\"%s\"}],"
+                            + "\"think\":false,\"stream\":false,\"options\":{\"temperature\":0.1,\"num_predict\":200}}",
+                    OLLAMA_MODEL, escapeJson(prompt)
+            );
+
+            try (OutputStream os = conn.getOutputStream()) {
+                os.write(requestBody.getBytes(StandardCharsets.UTF_8));
+            }
+
+            if (conn.getResponseCode() != 200) {
+                log.warn("Ollama API HTTP {}", conn.getResponseCode());
+                return "";
+            }
+
+            // 读取响应
+            String responseJson;
+            try (BufferedReader reader = new BufferedReader(
+                    new InputStreamReader(conn.getInputStream(), StandardCharsets.UTF_8))) {
+                StringBuilder sb = new StringBuilder();
+                String line;
+                while ((line = reader.readLine()) != null) {
+                    sb.append(line);
+                }
+                responseJson = sb.toString();
+            }
+
+            // 解析 Ollama 原生 API 响应：{"message":{"content":"..."}}
+            com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();
+            com.fasterxml.jackson.databind.JsonNode root = mapper.readTree(responseJson);
+            com.fasterxml.jackson.databind.JsonNode message = root.get("message");
+            if (message != null && message.has("content")) {
+                return message.get("content").asText("");
+            }
+            return "";
+        } catch (Exception e) {
+            log.error("Ollama API 调用失败: {}", e.getMessage());
+            return "";
+        }
+    }
+
     private String extractAnswer(String response) {
         if (response == null || response.isEmpty()) return "?";
+        // 优先匹配 "答案：X" 或 "答案: X" 格式
+        Matcher matcher = Pattern.compile("答案[：:](\\s*[A-Da-d])").matcher(response);
+        if (matcher.find()) {
+            return matcher.group(1).trim().toUpperCase();
+        }
+        // 回退：提取第一个出现的 A-D 字母
         for (char c : response.toUpperCase().toCharArray()) {
             if (c >= 'A' && c <= 'D') return String.valueOf(c);
         }
