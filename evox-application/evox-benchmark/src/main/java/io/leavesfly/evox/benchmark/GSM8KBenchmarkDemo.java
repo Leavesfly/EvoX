@@ -1,5 +1,7 @@
 package io.leavesfly.evox.benchmark;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import io.leavesfly.evox.benchmark.GSM8K.GSM8KExample;
 import io.leavesfly.evox.models.provider.ollama.OllamaLLM;
 import io.leavesfly.evox.models.provider.ollama.OllamaLLMConfig;
@@ -245,9 +247,9 @@ public class GSM8KBenchmarkDemo {
             }
 
             // 解析 API 响应
-            com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();
-            com.fasterxml.jackson.databind.JsonNode root = mapper.readTree(json);
-            com.fasterxml.jackson.databind.JsonNode rows = root.get("rows");
+            ObjectMapper mapper = new ObjectMapper();
+            JsonNode root = mapper.readTree(json);
+            JsonNode rows = root.get("rows");
 
             if (rows == null || !rows.isArray()) {
                 log.error("API 返回数据格式异常");
@@ -255,8 +257,8 @@ public class GSM8KBenchmarkDemo {
             }
 
             List<String> allLines = new ArrayList<>();
-            for (com.fasterxml.jackson.databind.JsonNode rowWrapper : rows) {
-                com.fasterxml.jackson.databind.JsonNode row = rowWrapper.get("row");
+            for (JsonNode rowWrapper : rows) {
+                JsonNode row = rowWrapper.get("row");
                 if (row == null) continue;
 
                 String question = row.get("question").asText();

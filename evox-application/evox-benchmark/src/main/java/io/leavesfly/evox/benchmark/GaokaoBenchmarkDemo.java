@@ -1,5 +1,7 @@
 package io.leavesfly.evox.benchmark;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import io.leavesfly.evox.benchmark.GaokaoBench.GaokaoExample;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -213,7 +215,7 @@ public class GaokaoBenchmarkDemo {
             }
 
             List<String> allLines = new ArrayList<>();
-            com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();
+            ObjectMapper mapper = new ObjectMapper();
 
             for (Map.Entry<String, String> entry : SUBJECT_FILES.entrySet()) {
                 String subjectCn = entry.getKey();
@@ -231,8 +233,8 @@ public class GaokaoBenchmarkDemo {
                     // 解析 GAOKAO-Bench JSON 格式
                     // 格式: {"keywords":"...", "example":[{"year":"2010","category":"...",
                     //         "question":"...","answer":["D"],"analysis":"...","index":0,"score":6},...]}
-                    com.fasterxml.jackson.databind.JsonNode root = mapper.readTree(json);
-                    com.fasterxml.jackson.databind.JsonNode examples = root.get("example");
+                    JsonNode root = mapper.readTree(json);
+                    JsonNode examples = root.get("example");
 
                     if (examples == null || !examples.isArray()) {
                         log.warn("  跳过（无有效数据）");
@@ -240,10 +242,10 @@ public class GaokaoBenchmarkDemo {
                     }
 
                     int count = 0;
-                    for (com.fasterxml.jackson.databind.JsonNode item : examples) {
+                    for (JsonNode item : examples) {
                         // 获取答案（数组格式）
                         String answer = "";
-                        com.fasterxml.jackson.databind.JsonNode answerNode = item.get("answer");
+                        JsonNode answerNode = item.get("answer");
                         if (answerNode != null && answerNode.isArray() && answerNode.size() > 0) {
                             answer = answerNode.get(0).asText();
                         }

@@ -1,5 +1,7 @@
 package io.leavesfly.evox.benchmark;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import io.leavesfly.evox.benchmark.CEval.CEvalExample;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -234,9 +236,9 @@ public class CEvalBenchmarkDemo {
 
                     // 解析 HuggingFace Datasets API 响应
                     // 格式: {"rows":[{"row":{"id":0,"question":"...","A":"...","B":"...","C":"...","D":"...","answer":"C"}}]}
-                    com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();
-                    com.fasterxml.jackson.databind.JsonNode root = mapper.readTree(json);
-                    com.fasterxml.jackson.databind.JsonNode rows = root.get("rows");
+                    ObjectMapper mapper = new ObjectMapper();
+                    JsonNode root = mapper.readTree(json);
+                    JsonNode rows = root.get("rows");
 
                     if (rows == null || !rows.isArray()) {
                         log.warn("  跳过（无有效数据）");
@@ -244,8 +246,8 @@ public class CEvalBenchmarkDemo {
                     }
 
                     int count = 0;
-                    for (com.fasterxml.jackson.databind.JsonNode rowWrapper : rows) {
-                        com.fasterxml.jackson.databind.JsonNode row = rowWrapper.get("row");
+                    for (JsonNode rowWrapper : rows) {
+                        JsonNode row = rowWrapper.get("row");
                         if (row == null) continue;
 
                         String jsonLine = String.format(
