@@ -368,9 +368,9 @@ public class CEvalBenchmarkDemo {
             }
 
             // 解析 Ollama 原生 API 响应：{"message":{"content":"..."}}
-            com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();
-            com.fasterxml.jackson.databind.JsonNode root = mapper.readTree(responseJson);
-            com.fasterxml.jackson.databind.JsonNode message = root.get("message");
+            ObjectMapper mapper = new ObjectMapper();
+            JsonNode root = mapper.readTree(responseJson);
+            JsonNode message = root.get("message");
             if (message != null && message.has("content")) {
                 return message.get("content").asText("");
             }
